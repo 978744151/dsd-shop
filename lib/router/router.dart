@@ -8,6 +8,8 @@ import '../pages/message_page.dart';
 import '../pages/shell_page.dart';
 import '../pages/mine_page.dart';
 import '../pages/login_page.dart';
+import '../pages/shopDetailEcharts.dart';
+import '../pages/test_map_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(); // 添加这行
 
@@ -35,7 +37,11 @@ final router = GoRouter(
               path: '/',
               builder: (context, state) => HomePage(),
               routes: [
-                
+                GoRoute(
+                  path: 'shopDetailEcharts/:id',
+                  builder: (context, state) =>
+                      ShopDetailEcharts(id: state.pathParameters['id']!),
+                ),
               ],
             ),
           ],
@@ -98,6 +104,10 @@ final router = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginPage(),
+    ),
+    GoRoute(
+      path: '/test-map',
+      builder: (context, state) => const TestMapPage(),
     ),
   ],
 );

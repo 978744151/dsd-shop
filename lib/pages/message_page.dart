@@ -14,7 +14,7 @@ class _MessagePageState extends State<MessagePage> {
         title: const Text('message'),
       ),
       body: const Center(
-        child: Text('message'),
+        child: Text('我的'),
       ),
     );
   }
