@@ -48,9 +48,7 @@ class _TestMapPageState extends State<TestMapPage> {
               },
               "tooltip": {
                 "trigger": "item",
-                "formatter": function(params) {
-                  return params.name + '<br/>测试数据';
-                }
+                "formatter": "{b}<br/>测试数据: {c}"
               },
               "visualMap": {
                 "min": 0,

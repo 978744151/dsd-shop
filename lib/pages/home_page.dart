@@ -14,7 +14,7 @@ class _HomePageState extends State<HomePage> {
     {
       'id': 1,
       'brandName': 'COACH',
-      'image': '/assets/brand/coach.png',
+      'image': 'assets/brand/coach.png',
     },
     {
       'id': 2,
@@ -61,18 +61,40 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 测试按钮
-                  ElevatedButton(
-                    onPressed: () => context.go('/test-map'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E3A8A),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => context.go('/test-map'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1E3A8A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text('测试ECharts地图'),
+                        ),
                       ),
-                    ),
-                    child: const Text('测试ECharts地图'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => context.go('/simple-map'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text('简单地图测试'),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 
@@ -256,7 +278,7 @@ class _HomePageState extends State<HomePage> {
               color: Colors.white,
               shape: BoxShape.circle,
               image: DecorationImage(
-                image: NetworkImage(brand['image']),
+                image: AssetImage(brand['image']),
                 fit: BoxFit.contain,
               )),
         ),

@@ -18,6 +18,7 @@ class _ShopDetailEchartsState extends State<ShopDetailEcharts> {
   String selectedCity = '';
   List<CoachData> currentStores = [];
   bool showStoreDialog = false;
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -29,6 +30,7 @@ class _ShopDetailEchartsState extends State<ShopDetailEcharts> {
     final coachData = CoachService.getMockCoachData();
     setState(() {
       currentStores = coachData;
+      isLoading = false;
     });
   }
 
@@ -59,22 +61,11 @@ class _ShopDetailEchartsState extends State<ShopDetailEcharts> {
       },
       "tooltip": {
         "trigger": "item",
-        "formatter": function(params) {
-          if (params.data && params.data.value) {
-            return params.name + '<br/>Coach数量: ' + params.data.value + '人';
-          }
-          return params.name + '<br/>暂无数据';
-        },
-        "backgroundColor": "rgba(255,255,255,0.9)",
-        "borderColor": "#1E3A8A",
-        "borderWidth": 1,
-        "textStyle": {
-          "color": "#1F2937"
-        }
+        "formatter": "{b}<br/>Coach数量: {c}人"
       },
       "visualMap": {
         "min": 0,
-        "max": 30,
+        "max": 40,
         "left": "left",
         "top": "bottom",
         "text": ["高", "低"],
@@ -147,18 +138,7 @@ class _ShopDetailEchartsState extends State<ShopDetailEcharts> {
       },
       "tooltip": {
         "trigger": "item",
-        "formatter": function(params) {
-          if (params.data && params.data.value) {
-            return params.name + '<br/>Coach数量: ' + params.data.value + '人';
-          }
-          return params.name + '<br/>暂无数据';
-        },
-        "backgroundColor": "rgba(255,255,255,0.9)",
-        "borderColor": "#1E3A8A",
-        "borderWidth": 1,
-        "textStyle": {
-          "color": "#1F2937"
-        }
+        "formatter": "{b}<br/>Coach数量: {c}人"
       },
       "visualMap": {
         "min": 0,
@@ -295,6 +275,14 @@ class _ShopDetailEchartsState extends State<ShopDetailEcharts> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -349,6 +337,25 @@ class _ShopDetailEchartsState extends State<ShopDetailEcharts> {
                     option: currentView == 'china'
                         ? _getChinaMapOption()
                         : _getProvinceMapOption(selectedProvince),
+                    onMessage: (String message) {
+                      // 处理地图点击事件
+                      if (message.contains('click')) {
+                        try {
+                          final data = message.split('|');
+                          if (data.length >= 2) {
+                            final name = data[1];
+                            if (data.length >= 3) {
+                              final value = int.tryParse(data[2]) ?? 0;
+                              _onMapClickValue(name, value);
+                            } else {
+                              _onMapClick(name);
+                            }
+                          }
+                        } catch (e) {
+                          print('Error parsing map click: $e');
+                        }
+                      }
+                    },
                   ),
 
                   // 模拟点击区域（用于演示）

@@ -10,6 +10,7 @@ import '../pages/mine_page.dart';
 import '../pages/login_page.dart';
 import '../pages/shopDetailEcharts.dart';
 import '../pages/test_map_page.dart';
+import '../pages/simple_map_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(); // 添加这行
 
@@ -108,6 +109,10 @@ final router = GoRouter(
     GoRoute(
       path: '/test-map',
       builder: (context, state) => const TestMapPage(),
+    ),
+    GoRoute(
+      path: '/simple-map',
+      builder: (context, state) => const SimpleMapPage(),
     ),
   ],
 );
