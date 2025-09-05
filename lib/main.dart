@@ -47,7 +47,7 @@ class MyApp extends StatelessWidget {
       // 移除了不存在的 navigatorKey 参数
       routerConfig: router,
       title: '懂商帝',
-      // builder: BotToastInit(),
+      builder: BotToastInit(),
       theme: ThemeData(
         primaryColor: defaultColor,
         scaffoldBackgroundColor: const Color(0xFFFFFFFF), // 全局背景色设为白色

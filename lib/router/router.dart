@@ -11,6 +11,7 @@ import '../pages/login_page.dart';
 import '../pages/shopDetailEcharts.dart';
 import '../pages/test_map_page.dart';
 import '../pages/simple_map_page.dart';
+import '../pages/mall_detail_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(); // 添加这行
 
@@ -36,12 +37,23 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: '/',
-              builder: (context, state) => HomePage(),
+              builder: (context, state) => const HomePage(),
               routes: [
                 GoRoute(
                   path: 'shopDetailEcharts/:id',
                   builder: (context, state) =>
                       ShopDetailEcharts(id: state.pathParameters['id']!),
+                ),
+                GoRoute(
+                  path: 'brandMap/:brandId',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) =>
+                      SimpleMapPage(brandId: state.pathParameters['brandId']),
+                ),
+                GoRoute(
+                  parentNavigatorKey: _rootNavigatorKey,
+                  path: 'mall-detail',
+                  builder: (context, state) => const MallDetailPage(),
                 ),
               ],
             ),
@@ -109,10 +121,6 @@ final router = GoRouter(
     GoRoute(
       path: '/test-map',
       builder: (context, state) => const TestMapPage(),
-    ),
-    GoRoute(
-      path: '/simple-map',
-      builder: (context, state) => const SimpleMapPage(),
     ),
   ],
 );
