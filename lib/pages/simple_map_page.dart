@@ -427,7 +427,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                 ),
               )
             : Echarts(
-                key: UniqueKey(),
+                key: ValueKey('map_${_currentMapKey}_${_isProvince}'),
                 option: '''
                 {
                   title: {
@@ -570,11 +570,14 @@ class _SimpleMapPageState extends State<SimpleMapPage>
 
   // 显示门店列表底部弹框
   void _showStoreBottomSheet(String cityId, String cityName) async {
-    setState(() {
-      _currentCityId = cityId;
-      _currentCityName = cityName;
-      _isShowingStoreDialog = true;
-    });
+    // setState(() {
+    //   _currentCityId = cityId;
+    //   _currentCityName = cityName;
+    //   _isShowingStoreDialog = true;
+    // });
+    _currentCityId = cityId;
+    _currentCityName = cityName;
+    _isShowingStoreDialog = true;
     await fetchStores(cityId, cityName);
     if (!mounted) return;
     showModalBottomSheet(

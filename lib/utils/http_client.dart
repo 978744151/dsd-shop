@@ -19,9 +19,7 @@ class HttpClient {
   }
 
   static Future<Map<String, String>> _getHeaders() async {
-    // final token = await _getToken();
-    final token =
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODllYWMzNDQwODk5Nzk5YTE4YWJhNjkiLCJlbWFpbCI6Ijk3ODc0NDE1MUBxcS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTU4NTE3ODIsImV4cCI6MTc1NjQ1NjU4Mn0.PhXrpo4hmobGBYj6ZI05WEAmkGXCAvDnyOANcyKD7Gk';
+    final token = await _getToken();
 
     return {
       'Content-Type': 'application/json',
@@ -71,7 +69,6 @@ class HttpClient {
   static dynamic _handleResponse(http.Response response) {
     try {
       final data = json.decode(response.body);
-      print(response);
       if (response.statusCode == 401) {
         // _showErrorMessage('登录已过期，请重新登录');
 

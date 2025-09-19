@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models/mall.dart';
 import '../api/brand.dart';
 import '../utils/http_client.dart';
@@ -229,14 +230,9 @@ class _MallDetailPageState extends State<MallDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('购物中心'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
       body: Column(
         children: [
+          _buildCustomHeader(),
           _buildFilterBar(),
           Expanded(
             child: RefreshIndicator(
@@ -266,6 +262,101 @@ class _MallDetailPageState extends State<MallDetailPage> {
           ),
         ],
       ),
+    );
+  }
+
+  // 构建自定义标题区域
+  Widget _buildCustomHeader() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.fromARGB(255, 120, 160, 230), // 更深的蓝色
+            Color.fromARGB(255, 255, 255, 255), // 白色
+          ],
+          stops: [0.0, 1.0],
+        ),
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // 自定义导航栏
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(
+                      Icons.arrow_back_ios,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const Expanded(
+                    child: Text(
+                      '购物中心',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(width: 48), // 平衡左侧按钮
+                ],
+              ),
+            ),
+            // 统计信息区域
+            // Container(
+            //   margin: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            //   padding: const EdgeInsets.all(20),
+            //   decoration: BoxDecoration(
+            //     color: Colors.white.withOpacity(0.15),
+            //     borderRadius: BorderRadius.circular(20),
+            //     border: Border.all(
+            //       color: Colors.white.withOpacity(0.3),
+            //       width: 1,
+            //     ),
+            //   ),
+            //   child: Row(
+            //     mainAxisAlignment: MainAxisAlignment.spaceAround,
+            //     children: [
+            //       _buildStatItem('购物中心', '${mallList.length}'),
+            //       _buildStatItem('省份', '${provinces.length}'),
+            //       _buildStatItem('城市', '${cities.length}'),
+            //     ],
+            //   ),
+            // ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.white.withOpacity(0.9),
+          ),
+        ),
+      ],
     );
   }
 
@@ -547,100 +638,109 @@ class _MallDetailPageState extends State<MallDetailPage> {
   }
 
   Widget _buildMallCard(MallData mall) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+    return GestureDetector(
+      onTap: () {
+        context.push('/mall-brand/${mall.id}');
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: mall.isActive
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      mall.isActive ? '营业中' : '暂停营业',
+                      style: TextStyle(
+                        color: mall.isActive ? Colors.green : Colors.grey,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: mall.isActive
-                        ? Colors.green.withOpacity(0.1)
-                        : Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
+                  const Spacer(),
+                  Icon(
+                    Icons.location_on,
+                    size: 16,
+                    color: Colors.grey[600],
                   ),
-                  child: Text(
-                    mall.isActive ? '营业中' : '暂停营业',
+                  Text(
+                    '${mall.province.name} ${mall.city.name}',
                     style: TextStyle(
-                      color: mall.isActive ? Colors.green : Colors.grey,
+                      color: Colors.grey[600],
                       fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                mall.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                mall.address,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    '查看品牌',
+                    style: TextStyle(
+                      color: Colors.blue[700],
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.location_on,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
-                Text(
-                  '${mall.province.name} ${mall.city.name}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 12,
+                    color: Colors.blue[700],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              mall.name,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                ],
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              mall.address,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            // const SizedBox(height: 12),
-            //   Row(
-            //     children: [
-            //       _buildInfoItem(
-            //         icon: Icons.layers,
-            //         label: '楼层',
-            //         value: '${mall.floorCount ?? 0}层',
-            //       ),
-            //       const SizedBox(width: 16),
-            //       _buildInfoItem(
-            //         icon: Icons.square_foot,
-            //         label: '面积',
-            //         value: '${mall.totalArea ?? 0}㎡',
-            //       ),
-            //     ],
-            //   ),
-          ],
+            ],
+          ),
         ),
       ),
     );

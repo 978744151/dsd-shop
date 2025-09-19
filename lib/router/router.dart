@@ -4,7 +4,7 @@ import 'package:bot_toast/bot_toast.dart';
 
 import '../pages/home_page.dart';
 import '../pages/shop_page.dart';
-import '../pages/message_page.dart';
+import '../pages/compare_page.dart';
 import '../pages/shell_page.dart';
 import '../pages/mine_page.dart';
 import '../pages/login_page.dart';
@@ -12,6 +12,7 @@ import '../pages/shopDetailEcharts.dart';
 import '../pages/test_map_page.dart';
 import '../pages/simple_map_page.dart';
 import '../pages/mall_detail_page.dart';
+import '../pages/mall_brand_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(); // 添加这行
 
@@ -55,6 +56,13 @@ final router = GoRouter(
                   path: 'mall-detail',
                   builder: (context, state) => const MallDetailPage(),
                 ),
+                GoRoute(
+                  parentNavigatorKey: _rootNavigatorKey,
+                  path: 'mall-brand/:mallId',
+                  builder: (context, state) => MallBrandPage(
+                    mallId: state.pathParameters['mallId']!,
+                  ),
+                ),
               ],
             ),
           ],
@@ -88,18 +96,16 @@ final router = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/message',
-              builder: (context, state) => const MessagePage(),
-              routes: [
-                // GoRoute(
-                //   path: 'messageDetail/:id', // 修改为子路由
-                //   parentNavigatorKey: _rootNavigatorKey, // 添加这行
-                //   builder: (context, state) {
-                //     final id = state.pathParameters['id']!;
-                //     return BlogDetailPage(id: id);
-                //   },
-                // ),
-              ],
+              path: '/compare',
+              builder: (context, state) => const ComparePage(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/mines',
+              builder: (context, state) => const HomePage(),
             ),
           ],
         ),
