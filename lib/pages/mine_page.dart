@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nft_once/pages/blog_detail_page.dart';
+import 'package:nft_once/pages/history_page.dart';
+import 'package:nft_once/pages/favorites_page.dart';
+import 'package:nft_once/pages/follow_page.dart';
+import 'package:nft_once/pages/notifications_page.dart';
 // import 'package:nft_once/pages/nft/nft_edition_detail.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
-import '../utils/storage.dart'; // 添加导入
-import 'dart:convert'; // 添加这行
 import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/http_client.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import '../widgets/red_book_card.dart';
+import '../api/comment_api.dart';
+import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
+import '../widgets/custom_refresh_widget.dart';
 
 class NFT {
   final String id;
@@ -57,13 +64,17 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
   List<Map<String, dynamic>> myCollectionsList = [];
   List<Map<String, dynamic>> myMysteryBoxesList = [];
   List<Map<String, dynamic>> soldCollectionsList = [];
+  List<Map<String, dynamic>> myBlogsList = []; // 添加笔记列表
   bool _showTitle = false; // 添加标题显示控制
   bool isLoading = true;
   double _scrollProgress = 0.0; // 添加滚动进度变量
+  int unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
+    fetchBlogs(userInfo['_id']);
+    getUnreadCount();
     _tabController = TabController(length: 2, vsync: this);
     _scrollController = ScrollController(); // 初始化滚动控制器
 
@@ -81,14 +92,12 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
         }
 
         switch (_tabController.index) {
-          case 0: // 我的藏品
-            fetchProfileCollections(userInfo['_id']);
+          case 0: // 我的笔记
+            fetchBlogs(userInfo['_id']);
             break;
           case 1: // 我的盲盒
-            fetchProfileMysteryBox(userInfo['_id']);
             break;
           case 2: // 售出藏品
-            fetchProfilSalesList(userInfo['_id']);
             break;
         }
       }
@@ -114,19 +123,32 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  Future<void> getUnreadCount() async {
+    if (!mounted) return;
+    try {
+      final response = await HttpClient.get(NftApi.getUnreadCount);
+      if (!mounted) return;
+
+      if (response['success'] == true) {
+        setState(() {
+          print(response['data']['unreadCount']);
+          unreadCount = response['data']['unreadCount'];
+        });
+      }
+    } catch (e) {
+      print('获取笔记信息失败: $e');
+    }
+  }
+
   Future<void> _getToken() async {
     if (!mounted) return;
     try {
-      final userInfoJson = await Storage.getString('userInfo');
-      if (userInfoJson != null) {
+      final data = await HttpClient.get('auth/me');
+      if (data != null) {
         setState(() {
-          userInfo = json.decode(userInfoJson);
+          userInfo = data['data']['user'];
         });
-        fetchFollowInfo(userInfo['_id']);
-        fetchProfile(userInfo['_id']);
-        fetchProfileCollections(userInfo['_id']);
-        fetchProfileMysteryBox(userInfo['_id']);
-        fetchProfilSalesList(userInfo['_id']);
+
         setState(() {
           isLoading = false;
         });
@@ -137,41 +159,22 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
   }
 
 // 添加获取关注信息的方法
-  Future<void> fetchProfile(id) async {
+  // 添加获取用户发布的笔记的方法
+  Future<void> fetchBlogs(id) async {
     if (!mounted) return;
     try {
-      final response = await HttpClient.get('/profile');
+      final response = await HttpClient.get('blogs/my');
       if (!mounted) return;
 
       if (response['success'] == true) {
+        final List<dynamic> list = response['data']['blogs'] ?? [];
         setState(() {
-          userProfile = response['data'];
-          stats = response['data'] ?? response['data']['stats'];
-          pointsInfo = response['data'] ?? response['data']['pointsInfo'];
-        });
-      }
-    } catch (e) {
-      print('获取信息失败: $e');
-    }
-  }
-
-  // 添加获取藏品的方法
-  Future<void> fetchProfileCollections(id) async {
-    if (!mounted) return;
-    try {
-      final response = await HttpClient.get('/nfts/user/collect');
-      if (!mounted) return;
-
-      if (response['success'] == true) {
-        print(response['success'] == true);
-        final List<dynamic> list = response['data'] ?? [];
-        setState(() {
-          myCollectionsList =
+          myBlogsList =
               list.map((item) => Map<String, dynamic>.from(item)).toList();
         });
       }
     } catch (e) {
-      print('获取关信息失败: $e');
+      print('获取笔记信息失败: $e');
     }
   }
 
@@ -209,23 +212,6 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
     }
   }
 
-// 添加获取关注信息的方法
-  Future<void> fetchFollowInfo(id) async {
-    if (!mounted) return;
-    try {
-      final response = await HttpClient.get('/follow/follow-info/$id');
-      if (!mounted) return;
-
-      if (response['success'] == true) {
-        setState(() {
-          followerInfo = response['data'];
-        });
-      }
-    } catch (e) {
-      print('获取关注信息失败: $e');
-    }
-  }
-
   // 添加滚动位置更新方法
   void _updateScrollState() {
     final scrollProgress = _scrollController.position.pixels / 150.0;
@@ -245,15 +231,11 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF), // 强制白色背景
 
-      body: RefreshIndicator(
+      body: CustomRefreshWidget(
         onRefresh: () async {
           // 刷新所有数据
           await Future.wait([
-            fetchProfile(userInfo['_id']),
-            fetchFollowInfo(userInfo['_id']),
-            fetchProfileCollections(userInfo['_id']),
-            fetchProfileMysteryBox(userInfo['_id']),
-            fetchProfilSalesList(userInfo['_id']),
+            fetchBlogs(userInfo['_id']),
           ]);
         },
         child: SafeArea(
@@ -268,47 +250,41 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                   elevation: 0,
                   backgroundColor: Color(0xFFB2CBF6),
                   expandedHeight: 150.0, // 减小展开高度
-                  toolbarHeight: 56, // 固定工具栏高度，不再使用状态栏高度
-                  collapsedHeight: 56, // 固定折叠高度，确保足够空间显示标题
+                  toolbarHeight: 56.0, // 固定工具栏高度，使用double类型
+                  collapsedHeight: 56.0, // 固定折叠高度，使用double类型
                   pinned: true, // 固定在顶部
                   floating: true, // 保持浮动特性
                   snap: false,
                   actions: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.settings,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      onPressed: () async {
-                        context.push('/settings');
-                        // final result =
-                        //     await Navigator.of(context).pushNamed('/settings');
-                        // if (result == true) {
-                        //   // 如果设置页面返回true，表示有更新，刷新用户信息
-                        //   _getToken();
-                        // }
-                      },
-                    ),
+                    // IconButton(
+                    //   icon: const Icon(
+                    //     Icons.settings,
+                    //     color: Colors.white,
+                    //     size: 24,
+                    //   ),
+                    //   onPressed: () async {
+                    //     context.push('/settings');
+                    //   },
+                    // ),
                   ],
                   title: AnimatedOpacity(
                     opacity: _showTitle ? 1.0 : 0.0,
                     duration: const Duration(milliseconds: 300),
                     child: // 顶部用户信息
                         SizedBox(
-                      height: 42, // 固定高度，不再根据屏幕大小动态调整
+                      height: 42.0, // 固定高度，使用double类型
                       child: Row(
                         children: [
                           // 用户头像
                           SvgPicture.network(
                             userInfo['avatar'] ??
                                 'https://api.dicebear.com/9.x/avataaars/svg?seed=Felix',
-                            height: 35, // 固定头像大小
-                            width: 35,
+                            height: 35.0, // 固定头像大小，使用double类型
+                            width: 35.0,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
-                                height: 35,
-                                width: 35,
+                                height: 35.0,
+                                width: 35.0,
                                 decoration: BoxDecoration(
                                   color: Colors.grey[200],
                                   shape: BoxShape.circle,
@@ -325,7 +301,7 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                               child: Row(
                                 children: [
                                   Text(
-                                    userInfo['name'] ?? '用户',
+                                    userInfo['username'] ?? '用户',
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -340,15 +316,17 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(
-                                icon: const Icon(Icons.headset_mic_outlined),
-                                onPressed: () {},
-                                padding: EdgeInsets.all(8),
-                                constraints: BoxConstraints(),
-                              ),
+                              // IconButton(
+                              //   icon: const Icon(Icons.headset_mic_outlined),
+                              //   onPressed: () {},
+                              //   padding: EdgeInsets.all(8),
+                              //   constraints: BoxConstraints(),
+                              // ),
                               IconButton(
                                 icon: const Icon(Icons.settings_outlined),
-                                onPressed: () {},
+                                onPressed: () {
+                                  context.push('/settings');
+                                },
                                 padding: EdgeInsets.all(8),
                                 constraints: BoxConstraints(),
                               ),
@@ -415,7 +393,7 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                                     Row(
                                       children: [
                                         Text(
-                                          userInfo['name'] ?? '用户',
+                                          userInfo['username'] ?? '用户',
                                           style: const TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
@@ -451,17 +429,15 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                                     Row(
                                       children: [
                                         _StatItem(
-                                            count:
-                                                followerInfo['followingCount']
-                                                        ?.toString() ??
-                                                    '0',
+                                            count: userInfo['followingCount']
+                                                    ?.toString() ??
+                                                '0',
                                             label: '关注'),
                                         const SizedBox(width: 16),
                                         _StatItem(
-                                            count:
-                                                followerInfo['followersCount']
-                                                        ?.toString() ??
-                                                    '0',
+                                            count: userInfo['followersCount']
+                                                    ?.toString() ??
+                                                '0',
                                             label: '粉丝'),
                                         const SizedBox(width: 16),
                                       ],
@@ -495,8 +471,8 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                               _buildMainFunction(Icons.star_border, '收藏'),
                               _buildMainFunction(Icons.person_add, '关注'),
                               _buildMainFunction(Icons.people, '粉丝'),
-                              _buildMainFunction(Icons.message, '消息',
-                                  hasNotification: true),
+                              // _buildMainFunction(Icons.message, '消息',
+                              // hasNotification: true),
                             ],
                           ),
                         ],
@@ -506,130 +482,130 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                 ),
 
                 // 二级功能区
-                SliverToBoxAdapter(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFFFF),
-                      border: Border(
-                        top: BorderSide(
-                          color: Colors.grey[100]!,
-                          width: 1.0,
-                          style: BorderStyle.solid,
-                        ),
-                        bottom: BorderSide(
-                          color: Colors.grey[100]!,
-                          width: 1.0,
-                          style: BorderStyle.solid,
-                        ),
-                      ),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildSecondaryFunction(
-                              icon: Icons.shopping_bag_outlined,
-                              iconColor: Colors.blue,
-                              bgColor: Colors.blue[50]!,
-                              label: '我的订单',
-                            ),
-                            _buildSecondaryFunction(
-                              icon: Icons.monetization_on,
-                              iconColor: Colors.orange,
-                              bgColor: Colors.orange[50]!,
-                              label: '钱包',
-                            ),
-                            _buildSecondaryFunction(
-                                icon: Icons.card_membership,
-                                iconColor: Colors.amber,
-                                bgColor: Colors.amber[50]!,
-                                label: '签到',
-                                hasTag: true),
-                            _buildSecondaryFunction(
-                              icon: Icons.card_giftcard,
-                              iconColor: Colors.amber,
-                              bgColor: Colors.orange[50]!,
-                              label: '积分兑换',
-                            ),
-                            _buildSecondaryFunction(
-                              icon: Icons.share,
-                              iconColor: Colors.red,
-                              bgColor: Colors.red[50]!,
-                              label: '分享app',
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                // SliverToBoxAdapter(
+                //   child: Container(
+                //     decoration: BoxDecoration(
+                //       color: const Color(0xFFFFFFFF),
+                //       border: Border(
+                //         top: BorderSide(
+                //           color: Colors.grey[100]!,
+                //           width: 1.0,
+                //           style: BorderStyle.solid,
+                //         ),
+                //         bottom: BorderSide(
+                //           color: Colors.grey[100]!,
+                //           width: 1.0,
+                //           style: BorderStyle.solid,
+                //         ),
+                //       ),
+                //     ),
+                //     padding: const EdgeInsets.symmetric(vertical: 16),
+                //     child: Column(
+                //       children: [
+                //         Row(
+                //           mainAxisAlignment: MainAxisAlignment.spaceAround,
+                //           children: [
+                //             _buildSecondaryFunction(
+                //               icon: Icons.shopping_bag_outlined,
+                //               iconColor: Colors.blue,
+                //               bgColor: Colors.blue[50]!,
+                //               label: '我的订单',
+                //             ),
+                //             _buildSecondaryFunction(
+                //               icon: Icons.monetization_on,
+                //               iconColor: Colors.orange,
+                //               bgColor: Colors.orange[50]!,
+                //               label: '钱包',
+                //             ),
+                //             _buildSecondaryFunction(
+                //                 icon: Icons.card_membership,
+                //                 iconColor: Colors.amber,
+                //                 bgColor: Colors.amber[50]!,
+                //                 label: '签到',
+                //                 hasTag: true),
+                //             _buildSecondaryFunction(
+                //               icon: Icons.card_giftcard,
+                //               iconColor: Colors.amber,
+                //               bgColor: Colors.orange[50]!,
+                //               label: '积分兑换',
+                //             ),
+                //             _buildSecondaryFunction(
+                //               icon: Icons.share,
+                //               iconColor: Colors.red,
+                //               bgColor: Colors.red[50]!,
+                //               label: '分享app',
+                //             ),
+                //           ],
+                //         ),
+                //       ],
+                //     ),
+                //   ),
+                // ),
 
                 // 藏品标题
-                SliverToBoxAdapter(
-                  child: Container(
-                    color: const Color(0xFFFFFFFF),
-                    padding: const EdgeInsets.only(
-                        left: 16, right: 16, top: 16, bottom: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          '持有资产',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 60),
-                        // 替换原来的IconButton为搜索框
-                        Expanded(
-                          flex: 1,
-                          child: Container(
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: Center(
-                              // 添加 Center 包裹
-                              child: TextField(
-                                textAlignVertical:
-                                    TextAlignVertical.center, // 文本垂直居中
-                                decoration: InputDecoration(
-                                  isDense: true, // 使输入框更紧凑
-                                  hintText: '搜索藏品',
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey[400],
-                                    fontSize: 14,
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.search,
-                                    color: Colors.grey[400],
-                                    size: 20,
-                                  ),
-                                  prefixIconConstraints: const BoxConstraints(
-                                    // 调整图标约束
-                                    minWidth: 40,
-                                    minHeight: 40,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 0, // 垂直内边距设为0
-                                    horizontal: 8, // 水平内边距
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                    ),
-                  ), // 固定在顶部
-                ),
+                // SliverToBoxAdapter(
+                //   child: Container(
+                //     color: const Color(0xFFFFFFFF),
+                //     padding: const EdgeInsets.only(
+                //         left: 16, right: 16, top: 16, bottom: 8),
+                //     child: Row(
+                //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //       crossAxisAlignment: CrossAxisAlignment.start,
+                //       children: [
+                //         const Text(
+                //           '持有资产',
+                //           style: TextStyle(
+                //             fontSize: 18,
+                //             fontWeight: FontWeight.bold,
+                //           ),
+                //         ),
+                //         const SizedBox(width: 60),
+                //         // 替换原来的IconButton为搜索框
+                //         Expanded(
+                //           flex: 1,
+                //           child: Container(
+                //             height: 38,
+                //             decoration: BoxDecoration(
+                //               color: Colors.grey[100],
+                //               borderRadius: BorderRadius.circular(18),
+                //             ),
+                //             child: Center(
+                //               // 添加 Center 包裹
+                //               child: TextField(
+                //                 textAlignVertical:
+                //                     TextAlignVertical.center, // 文本垂直居中
+                //                 decoration: InputDecoration(
+                //                   isDense: true, // 使输入框更紧凑
+                //                   hintText: '搜索藏品',
+                //                   hintStyle: TextStyle(
+                //                     color: Colors.grey[400],
+                //                     fontSize: 14,
+                //                   ),
+                //                   prefixIcon: Icon(
+                //                     Icons.search,
+                //                     color: Colors.grey[400],
+                //                     size: 20,
+                //                   ),
+                //                   prefixIconConstraints: const BoxConstraints(
+                //                     // 调整图标约束
+                //                     minWidth: 40,
+                //                     minHeight: 40,
+                //                   ),
+                //                   border: InputBorder.none,
+                //                   contentPadding: const EdgeInsets.symmetric(
+                //                     vertical: 0, // 垂直内边距设为0
+                //                     horizontal: 8, // 水平内边距
+                //                   ),
+                //                 ),
+                //               ),
+                //             ),
+                //           ),
+                //         ),
+                //         const SizedBox(width: 8),
+                //       ],
+                //     ),
+                //   ), // 固定在顶部
+                // ),
 
                 // TabBar（悬浮到顶部）
                 SliverPersistentHeader(
@@ -655,21 +631,17 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
             body: TabBarView(
               controller: _tabController,
               children: [
-                RefreshIndicator(
+                CustomRefreshWidget(
                   onRefresh: () async {
-                    await fetchProfile(userInfo['_id']);
-                    await fetchFollowInfo(userInfo['_id']);
-                    await fetchProfileCollections(userInfo['_id']);
+                    await _getToken();
+                    await fetchBlogs(userInfo['_id']);
+                    await getUnreadCount();
                   },
                   child: _buildMyCollections(), // 你的藏品列表Widget
                 ),
                 // 我的盲盒
-                RefreshIndicator(
-                  onRefresh: () async {
-                    await fetchProfile(userInfo['_id']);
-                    await fetchFollowInfo(userInfo['_id']);
-                    await fetchProfileMysteryBox(userInfo['_id']);
-                  },
+                CustomRefreshWidget(
+                  onRefresh: () async {},
                   child: _buildMyMysteryBoxes(), // 你的盲盒列表Widget
                 ),
                 // 售出藏品功能暂时移除
@@ -678,100 +650,6 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
           ),
         ),
       ),
-    );
-  }
-
-  // 我的藏品列表
-  Widget _buildMyCollections() {
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return AnimationLimiter(
-      child: myCollectionsList.isEmpty
-          ? const Center(child: Text('暂无藏品'))
-          : GridView.builder(
-              padding: const EdgeInsets.all(12),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.85,
-                crossAxisSpacing: 6,
-                mainAxisSpacing: 6,
-              ),
-              itemCount: myCollectionsList.length,
-              itemBuilder: (context, index) {
-                final item = myCollectionsList[index];
-                return AnimationConfiguration.staggeredGrid(
-                  position: index,
-                  duration: const Duration(milliseconds: 500),
-                  columnCount: 2,
-                  child: ScaleAnimation(
-                    child: FadeInAnimation(
-                      child: GestureDetector(
-                        onTap: () async {
-                          print(123);
-                          final response = await HttpClient.get(
-                              '/nfts/user/detail/${item['_id']}');
-                          _showNftDetailDialog(response['data']);
-                        },
-                        child: Card(
-                          elevation: 4,
-                          // margin: EdgeInsets.zero,
-                          color: const Color(0xFFFFFFFF),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(12),
-                                    topRight: Radius.circular(12),
-                                  ),
-                                  child: Image.network(
-                                    item['imageUrl'],
-                                    height: 180,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                    left: 8, right: 8, top: 12, bottom: 8),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      item['name'],
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      '( ${item['userOwnedEditions'].length.toString()} 份)',
-                                      style: const TextStyle(),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
     );
   }
 
@@ -943,37 +821,72 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
 
   Widget _buildMainFunction(IconData icon, String label,
       {bool hasNotification = false}) {
-    return Column(
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(icon, size: 28),
-            if (hasNotification)
-              Positioned(
-                right: -6,
-                top: -6,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Text(
-                    '2',
-                    style:
-                        TextStyle(color: const Color(0xFFFFFFFF), fontSize: 8),
+    return GestureDetector(
+      onTap: () {
+        if (label == '历史记录') {
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (context) => const HistoryPage(),
+            ),
+          );
+        } else if (label == '收藏') {
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (context) => const FavoritesPage(),
+            ),
+          );
+        } else if (label == '关注') {
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (context) => const FollowPage(),
+            ),
+          );
+        } else if (label == '粉丝') {
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (context) => const FollowPage(),
+            ),
+          );
+        } else if (label == '消息') {
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (context) => const NotificationsPage(),
+            ),
+          );
+        }
+      },
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(icon, size: 28),
+              if (hasNotification)
+                Positioned(
+                  right: -6,
+                  top: -6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      unreadCount.toString(),
+                      style: const TextStyle(
+                          color: Color(0xFFFFFFFF), fontSize: 8),
+                    ),
                   ),
                 ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12),
-        ),
-      ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1209,6 +1122,308 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
           ),
         );
       },
+    );
+  }
+
+  // 构建我的笔记列表
+  Widget _buildMyCollections() {
+    if (myBlogsList.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.article_outlined,
+              size: 64,
+              color: Colors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              '还没有发布笔记',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(8.0),
+          sliver: SliverMasonryGrid.count(
+            crossAxisCount: 2,
+            mainAxisSpacing: 8.0,
+            crossAxisSpacing: 8.0,
+            childCount: myBlogsList.length,
+            itemBuilder: (context, index) {
+              final blog = myBlogsList[index];
+              return _BlogCardWithDelete(
+                blog: blog,
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                      builder: (context) => BlogDetailPage(
+                        id: blog['_id'] ?? '',
+                      ),
+                    ),
+                  );
+                },
+                onDelete: () => _deleteBlog(blog['_id']),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 删除笔记方法
+  void _deleteBlog(String blogId) async {
+    try {
+      // 这里添加删除笔记的API调用
+      await HttpClient.delete(NftApi.deleteComment(blogId));
+
+      // 从本地列表中移除
+      setState(() {
+        myBlogsList.removeWhere((blog) => blog['_id'] == blogId);
+      });
+
+      // 显示删除成功提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('删除成功')),
+      );
+    } catch (e) {}
+  }
+}
+
+// 带删除功能的笔记卡片组件
+class _BlogCardWithDelete extends StatefulWidget {
+  final Map<String, dynamic> blog;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _BlogCardWithDelete({
+    required this.blog,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  State<_BlogCardWithDelete> createState() => _BlogCardWithDeleteState();
+}
+
+class _BlogCardWithDeleteState extends State<_BlogCardWithDelete> {
+  bool _showDeleteButton = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _showDeleteButton ? null : widget.onTap,
+      onLongPress: () {
+        setState(() {
+          _showDeleteButton = true;
+        });
+      },
+      child: Stack(
+        children: [
+          RedBookCard(
+            id: widget.blog['_id'] ?? '',
+            title: widget.blog['title'] ?? '',
+            content: widget.blog['content'] ?? '',
+            time: widget.blog['createdAt'] ?? '',
+            type: widget.blog['type'] ?? '',
+            defaultImage: widget.blog['defaultImage'] ?? '',
+            likes: widget.blog['likes'] ?? 0,
+            comments: widget.blog['comments'] ?? 0,
+            user: widget.blog['user'],
+            onTap: _showDeleteButton ? () {} : widget.onTap,
+          ),
+          if (_showDeleteButton)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _showDeleteButton = false;
+                  });
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.delete,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                        onPressed: () {
+                          // 显示确认删除对话框
+                          showDialog(
+                            context: context,
+                            barrierDismissible: true,
+                            builder: (BuildContext context) {
+                              return Dialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    color: Colors.white,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // 删除图标
+                                      Container(
+                                        width: 64,
+                                        height: 64,
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(32),
+                                        ),
+                                        child: const Icon(
+                                          Icons.delete_outline,
+                                          color: Colors.red,
+                                          size: 32,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      // 标题
+                                      const Text(
+                                        '确认删除',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      // 内容
+                                      const Text(
+                                        '确定要删除这篇笔记吗？\n删除后将无法恢复',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      // 按钮组
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Container(
+                                              height: 48,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(24),
+                                                border: Border.all(
+                                                  color: Colors.grey.shade300,
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: TextButton(
+                                                onPressed: () {
+                                                  Navigator.of(context).pop();
+                                                  setState(() {
+                                                    _showDeleteButton = false;
+                                                  });
+                                                },
+                                                style: TextButton.styleFrom(
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            24),
+                                                  ),
+                                                ),
+                                                child: const Text(
+                                                  '取消',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.grey,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Container(
+                                              height: 48,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(24),
+                                                gradient: const LinearGradient(
+                                                  colors: [
+                                                    Colors.red,
+                                                    Colors.redAccent
+                                                  ],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                ),
+                                              ),
+                                              child: TextButton(
+                                                onPressed: () {
+                                                  Navigator.of(context).pop();
+                                                  widget.onDelete();
+                                                  setState(() {
+                                                    _showDeleteButton = false;
+                                                  });
+                                                },
+                                                style: TextButton.styleFrom(
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            24),
+                                                  ),
+                                                ),
+                                                child: const Text(
+                                                  '删除',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

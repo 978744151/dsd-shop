@@ -50,14 +50,12 @@ class _LoginPageState extends State<LoginPage> {
         'password': _passwordController.text,
       });
       if (data['success'] == true) {
-        print(data);
-
         // 修改这里，根据实际返回的数据结构获取 token
         final token = data['data']['token']; // 修改这行
         await _saveToken(token);
-        // await _fetchUserInfo();
-        // final prefs = await SharedPreferences.getInstance();
-        // await prefs.setString('userInfo', data['data']['user']);
+        await _fetchUserInfo();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('userInfo', data['data']['user']);
         if (mounted) {
           context.go('/'); // 使用 go_router 进行导航
         }
@@ -84,10 +82,10 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _fetchUserInfo() async {
     try {
-      final data = await HttpClient.get('/auth/me');
+      final data = await HttpClient.get('auth/me');
       if (data['success'] == true) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('userInfo', json.encode(data['data']));
+        await prefs.setString('userInfo', json.encode(data['data']['user']));
         if (mounted) {
           context.go('/'); // 使用 go_router 进行导航
         }

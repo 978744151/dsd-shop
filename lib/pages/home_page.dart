@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nft_once/pages/brand_center_page.dart';
 import '../api/brand.dart';
 import '../utils/http_client.dart';
 import '../models/brand.dart';
 import '../models/mall.dart';
+import '../widgets/custom_refresh_widget.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:nft_once/pages/message_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,19 +21,29 @@ class _HomePageState extends State<HomePage> {
   List<BrandModel> brandList = [];
   List<dynamic> mallList = [];
   bool isLoading = true;
+  // 交流-推荐列表
+  List<Map<String, dynamic>> recommendBlogs = [];
+  bool isLoadingRecommend = true;
   final TextEditingController _searchController =
       TextEditingController(); // 添加搜索控制器
+  int recommendPage = 1;
+  bool recommendHasMore = true;
+  bool recommendLoadingMore = false;
+  final ScrollController _recommendScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     fetchBrand();
     fetchMall();
+    fetchRecommendBlogs();
+    _recommendScrollController.addListener(_onRecommendScroll);
   }
 
   @override
   void dispose() {
     _searchController.dispose(); // 只在dispose时释放控制器
+    _recommendScrollController.dispose();
     super.dispose();
   }
 
@@ -50,7 +64,6 @@ class _HomePageState extends State<HomePage> {
           mallList = mallData.map((item) => MallData.fromJson(item)).toList();
           isLoading = false;
         });
-        print('MallData: $mallList');
       }
     } catch (e) {
       if (!mounted) return;
@@ -99,6 +112,90 @@ class _HomePageState extends State<HomePage> {
     return Future.value();
   }
 
+  Future<void> fetchRecommendBlogs() async {
+    if (!mounted) return;
+    setState(() {
+      isLoadingRecommend = true;
+    });
+    try {
+      final response = await HttpClient.get('blogs/all?page=$recommendPage');
+      if (!mounted) return;
+      if (response['success'] == true) {
+        final List<dynamic> blogsData = response['data']['blogs'] ?? [];
+        final pagination = response['data']['pagination'] ?? {};
+        setState(() {
+          if (recommendPage == 1) {
+            recommendBlogs = blogsData.cast<Map<String, dynamic>>();
+          } else {
+            recommendBlogs.addAll(blogsData.cast<Map<String, dynamic>>());
+          }
+          // 修正 recommendHasMore 的逻辑
+
+          recommendHasMore = response['data']['pagination']['page'] <
+              response['data']['pagination']['pages'];
+          isLoadingRecommend = false;
+        });
+      } else {
+        setState(() {
+          isLoadingRecommend = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isLoadingRecommend = false;
+      });
+    }
+  }
+
+  Future<void> loadMoreRecommend() async {
+    if (!mounted || recommendLoadingMore || !recommendHasMore) return;
+
+    print('开始加载更多推荐内容，当前页：$recommendPage');
+
+    setState(() {
+      recommendLoadingMore = true;
+    });
+    try {
+      final nextPage = recommendPage + 1;
+      final response = await HttpClient.get('blogs/all?page=$nextPage');
+      if (!mounted) return;
+      if (response['success'] == true) {
+        final data = response['data'] as Map? ?? const {};
+        final List<dynamic> blogsData = data['blogs'] ?? [];
+        final pagination = data['pagination'] ?? {};
+        setState(() {
+          recommendBlogs.addAll(blogsData.cast<Map<String, dynamic>>());
+          recommendPage = nextPage;
+          // 修正 recommendHasMore 的逻辑
+          recommendHasMore = response['data']['pagination']['page'] <
+              response['data']['pagination']['pages'];
+          recommendLoadingMore = false;
+        });
+      } else {
+        setState(() {
+          recommendLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        recommendLoadingMore = false;
+      });
+    }
+  }
+
+  void _onRecommendScroll() {
+    if (!recommendHasMore || recommendLoadingMore) return;
+
+    final position = _recommendScrollController.position;
+
+    // 当滚动到距离底部 200px 时开始加载
+    if (position.pixels >= position.maxScrollExtent - 200) {
+      loadMoreRecommend();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,23 +207,35 @@ class _HomePageState extends State<HomePage> {
         children: [
           // 浮空搜索栏
 
-          RefreshIndicator(
+          CustomRefreshWidget(
             onRefresh: () async {
+              setState(() {
+                recommendPage = 1;
+              });
               await fetchBrand();
               await fetchMall();
+              await fetchRecommendBlogs();
+
+              // 刷新完成后，将滚动位置重置到顶部
+              if (_recommendScrollController.hasClients) {
+                _recommendScrollController.animateTo(
+                  0,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              }
             },
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(
+              controller: _recommendScrollController,
+              padding: EdgeInsets.only(
                 left: 16,
                 right: 16,
-                top: 120, // 为浮空搜索栏留出空间
+                top: MediaQuery.of(context).padding.top + 50, // 为浮空搜索栏留出空间
                 bottom: 16,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 20),
-
                   // 第一个Section - 圆形图标网格
                   _buildSectionHeader('品牌'),
                   const SizedBox(height: 16),
@@ -140,33 +249,38 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 10),
 
                   // 第三个Section - 小图标网格
-                  _buildSectionHeader('分类'),
-                  const SizedBox(height: 20),
-                  _buildSmallIconGrid(),
-                  const SizedBox(height: 20),
+                  // _buildSectionHeader('分类'),
+                  // const SizedBox(height: 20),
+                  // _buildSmallIconGrid(),
+                  // const SizedBox(height: 20),
 
                   // 第四个Section - 音乐卡片网格
-                  _buildSectionHeader('Section title'),
+                  _buildSectionHeader('交流'),
                   // const SizedBox(height: 20),
-                  _buildMusicCardGrid(),
+                  _buildMessageRecommendSection(),
+                  if (recommendLoadingMore)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
                   const SizedBox(height: 20),
 
-                  // 第五个Section - 新闻列表
-                  _buildSectionHeader('Section title'),
-                  const SizedBox(height: 20),
-                  _buildNewsList(),
-                  const SizedBox(height: 20),
+                  // // 第五个Section - 新闻列表
+                  // _buildSectionHeader('Section title'),
+                  // const SizedBox(height: 20),
+                  // _buildNewsList(),
+                  // const SizedBox(height: 20),
 
-                  // 最后一个Section - More like
-                  _buildMoreLikeSection(),
-                  const SizedBox(height: 20),
-                  _buildBottomIconGrid(),
-                  const SizedBox(height: 20),
-                  _buildBottomText(),
-                  const SizedBox(height: 20),
+                  // // 最后一个Section - More like
+                  // _buildMoreLikeSection(),
+                  // const SizedBox(height: 20),
+                  // _buildBottomIconGrid(),
+                  // const SizedBox(height: 20),
+                  // _buildBottomText(),
+                  // const SizedBox(height: 20),
 
-                  // 底部导航图标
-                  _buildBottomNavigation(),
+                  // // 底部导航图标
+                  // _buildBottomNavigation(),
                 ],
               ),
             ),
@@ -176,23 +290,30 @@ class _HomePageState extends State<HomePage> {
             top: 0, // 从屏幕最顶部开始
             left: 0,
             right: 0,
-            child: Container(
-              height: MediaQuery.of(context).padding.top + 70, // 状态栏高度 + 搜索框高度
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color.fromARGB(255, 120, 160, 230), // 更深的蓝色
-                    Color.fromARGB(255, 255, 255, 255), // 半透明白色
-                  ],
-                  stops: [0.0, 1.0],
+            child: GestureDetector(
+              onTap: () {
+                Navigator.of(context)
+                    .pushNamed('/brand_center');
+              },
+              child: Container(
+                height:
+                    MediaQuery.of(context).padding.top + 50, // 状态栏高度 + 搜索框高度
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color.fromARGB(255, 120, 160, 230), // 更深的蓝色
+                      Color.fromARGB(255, 255, 255, 255), // 半透明白色
+                    ],
+                    stops: [0.0, 1.0],
+                  ),
                 ),
-              ),
-              child: SafeArea(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 8), // 避免贴近灵动岛
-                  child: _buildFloatingSearchBar(),
+                child: SafeArea(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 8), // 避免贴近灵动岛
+                    child: _buildFloatingSearchBar(),
+                  ),
                 ),
               ),
             ),
@@ -205,35 +326,22 @@ class _HomePageState extends State<HomePage> {
 // 浮空搜索框 - 移除渐变装饰
   Widget _buildFloatingSearchBar() {
     return Container(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 20, bottom: 20),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Icon(Icons.search, color: Colors.grey),
           const SizedBox(width: 12),
           Expanded(
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: '搜索...',
-                hintStyle: TextStyle(
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: const Text(
+                '搜索...',
+                style: TextStyle(
                   color: Colors.grey,
                   fontSize: 14,
                 ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 0),
-                isDense: true,
               ),
-              style: const TextStyle(
-                color: Colors.black87,
-                fontSize: 14,
-              ),
-              maxLines: 1,
-              textAlignVertical: TextAlignVertical.center, // 添加文本垂直居中
-              onChanged: (value) {
-                // 实时搜索功能
-                // _performSearch(value);
-              },
             ),
           ),
         ],
@@ -246,6 +354,16 @@ class _HomePageState extends State<HomePage> {
       onTap: () {
         if (title == '购物中心') {
           context.go('/mall-detail');
+        }
+        if (title == '交流') {
+          context.go('/message');
+        }
+        if (title == '品牌') {
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (context) => const BrandCenterPage(),
+            ),
+          );
         }
       },
       child: Row(
@@ -392,6 +510,45 @@ class _HomePageState extends State<HomePage> {
           return GestureDetector(
               onTap: () {
                 context.go('/mall-brand/${mall.id}');
+                // Navigator.of(context, rootNavigator: true).push(
+                //   // 添加 rootNavigator: true
+                //   PageRouteBuilder(
+                //     pageBuilder: (context, animation, secondaryAnimation) =>
+                //         MallBrandPage(mallId: mall.id),
+                //     transitionsBuilder:
+                //         (context, animation, secondaryAnimation, child) {
+                //       // 从中心点放大的动画效果
+                //       return AnimatedBuilder(
+                //         animation: animation,
+                //         builder: (context, child) {
+                //           // 动画进度
+                //           final progress = animation.value;
+
+                //           // 缩放效果：从0.0开始，放大到1.0
+                //           final scale = Tween(begin: 0.0, end: 1.0).transform(
+                //               Curves.easeOutBack.transform(progress));
+
+                //           // 透明度：快速显现
+                //           final opacity = Tween(begin: 0.0, end: 1.0)
+                //               .transform(Curves.easeOut.transform(progress));
+
+                //           return Transform.scale(
+                //             scale: scale,
+                //             alignment: Alignment.center, // 从中心点缩放
+                //             child: Opacity(
+                //               opacity: opacity,
+                //               child: child,
+                //             ),
+                //           );
+                //         },
+                //         child: child,
+                //       );
+                //     },
+                //     transitionDuration: const Duration(milliseconds: 300),
+                //     reverseTransitionDuration:
+                //         const Duration(milliseconds: 300),
+                //   ),
+                // );
               },
               child: Container(
                 width: 280,
@@ -576,6 +733,57 @@ class _HomePageState extends State<HomePage> {
       mainAxisSpacing: 16,
       childAspectRatio: 1.2,
       children: List.generate(4, (index) => _buildMusicCard()),
+    );
+  }
+
+  Widget _buildMessageRecommendSection() {
+    if (isLoadingRecommend) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (recommendBlogs.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    // 使用与 message_page 相同的瀑布流卡片样式（RedBookCard）
+    return MasonryGridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 20),
+      itemCount: recommendBlogs.length,
+      itemBuilder: (context, index) {
+        final item = recommendBlogs[index];
+        // 与 message_page 中的 Blog.fromJson 字段对应
+        final String id = (item['_id'] ?? '').toString();
+        final String title = (item['title'] ?? '').toString();
+        final String content = (item['content'] ?? '').toString();
+        final String createName = (item['createName'] ?? '').toString();
+        final String createdAt = (item['createdAt'] ?? '').toString();
+        final String type = (item['type'] ?? '').toString();
+        final String defaultImage = (item['defaultImage'] ?? '').toString();
+        final Map<String, dynamic>? user =
+            item['user'] is Map<String, dynamic> ? item['user'] : null;
+
+        final contentLength = title.length + content.length;
+        final double randomHeight = 180.0 + (contentLength % 3) * 40;
+
+        return RedBookCard(
+          avatar: '',
+          name: createName,
+          title: title,
+          content: content,
+          time: createdAt,
+          type: type,
+          defaultImage: defaultImage,
+          likes: 0,
+          comments: 0,
+          height: randomHeight,
+          id: id,
+          user: user,
+        );
+      },
+      // 移除 controller 参数，避免与 SingleChildScrollView 的 controller 冲突
     );
   }
 

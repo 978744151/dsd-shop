@@ -13,6 +13,14 @@ import '../pages/test_map_page.dart';
 import '../pages/simple_map_page.dart';
 import '../pages/mall_detail_page.dart';
 import '../pages/mall_brand_page.dart';
+import '../pages/settings_page.dart';
+import '../pages/blog_detail_page.dart';
+import '../pages/message_page.dart';
+import '../pages/create_blog_page.dart';
+import '../pages/history_page.dart';
+import '../pages/favorites_page.dart';
+import '../pages/follow_page.dart';
+import '../pages/notifications_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(); // 添加这行
 
@@ -54,7 +62,7 @@ final router = GoRouter(
                 GoRoute(
                   parentNavigatorKey: _rootNavigatorKey,
                   path: 'mall-detail',
-                  builder: (context, state) => const MallDetailPage(),
+                  builder: (context, state) => MallDetailPage(),
                 ),
                 GoRoute(
                   parentNavigatorKey: _rootNavigatorKey,
@@ -78,17 +86,22 @@ final router = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/shop',
-              builder: (context, state) => ShopPage(),
+              path: '/message',
+              builder: (context, state) => const MessagePage(),
               routes: [
-                // GoRoute(
-                //   path: 'detail/:id', // 修改为子路由
-                //   parentNavigatorKey: _rootNavigatorKey, // 添加这行
-                //   builder: (context, state) {
-                //     final id = state.pathParameters['id']!;
-                //     return ShopDetail(id: id);
-                //   },
-                // ),
+                GoRoute(
+                  path: 'messageDetail/:id', // 修改为子路由
+                  parentNavigatorKey: _rootNavigatorKey, // 添加这行
+                  builder: (context, state) {
+                    final id = state.pathParameters['id']!;
+                    return BlogDetailPage(id: id);
+                  },
+                ),
+                GoRoute(
+                  path: 'create',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => CreateBlogPage(),
+                ),
               ],
             ),
           ],
@@ -104,8 +117,8 @@ final router = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/mines',
-              builder: (context, state) => const HomePage(),
+              path: '/notifications',
+              builder: (context, state) => const NotificationsPage(),
             ),
           ],
         ),
@@ -114,12 +127,39 @@ final router = GoRouter(
             GoRoute(
               path: '/mine',
               builder: (context, state) => MinePage(),
+              routes: [],
             ),
           ],
         ),
       ],
     ),
-    // 将博客详情页移到这里
+    GoRoute(
+      path: '/settings',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SettingsPage(),
+    ),
+    GoRoute(
+      path: '/history',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const HistoryPage(),
+    ),
+    GoRoute(
+      path: '/favorites',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const FavoritesPage(),
+    ),
+    GoRoute(
+      path: '/follow',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const FollowPage(),
+    ),
+    GoRoute(
+      path: '/notifications',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const NotificationsPage(),
+    ),
+
+    // 将笔记详情页移到这里
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginPage(),

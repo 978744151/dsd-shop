@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_echarts/flutter_echarts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nft_once/pages/mall_brand_page.dart';
 import '../api/brand.dart';
 import '../utils/http_client.dart';
 import '../models/province.dart';
@@ -741,75 +742,87 @@ class _SimpleMapPageState extends State<SimpleMapPage>
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF1E3A8A),
-                    shape: BoxShape.circle,
-                  ),
+        child: GestureDetector(
+          onTap: () {
+            // 跳转到门店详情页面
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => MallBrandPage(
+                  mallId: store['mall']['_id'],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    store['mall']['name'] ?? '未知门店',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (store['address'] != null) ...[
-              const SizedBox(height: 8),
+              ),
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
-                  const Icon(
-                    Icons.location_on_outlined,
-                    size: 16,
-                    color: Colors.grey,
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1E3A8A),
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      store['address'],
+                      store['mall']['name'] ?? '未知门店',
                       style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1F2937),
                       ),
                     ),
                   ),
                 ],
               ),
-            ],
-            if (store['phone'] != null) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.phone_outlined,
-                    size: 16,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    store['phone'],
-                    style: const TextStyle(
-                      fontSize: 14,
+              if (store['address'] != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 16,
                       color: Colors.grey,
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        store['address'],
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (store['phone'] != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.phone_outlined,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      store['phone'],
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nft_once/pages/simple_map_page.dart';
 import '../models/brand.dart';
 import '../utils/http_client.dart';
 import '../utils/toast_util.dart';
@@ -51,7 +52,7 @@ class _MallBrandPageState extends State<MallBrandPage> {
       setState(() {
         isLoading = false;
       });
-      ToastUtil.showError('网络错误，请稍后重试');
+      // ToastUtil.showError('网络错误，请稍后重试');
     }
   }
 
@@ -68,10 +69,10 @@ class _MallBrandPageState extends State<MallBrandPage> {
                   child: brands.isEmpty
                       ? const Center(child: Text('暂无品牌数据'))
                       : GridView.builder(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(12),
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
+                            crossAxisCount: 4,
                             childAspectRatio: 0.8,
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
@@ -115,9 +116,9 @@ class _MallBrandPageState extends State<MallBrandPage> {
                       size: 20,
                     ),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      '商场品牌',
+                      mallInfo?['name'] ?? '',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -146,14 +147,6 @@ class _MallBrandPageState extends State<MallBrandPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      mallInfo?['name'] ?? '',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -207,21 +200,21 @@ class _MallBrandPageState extends State<MallBrandPage> {
           width: 1,
         ),
       ),
-      child: Column(
+      child: Row(
         children: [
           Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          Text(
-            label,
+            label + ':',
             style: TextStyle(
               fontSize: 12,
               color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
           ),
         ],
@@ -242,37 +235,48 @@ class _MallBrandPageState extends State<MallBrandPage> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              image: DecorationImage(
-                image: NetworkImage(brand.logo ?? ''),
-                fit: BoxFit.contain,
-                onError: (exception, stackTrace) =>
-                    const AssetImage('assets/brand/default.png'),
+      child: GestureDetector(
+        onTap: () => {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => SimpleMapPage(
+                brandId: brand.id,
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text(
-              brand.name ?? '未命名品牌',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+          )
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                image: DecorationImage(
+                  image: NetworkImage(brand.logo ?? ''),
+                  fit: BoxFit.contain,
+                  onError: (exception, stackTrace) =>
+                      const AssetImage('assets/brand/default.png'),
+                ),
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                brand.name ?? '未命名品牌',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -11,6 +11,10 @@ import '../utils/http_client.dart';
 import '../models/mall.dart';
 import '../models/brand.dart';
 
+// 全局颜色常量定义
+const Color kHeaderBackgroundColor = Color(0xFFF4F8FF);
+const tableLableWidth = 150;
+
 class ComparePage extends StatefulWidget {
   const ComparePage({super.key});
 
@@ -68,6 +72,7 @@ class _ComparePageState extends State<ComparePage> {
   @override
   void initState() {
     super.initState();
+
     _loadInitialData();
   }
 
@@ -97,12 +102,13 @@ class _ComparePageState extends State<ComparePage> {
 
       // 加载省份数据
       await _loadProvinces();
-      
+
       // 加载城市数据
       await _loadCities();
 
       // 加载品牌数据
       await _loadBrands();
+      // _showSelectionDialog();
     } catch (e) {
       print('加载数据失败: $e');
     } finally {
@@ -112,16 +118,46 @@ class _ComparePageState extends State<ComparePage> {
     }
   }
 
-
-
   List<Map<String, dynamic>> _getCitiesByProvince(String? provinceId) {
     if (provinceId == null) return cities;
-    return cities.where((city) => city['provinceId'] == provinceId).toList();
+    return cities;
   }
 
   List<MallData> _getMallsByCity(String? cityId) {
     if (cityId == null) return _malls;
     return _malls.where((mall) => mall.city.id == cityId).toList();
+  }
+
+  // 根据省份ID重新加载商场数据
+  Future<void> _loadMallsByProvince(
+      String? provinceId, StateSetter? setModalState) async {
+    try {
+      Map<String, dynamic> params = {};
+      if (provinceId != null) {
+        params['provinceId'] = provinceId;
+      }
+
+      final response = await HttpClient.get(brandApi.getMalls, params: params);
+      if (response['success'] == true) {
+        final List<dynamic> mallList = response['data']['malls'] ?? [];
+        final newMalls =
+            mallList.map((json) => MallData.fromJson(json)).toList();
+
+        setState(() {
+          _malls = newMalls;
+        });
+
+        if (setModalState != null) {
+          setModalState(() {
+            // 更新弹框中的商场数据
+          });
+        }
+
+        print('根据省份加载商场数据: ${_malls.length}个商场');
+      }
+    } catch (e) {
+      print('加载商场数据失败: $e');
+    }
   }
 
   Future<void> _loadProvinces() async {
@@ -130,10 +166,12 @@ class _ComparePageState extends State<ComparePage> {
       if (response['success'] == true) {
         final List<dynamic> provinceList = response['data']['provinces'] ?? [];
         setState(() {
-          provinces = provinceList.map((province) => {
-                'id': province['_id'].toString(),
-                'name': province['name'].toString(),
-              }).toList();
+          provinces = provinceList
+              .map((province) => {
+                    'id': province['_id'].toString(),
+                    'name': province['name'].toString(),
+                  })
+              .toList();
         });
       }
     } catch (e) {
@@ -147,15 +185,45 @@ class _ComparePageState extends State<ComparePage> {
       if (response['success'] == true) {
         final List<dynamic> cityList = response['data']['cities'] ?? [];
         setState(() {
-          cities = cityList.map((city) => {
-                'id': city['_id'].toString(),
-                'name': city['name'].toString(),
-                'provinceId': city['provinceId'].toString(),
-              }).toList();
+          cities = cityList
+              .map((city) => {
+                    'id': city['_id'].toString(),
+                    'name': city['name'].toString(),
+                    'provinceId': city['provinceId'].toString(),
+                  })
+              .toList();
+          print('cities: $cities');
         });
       }
     } catch (e) {
       print('加载城市数据失败: $e');
+    }
+  }
+
+  Future<void> _loadCitiesByProvince(
+      String? provinceId, StateSetter setModalState) async {
+    try {
+      String url = brandApi.getCities;
+      if (provinceId != null) {
+        url += '?provinceId=$provinceId';
+      }
+      final response = await HttpClient.get(url);
+      if (response['success'] == true) {
+        final List<dynamic> cityList = response['data']['cities'] ?? [];
+        setModalState(() {
+          cities = cityList
+              .map((city) => {
+                    'id': city['_id'].toString(),
+                    'name': city['name'].toString(),
+                    'provinceId': city['provinceId'].toString(),
+                  })
+              .toList();
+          print('cities: $cities');
+        });
+        setState(() {}); // 同时更新主页面状态
+      }
+    } catch (e) {
+      print('加载省份城市数据失败: $e');
     }
   }
 
@@ -183,7 +251,7 @@ class _ComparePageState extends State<ComparePage> {
       isScrollControlled: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Container(
-          height: MediaQuery.of(context).size.height * 0.8,
+          height: MediaQuery.of(context).size.height * 0.72,
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -321,25 +389,29 @@ class _ComparePageState extends State<ComparePage> {
                 title: '选择省份',
                 items: ['全部省份', ...provinces.map((p) => p['name'] as String)],
                 selectedValue: selectedProvinceName,
-                onSelected: (value) {
+                onSelected: (value) async {
                   if (value == '全部省份') {
-                    setModalState(() {
-                      selectedProvinceId = null;
-                      selectedProvinceName = '全部省份';
-                      selectedCityId = null;
-                      selectedCityName = '全部城市';
-                    });
-                    setState(() {}); // 同时更新主页面状态
+                    selectedProvinceId = null;
+                    selectedProvinceName = '全部省份';
+                    selectedCityId = null;
+                    selectedCityName = '全部城市';
+                    // 加载所有城市
+                    await _loadCitiesByProvince(null, setModalState);
+                    // 加载所有商场
+                    await _loadMallsByProvince(null, setModalState);
                   } else {
                     final province =
                         provinces.firstWhere((p) => p['name'] == value);
-                    setModalState(() {
-                      selectedProvinceId = province['id'];
-                      selectedProvinceName = value;
-                      selectedCityId = null;
-                      selectedCityName = '全部城市';
-                    });
-                    setState(() {}); // 同时更新主页面状态
+                    selectedProvinceId = province['id'];
+                    selectedProvinceName = value;
+                    selectedCityId = null;
+                    selectedCityName = '全部城市';
+                    // 根据省份加载城市
+                    await _loadCitiesByProvince(
+                        selectedProvinceId, setModalState);
+                    // 根据省份加载商场
+                    await _loadMallsByProvince(
+                        selectedProvinceId, setModalState);
                   }
                 },
               ),
@@ -351,44 +423,43 @@ class _ComparePageState extends State<ComparePage> {
             margin: const EdgeInsets.symmetric(horizontal: 8),
             color: Colors.grey.withOpacity(0.2),
           ),
-          Expanded(
-            child: _buildFilterItem(
-              label: '城市',
-              value: selectedCityName,
-              onTap: () => _showFilterDialog(
-                title: '选择城市',
-                items: [
-                  '全部城市',
-                  ..._getCitiesByProvince(selectedProvinceId)
-                      .map((c) => c['name'] as String)
-                ],
-                selectedValue: selectedCityName,
-                onSelected: (value) {
-                  if (value == '全部城市') {
-                    setModalState(() {
+          if (_selectedType == 'mall')
+            Expanded(
+              child: _buildFilterItem(
+                label: '城市',
+                value: selectedCityName,
+                onTap: () => _showFilterDialog(
+                  title: '选择城市',
+                  items: [
+                    '全部城市',
+                    ..._getCitiesByProvince(selectedProvinceId)
+                        .map((c) => c['name'] as String)
+                  ],
+                  selectedValue: selectedCityName,
+                  onSelected: (value) {
+                    if (value == '全部城市') {
                       selectedCityId = null;
                       selectedCityName = '全部城市';
-                    });
-                    setState(() {}); // 同时更新主页面状态
-                  } else {
-                    final city = _getCitiesByProvince(selectedProvinceId)
-                        .firstWhere((c) => c['name'] == value);
-                    setModalState(() {
+                    } else {
+                      final city = _getCitiesByProvince(selectedProvinceId)
+                          .firstWhere((c) => c['name'] == value);
                       selectedCityId = city['id'];
                       selectedCityName = value;
-                    });
+                    }
+                    // 更新主弹框状态
+                    setModalState(() {});
                     setState(() {}); // 同时更新主页面状态
-                  }
-                },
+                  },
+                ),
               ),
             ),
-          ),
-          Container(
-            width: 1,
-            height: 40,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            color: Colors.grey.withOpacity(0.2),
-          ),
+          if (_selectedType == 'mall')
+            Container(
+              width: 1,
+              height: 40,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              color: Colors.grey.withOpacity(0.2),
+            ),
           Expanded(
             child: _buildFilterItem(
               label: '品牌',
@@ -577,11 +648,8 @@ class _ComparePageState extends State<ComparePage> {
                   final isSelected = item == selectedValue;
                   return GestureDetector(
                     onTap: () {
+                      onSelected(item);
                       Navigator.pop(context);
-                      // 延迟执行onSelected，确保弹框关闭后再更新状态
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        onSelected(item);
-                      });
                     },
                     child: Container(
                       margin: const EdgeInsets.symmetric(
@@ -740,6 +808,10 @@ class _ComparePageState extends State<ComparePage> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
                     onPressed: () {
                       Navigator.pop(context);
                       setModalState(() {});
@@ -763,68 +835,12 @@ class _ComparePageState extends State<ComparePage> {
     );
   }
 
-  Widget _buildSelectionList() {
-    List<dynamic> items;
-    if (_selectedType == 'mall') {
-      items = _getMallsByCity(selectedCityId);
-    } else {
-      items = _cities;
-    }
-
-    return ListView.builder(
-      shrinkWrap: true,
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        if (_selectedType == 'mall') {
-          final mall = items[index] as MallData;
-          final isSelected = _selectedIds.contains(mall.id);
-          return CheckboxListTile(
-            title: Text(mall.name),
-            subtitle: Text('${mall.city.name} - ${mall.address}'),
-            value: isSelected,
-            onChanged: (bool? value) {
-              setState(() {
-                if (value == true) {
-                  _mallSelectedIds.add(mall.id);
-                  _mallSelectedNames.add(mall.name);
-                } else {
-                  _mallSelectedIds.remove(mall.id);
-                  _mallSelectedNames.remove(mall.name);
-                }
-                _mallComparisonData.clear();
-              });
-            },
-          );
-        } else {
-          final city = items[index] as City;
-          final isSelected = _selectedIds.contains(city.id);
-          return CheckboxListTile(
-            title: Text(city.name),
-            value: isSelected,
-            onChanged: (bool? value) {
-              setState(() {
-                if (value == true) {
-                  _citySelectedIds.add(city.id);
-                  _citySelectedNames.add(city.name);
-                } else {
-                  _citySelectedIds.remove(city.id);
-                  _citySelectedNames.remove(city.name);
-                }
-                _cityComparisonData.clear();
-              });
-            },
-          );
-        }
-      },
-    );
-  }
-
   Widget _buildDialogSelectionList(StateSetter setModalState) {
     List<dynamic> items;
     if (_selectedType == 'mall') {
       items = _getMallsByCity(selectedCityId);
     } else {
-      items = _cities;
+      items = cities;
     }
 
     return ListView.builder(
@@ -903,17 +919,19 @@ class _ComparePageState extends State<ComparePage> {
             ),
           );
         } else {
-          final city = items[index] as City;
-          final isSelected = _selectedIds.contains(city.id);
+          final city = items[index] as Map<String, dynamic>;
+          final cityId = city['id'] as String;
+          final cityName = city['name'] as String;
+          final isSelected = _selectedIds.contains(cityId);
           return GestureDetector(
             onTap: () {
               setModalState(() {
                 if (isSelected) {
-                  _citySelectedIds.remove(city.id);
-                  _citySelectedNames.remove(city.name);
+                  _citySelectedIds.remove(cityId);
+                  _citySelectedNames.remove(cityName);
                 } else {
-                  _citySelectedIds.add(city.id);
-                  _citySelectedNames.add(city.name);
+                  _citySelectedIds.add(cityId);
+                  _citySelectedNames.add(cityName);
                 }
                 _cityComparisonData.clear();
               });
@@ -937,7 +955,7 @@ class _ComparePageState extends State<ComparePage> {
                 children: [
                   Expanded(
                     child: Text(
-                      city.name,
+                      cityName,
                       style: TextStyle(
                         fontSize: 16,
                         color: isSelected
@@ -1212,7 +1230,7 @@ class _ComparePageState extends State<ComparePage> {
                     ),
                   ),
                   child: Text(
-                    _selectedIds.isEmpty ? '开始对比' : '重新选择',
+                    _selectedIds.isEmpty ? '点击选择' : '重新选择',
                   ),
                 ),
               ),
@@ -1628,7 +1646,7 @@ class _ComparePageState extends State<ComparePage> {
     List<String> sortedBrands = allBrands.toList()..sort();
 
     // 计算表格宽度，确保有足够空间显示所有数据
-    double tableWidth = 180 + (_comparisonData.length * 185.0); // 进一步增加列宽和缓冲空间
+    double tableWidth = 150 + (_comparisonData.length * 155.0); // 进一步增加列宽和缓冲空间
 
     return Container(
       width: tableWidth,
@@ -1654,7 +1672,7 @@ class _ComparePageState extends State<ComparePage> {
           Container(
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: kHeaderBackgroundColor,
               border: Border(
                 bottom: BorderSide(color: Colors.grey.shade300, width: 2),
               ),
@@ -1663,14 +1681,14 @@ class _ComparePageState extends State<ComparePage> {
               children: [
                 // 固定列表头
                 Container(
-                  width: 180,
-                  padding: const EdgeInsets.all(16),
+                  width: 150,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: const Text(
-                    '对比项目',
+                    '品牌/分值',
                     textAlign: TextAlign.left,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                      fontSize: 14,
                     ),
                   ),
                 ),
@@ -1678,14 +1696,14 @@ class _ComparePageState extends State<ComparePage> {
                 ..._comparisonData.map((data) {
                   String name = data['location']['name'] ?? '未知';
                   return Container(
-                    width: 180,
+                    width: 150,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       border: Border(
                         left: BorderSide(color: Colors.grey.shade300),
                       ),
                     ),
-                    alignment: Alignment.center,
+                    alignment: Alignment.centerLeft,
                     child: Text(
                       name,
                       style: const TextStyle(
@@ -1706,7 +1724,7 @@ class _ComparePageState extends State<ComparePage> {
             child: Row(
               children: [
                 Container(
-                  width: 180,
+                  width: 150,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     border: Border(
@@ -1718,7 +1736,7 @@ class _ComparePageState extends State<ComparePage> {
                     '汇总信息',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: 14,
                       color: Colors.orange,
                     ),
                   ),
@@ -1727,7 +1745,7 @@ class _ComparePageState extends State<ComparePage> {
                   List<dynamic> brands = data['brands'] ?? [];
                   int brandCount = brands.length;
                   return Container(
-                    width: 180,
+                    width: 150,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       border: Border(
@@ -1755,7 +1773,7 @@ class _ComparePageState extends State<ComparePage> {
             child: Row(
               children: [
                 Container(
-                  width: 180,
+                  width: 150,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     border: Border(
@@ -1767,7 +1785,7 @@ class _ComparePageState extends State<ComparePage> {
                     '综合总分',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: 14,
                       color: Colors.green,
                     ),
                   ),
@@ -1778,7 +1796,7 @@ class _ComparePageState extends State<ComparePage> {
                               '0.0') ??
                       0.0;
                   return Container(
-                    width: 180,
+                    width: 150,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       border: Border(
@@ -1833,7 +1851,7 @@ class _ComparePageState extends State<ComparePage> {
               child: Row(
                 children: [
                   Container(
-                    width: 180,
+                    width: 150,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       border: Border(
@@ -1896,7 +1914,7 @@ class _ComparePageState extends State<ComparePage> {
                       orElse: () => null,
                     );
                     return Container(
-                      width: 180,
+                      width: 150,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         border: Border(
@@ -1936,6 +1954,26 @@ class _ComparePageState extends State<ComparePage> {
               ),
             );
           }).toList(),
+          // 免责声明
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              border: Border(
+                top: BorderSide(color: Colors.grey.shade300, width: 1),
+              ),
+            ),
+            child: const Text(
+              '懂商帝: 分值采用自定义输入分数,仅作参考',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
         ],
       ),
     );
@@ -2161,14 +2199,14 @@ class _SyncScrollTableState extends State<_SyncScrollTable> {
                 height: 56,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
+                  color: kHeaderBackgroundColor,
                   border: Border(
                     bottom: BorderSide(color: Colors.grey.shade300),
                   ),
                 ),
                 alignment: Alignment.centerLeft,
                 child: const Text(
-                  '名称(分值)',
+                  '品牌(分值)',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -2200,7 +2238,7 @@ class _SyncScrollTableState extends State<_SyncScrollTable> {
                   Container(
                     height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
+                      color: kHeaderBackgroundColor,
                       border: Border(
                         bottom: BorderSide(color: Colors.grey.shade300),
                       ),
@@ -2209,13 +2247,14 @@ class _SyncScrollTableState extends State<_SyncScrollTable> {
                       children: widget.comparisonData
                           .map((data) => Container(
                                 width: 150,
-                                padding: const EdgeInsets.all(12),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
                                 alignment: Alignment.centerLeft,
                                 child: Text(
                                   data['location']['name'] ?? '未知',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ))

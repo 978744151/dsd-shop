@@ -5,6 +5,7 @@ import '../api/brand.dart';
 import '../utils/http_client.dart';
 import '../utils/toast_util.dart';
 import '../models/province.dart';
+import '../widgets/custom_refresh_widget.dart';
 
 class MallDetailPage extends StatefulWidget {
   const MallDetailPage({Key? key}) : super(key: key);
@@ -212,7 +213,7 @@ class _MallDetailPageState extends State<MallDetailPage> {
       setState(() {
         isLoading = false;
       });
-      ToastUtil.showError('网络错误，请稍后重试');
+      // ToastUtil.showError('网络错误，请稍后重试');
     }
   }
 
@@ -235,7 +236,7 @@ class _MallDetailPageState extends State<MallDetailPage> {
           _buildCustomHeader(),
           _buildFilterBar(),
           Expanded(
-            child: RefreshIndicator(
+            child: CustomRefreshWidget(
               onRefresh: _onRefresh,
               child: mallList.isEmpty && !isLoading
                   ? const Center(
@@ -274,7 +275,7 @@ class _MallDetailPageState extends State<MallDetailPage> {
           end: Alignment.bottomRight,
           colors: [
             Color.fromARGB(255, 120, 160, 230), // 更深的蓝色
-            Color.fromARGB(255, 255, 255, 255), // 白色
+            Color.fromARGB(255, 120, 160, 230), // 更深的蓝色
           ],
           stops: [0.0, 1.0],
         ),
