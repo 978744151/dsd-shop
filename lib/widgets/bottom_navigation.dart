@@ -130,18 +130,18 @@ class _CustomBottomNavigationState extends State<CustomBottomNavigation> {
         ),
 
         BottomNavigationBarItem(
-          icon: SizedBox(
+          icon: const SizedBox(
             height: 20, // 与文字高度一致
             child: Icon(
               Icons.compare_arrows,
               size: 40,
-              color: Theme.of(context).primaryColor,
+              color: Colors.black87,
             ),
           ),
           activeIcon: SizedBox(
             height: 20, // 与文字高度一致
             child: Icon(
-              Icons.compare_arrows_outlined,
+              Icons.compare_arrows,
               size: 40,
               color: Theme.of(context).primaryColor,
             ),

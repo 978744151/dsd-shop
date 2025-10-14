@@ -3,6 +3,7 @@ import 'package:nft_once/pages/simple_map_page.dart';
 import '../models/brand.dart';
 import '../utils/http_client.dart';
 import '../utils/toast_util.dart';
+import 'package:go_router/go_router.dart';
 
 class MallBrandPage extends StatefulWidget {
   final String mallId;
@@ -127,7 +128,6 @@ class _MallBrandPageState extends State<MallBrandPage> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  const SizedBox(width: 48), // 平衡左侧按钮
                 ],
               ),
             ),
@@ -174,6 +174,31 @@ class _MallBrandPageState extends State<MallBrandPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildInfoChip('品牌数量', '${brands.length}'),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            // 取出当前商场的所有品牌的 brandId（过滤空值），作为预选项
+
+                            // 只要有一个品牌就带入预选并自动打开选择弹窗
+                            final query =
+                                'mallId=${widget.mallId}&open=true&mallName=${mallInfo?['name']}';
+                            print(query);
+                            context.go('/compare?$query');
+                          },
+                          icon: const Icon(Icons.compare_arrows, size: 16),
+                          label: const Text('去对比'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.black87,
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            minimumSize: const Size(0, 28),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                          ),
+                        ),
                         if (mallInfo?['floorCount'] != null)
                           _buildInfoChip('楼层', '${mallInfo?['floorCount']}F'),
                         if (mallInfo?['totalArea'] != null)

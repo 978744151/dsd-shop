@@ -292,8 +292,10 @@ class _HomePageState extends State<HomePage> {
             right: 0,
             child: GestureDetector(
               onTap: () {
-                Navigator.of(context)
-                    .pushNamed('/brand_center');
+                Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                        builder: (context) =>
+                            const BrandCenterPage(autoFocus: true)));
               },
               child: Container(
                 height:
@@ -334,12 +336,12 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(width: 12),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(),
               child: const Text(
                 '搜索...',
                 style: TextStyle(
                   color: Colors.grey,
-                  fontSize: 14,
+                  fontSize: 16,
                 ),
               ),
             ),

@@ -217,7 +217,7 @@ class _MessagePageState extends State<MessagePage>
                   },
                   child: AppBar(
                     elevation: 0,
-                    backgroundColor: const Color(0xFFFFFFFF),
+                    backgroundColor: Colors.white70,
                     title: Row(
                       children: [
                         Expanded(

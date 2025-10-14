@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nft_once/pages/blog_detail_page.dart';
+import 'package:nft_once/pages/compare_detail_page.dart';
+import 'package:nft_once/pages/compare_page.dart';
 import 'package:nft_once/pages/history_page.dart';
 import 'package:nft_once/pages/favorites_page.dart';
 import 'package:nft_once/pages/follow_page.dart';
@@ -13,6 +15,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../widgets/red_book_card.dart';
 import '../api/comment_api.dart';
+import '../api/brand.dart';
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import '../widgets/custom_refresh_widget.dart';
 
@@ -65,6 +68,7 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
   List<Map<String, dynamic>> myMysteryBoxesList = [];
   List<Map<String, dynamic>> soldCollectionsList = [];
   List<Map<String, dynamic>> myBlogsList = []; // 添加笔记列表
+  List<Map<String, dynamic>> myReportsList = []; // 添加报告列表
   bool _showTitle = false; // 添加标题显示控制
   bool isLoading = true;
   double _scrollProgress = 0.0; // 添加滚动进度变量
@@ -95,7 +99,8 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
           case 0: // 我的笔记
             fetchBlogs(userInfo['_id']);
             break;
-          case 1: // 我的盲盒
+          case 1: // 我的报告
+            fetchComparisonReports();
             break;
           case 2: // 售出藏品
             break;
@@ -178,6 +183,27 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
     }
   }
 
+  // 获取我的报告
+  Future<void> fetchComparisonReports() async {
+    if (!mounted) return;
+    try {
+      final response = await HttpClient.get(brandApi.getComparisonReports,
+          params: {'limit': 999});
+      if (!mounted) return;
+
+      if (response['success'] == true) {
+        setState(() {
+          myReportsList = (response['data']['reports'] as List<dynamic>?)
+                  ?.map((item) => Map<String, dynamic>.from(item))
+                  .toList() ??
+              [];
+        });
+      }
+    } catch (e) {
+      print('获取报告信息失败: $e');
+    }
+  }
+
 // 添加获盲盒的方法
   Future<void> fetchProfileMysteryBox(id) async {
     if (!mounted) return;
@@ -234,9 +260,20 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
       body: CustomRefreshWidget(
         onRefresh: () async {
           // 刷新所有数据
-          await Future.wait([
-            fetchBlogs(userInfo['_id']),
-          ]);
+          switch (_tabController.index) {
+            case 0: // 我的笔记
+              fetchBlogs(userInfo['_id']);
+              break;
+            case 1: // 我的报告
+              fetchComparisonReports();
+              break;
+            case 2: // 售出藏品
+              break;
+          }
+          // await Future.wait([
+          //   fetchBlogs(userInfo['_id']),
+          //   fetchComparisonReports(),
+          // ]);
         },
         child: SafeArea(
           top: false, // 不影响顶部
@@ -448,11 +485,11 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                               // 右侧图标
                               Row(
                                 children: [
-                                  IconButton(
-                                    icon:
-                                        const Icon(Icons.headset_mic_outlined),
-                                    onPressed: () {},
-                                  ),
+                                  // IconButton(
+                                  //   icon:
+                                  //       const Icon(Icons.headset_mic_outlined),
+                                  //   onPressed: () {},
+                                  // ),
                                   IconButton(
                                     icon: const Icon(Icons.settings_outlined),
                                     onPressed: () {},
@@ -639,10 +676,12 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                   },
                   child: _buildMyCollections(), // 你的藏品列表Widget
                 ),
-                // 我的盲盒
+                // 我的报告
                 CustomRefreshWidget(
-                  onRefresh: () async {},
-                  child: _buildMyMysteryBoxes(), // 你的盲盒列表Widget
+                  onRefresh: () async {
+                    await fetchComparisonReports();
+                  },
+                  child: _buildMyReports(), // 你的报告列表Widget
                 ),
                 // 售出藏品功能暂时移除
               ],
@@ -737,6 +776,266 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                 );
               },
             ),
+    );
+  }
+
+  // 我的报告列表
+  Widget _buildMyReports() {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return AnimationLimiter(
+      child: myReportsList.isEmpty
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.assessment_outlined,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    '暂无报告',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: myReportsList.length,
+              itemBuilder: (context, index) {
+                final report = myReportsList[index];
+                return AnimationConfiguration.staggeredList(
+                  position: index,
+                  duration: const Duration(milliseconds: 500),
+                  child: SlideAnimation(
+                    verticalOffset: 50.0,
+                    child: FadeInAnimation(
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: Card(
+                          elevation: 2,
+                          color: const Color(0xFFFFFFFF),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {
+                              final id = report['_id'];
+                              // if (id != null && id.isNotEmpty) {
+                              //   context.go('/compare-detail/$id');
+                              // } else {
+                              //   context.go('/compare');
+                              // }
+                              Navigator.of(context, rootNavigator: true).push(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      CompareDetailPage(id: id),
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 报告标题和状态
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getReportStatusColor(
+                                              report['status']),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          _getReportStatusText(
+                                              report['status']),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          report['title'] ?? '比较报告',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.chevron_right,
+                                        color: Colors.grey[400],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // 报告信息
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.store_outlined,
+                                        size: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          '对比: ${report['selectedLocations'] ?? '未知'}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  // Row(
+                                  //   children: [
+                                  //     Icon(
+                                  //       Icons.access_time,
+                                  //       size: 12,
+                                  //       color: Colors.grey[600],
+                                  //     ),
+                                  //     const SizedBox(width: 4),
+                                  //     Text(
+                                  //       '创建时间: ${_formatDate(report['createdAt'])}',
+                                  //       style: TextStyle(
+                                  //         fontSize: 12,
+                                  //         color: Colors.grey[600],
+                                  //       ),
+                                  //     ),
+                                  //   ],
+                                  // ),
+                                  // if (report['description'] != null &&
+                                  //     report['description'].isNotEmpty) ...[
+                                  //   const SizedBox(height: 8),
+                                  //   Text(
+                                  //     report['description'],
+                                  //     style: TextStyle(
+                                  //       fontSize: 14,
+                                  //       color: Colors.grey[700],
+                                  //     ),
+                                  //     maxLines: 2,
+                                  //     overflow: TextOverflow.ellipsis,
+                                  //   ),
+                                  // ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  // 获取报告状态颜色
+  Color _getReportStatusColor(String? status) {
+    switch (status) {
+      case 'completed':
+        return Colors.green;
+      case 'processing':
+        return Colors.orange;
+      case 'failed':
+        return Colors.red;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  // 获取报告状态文本
+  String _getReportStatusText(String? status) {
+    switch (status) {
+      case 'completed':
+        return '已完成';
+      case 'processing':
+        return '处理中';
+      case 'failed':
+        return '失败';
+      default:
+        return '待处理';
+    }
+  }
+
+  // 格式化日期
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '未知';
+    try {
+      final date = DateTime.parse(dateStr);
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return '未知';
+    }
+  }
+
+  // 显示报告详情
+  void _showReportDetail(Map<String, dynamic> report) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(report['title'] ?? '比较报告'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('状态: ${_getReportStatusText(report['status'])}'),
+                const SizedBox(height: 8),
+                Text('品牌: ${report['selectedLocations'] ?? '未知'}'),
+                const SizedBox(height: 8),
+                Text('创建时间: ${_formatDate(report['createdAt'])}'),
+                if (report['description'] != null &&
+                    report['description'].isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text('描述: ${report['description']}'),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('关闭'),
+            ),
+            if (report['status'] == 'completed')
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // 这里可以添加查看完整报告的逻辑
+                },
+                child: const Text('查看报告'),
+              ),
+          ],
+        );
+      },
     );
   }
 

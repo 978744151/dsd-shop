@@ -21,6 +21,7 @@ import '../pages/history_page.dart';
 import '../pages/favorites_page.dart';
 import '../pages/follow_page.dart';
 import '../pages/notifications_page.dart';
+import '../pages/brand_center_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(); // 添加这行
 
@@ -110,8 +111,19 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: '/compare',
-              builder: (context, state) => const ComparePage(),
+              builder: (context, state) {
+                final mallIdParam = state.queryParameters['mallId'];
+                final mallNameParam = state.queryParameters['mallName'];
+                final autoOpen = state.queryParameters['open'] == 'true';
+                print('mallIdParam: $mallIdParam');
+                return ComparePage(
+                  mallId: mallIdParam,
+                  autoOpenSelection: autoOpen,
+                  mallName: mallNameParam,
+                );
+              },
             ),
+            // 新增比较详情页
           ],
         ),
         StatefulShellBranch(
@@ -163,6 +175,14 @@ final router = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginPage(),
+    ),
+    GoRoute(
+      path: '/brand_center',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final autoFocus = state.queryParameters['autoFocus'] == 'true';
+        return BrandCenterPage(autoFocus: autoFocus);
+      },
     ),
     GoRoute(
       path: '/test-map',

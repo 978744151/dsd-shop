@@ -7,5 +7,6 @@ class brandApi {
   static const String getComparison = 'map/comparison';
   static const String getProvinces = 'map/provinces';
   static const String getCities = 'map/cities';
+  static const String getComparisonReports = 'map/comparison/reports';
+  static String getComparisonReportsDetail(id) => 'map/comparison/reports/$id';
 }
-

@@ -1,3 +1,4 @@
+import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -9,6 +10,7 @@ import 'dart:async';
 import '../widgets/loading_indicator_widget.dart';
 import 'package:flutter/cupertino.dart';
 import '../widgets/custom_refresh_widget.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class HistoryBlog {
   final String id;
@@ -98,7 +100,7 @@ class _HistoryPageState extends State<HistoryPage>
   // 加载更多数据
   Future<void> _loadMore() async {
     if (isLoadingMore || !hasMore) return;
-    
+
     setState(() {
       isLoadingMore = true;
     });
@@ -129,23 +131,25 @@ class _HistoryPageState extends State<HistoryPage>
     }
 
     try {
-      final response = await HttpClient.get('blogs/history?page=$currentPage&limit=$pageSize');
+      final response = await HttpClient.get(
+          'blogs/history?page=$currentPage&limit=$pageSize');
 
       if (!mounted) return;
       if (response['success']) {
         final List<dynamic> blogsData = response['data']['histories'] ?? [];
-        final newBlogs = blogsData.map((item) => HistoryBlog.fromJson(item)).toList();
-        
+        final newBlogs =
+            blogsData.map((item) => HistoryBlog.fromJson(item)).toList();
+
         setState(() {
           if (isLoadMore) {
             historyBlogs.addAll(newBlogs);
           } else {
             historyBlogs = newBlogs;
           }
-          
+
           // 判断是否还有更多数据
           hasMore = newBlogs.length >= pageSize;
-          
+
           if (!isLoadMore) {
             isLoading = false;
           }
@@ -167,110 +171,147 @@ class _HistoryPageState extends State<HistoryPage>
 
   // 清空历史记录
   Future<void> _clearHistory() async {
-    showDialog(
+    // showDialog(
+    //   context: context,
+    //   builder: (BuildContext context) {
+    //     return showModalActionSheet<int>(
+    //         context: context,
+    //         title: const Text('清空历史记录'),
+    //         message: const Text('确定要清空所有浏览历史吗？\n此操作无法撤销'),
+
+    //     //  Dialog(
+    //     //   shape: RoundedRectangleBorder(
+    //     //     borderRadius: BorderRadius.circular(16),
+    //     //   ),
+    //     //   child: Container(
+    //     //     padding: const EdgeInsets.all(24),
+    //     //     child: Column(
+    //     //       mainAxisSize: MainAxisSize.min,
+    //     //       children: [
+    //     //         const Icon(
+    //     //           Icons.delete_outline,
+    //     //           color: Colors.red,
+    //     //           size: 48,
+    //     //         ),
+    //     //         const SizedBox(height: 16),
+    //     //         const Text(
+    //     //           '清空历史记录',
+    //     //           style: TextStyle(
+    //     //             fontSize: 18,
+    //     //             fontWeight: FontWeight.w600,
+    //     //           ),
+    //     //         ),
+    //     //         const SizedBox(height: 8),
+    //     //         const Text(
+    //     //           '确定要清空所有浏览历史吗？\n此操作无法撤销',
+    //     //           textAlign: TextAlign.center,
+    //     //           style: TextStyle(
+    //     //             fontSize: 14,
+    //     //             color: Colors.grey,
+    //     //           ),
+    //     //         ),
+    //     //         const SizedBox(height: 24),
+    //     //         Row(
+    //     //           children: [
+    //     //             Expanded(
+    //     //               child: TextButton(
+    //     //                 onPressed: () => Navigator.of(context).pop(),
+    //     //                 style: TextButton.styleFrom(
+    //     //                   padding: const EdgeInsets.symmetric(vertical: 12),
+    //     //                   shape: RoundedRectangleBorder(
+    //     //                     borderRadius: BorderRadius.circular(8),
+    //     //                     side: const BorderSide(color: Colors.grey),
+    //     //                   ),
+    //     //                 ),
+    //     //                 child: const Text(
+    //     //                   '取消',
+    //     //                   style: TextStyle(color: Colors.grey),
+    //     //                 ),
+    //     //               ),
+    //     //             ),
+    //     //             const SizedBox(width: 12),
+    //     //             Expanded(
+    //     //               child: Container(
+    //     //                 decoration: BoxDecoration(
+    //     //                   gradient: const LinearGradient(
+    //     //                     colors: [Colors.red, Colors.redAccent],
+    //     //                   ),
+    //     //                   borderRadius: BorderRadius.circular(8),
+    //     //                 ),
+    //     //                 child: TextButton(
+    //     //                   onPressed: () async {
+    //     //                     Navigator.of(context).pop();
+    //     //                     try {
+    //     //                       await HttpClient.delete('blogs/history');
+    //     //                       setState(() {
+    //     //                         historyBlogs.clear();
+    //     //                         currentPage = 1;
+    //     //                         hasMore = true;
+    //     //                       });
+    //     //                       if (mounted) {
+    //     //                         ScaffoldMessenger.of(context).showSnackBar(
+    //     //                           const SnackBar(content: Text('历史记录已清空')),
+    //     //                         );
+    //     //                       }
+    //     //                     } catch (e) {
+    //     //                       if (mounted) {
+    //     //                         ScaffoldMessenger.of(context).showSnackBar(
+    //     //                           SnackBar(
+    //     //                               content: Text('清空失败：${e.toString()}')),
+    //     //                         );
+    //     //                       }
+    //     //                     }
+    //     //                   },
+    //     //                   style: TextButton.styleFrom(
+    //     //                     padding: const EdgeInsets.symmetric(vertical: 12),
+    //     //                   ),
+    //     //                   child: const Text(
+    //     //                     '确定',
+    //     //                     style: TextStyle(color: Colors.white),
+    //     //                   ),
+    //     //                 ),
+    //     //               ),
+    //     //             ),
+    //     //           ],
+    //     //         ),
+    //     //       ],
+    //     //     ),
+    //     //   ),
+    //     // );
+    //   },
+    // );
+    final result = await showModalActionSheet<int>(
       context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.delete_outline,
-                  color: Colors.red,
-                  size: 48,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  '清空历史记录',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '确定要清空所有浏览历史吗？\n此操作无法撤销',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: const BorderSide(color: Colors.grey),
-                          ),
-                        ),
-                        child: const Text(
-                          '取消',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Colors.red, Colors.redAccent],
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: TextButton(
-                          onPressed: () async {
-                            Navigator.of(context).pop();
-                            try {
-                              await HttpClient.delete('blogs/history');
-                              setState(() {
-                                historyBlogs.clear();
-                                currentPage = 1;
-                                hasMore = true;
-                              });
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('历史记录已清空')),
-                                );
-                              }
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text('清空失败：${e.toString()}')),
-                                );
-                              }
-                            }
-                          },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text(
-                            '确定',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      title: '清空历史记录',
+      message: '确定要清空所有浏览历史吗？\n此操作无法撤销',
+      actions: [
+        SheetAction(
+          label: '确定',
+          key: 1,
+          isDestructiveAction: true,
+        ),
+      ],
+      cancelLabel: '取消',
     );
+    if (result == 1) {
+      try {
+        await HttpClient.delete('blogs/history');
+        setState(() {
+          historyBlogs.clear();
+          currentPage = 1;
+          hasMore = true;
+        });
+        if (mounted) {
+          Fluttertoast.showToast(msg: '历史记录已清空');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('清空失败：${e.toString()}')),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -359,7 +400,8 @@ class _HistoryPageState extends State<HistoryPage>
                               crossAxisCount: 2,
                               mainAxisSpacing: 12,
                               crossAxisSpacing: 12,
-                              childCount: historyBlogs.length + (isLoadingMore ? 2 : 0),
+                              childCount:
+                                  historyBlogs.length + (isLoadingMore ? 2 : 0),
                               itemBuilder: (context, index) {
                                 // 显示加载更多指示器
                                 if (index >= historyBlogs.length) {

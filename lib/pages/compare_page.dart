@@ -16,7 +16,15 @@ const Color kHeaderBackgroundColor = Color(0xFFF4F8FF);
 const tableLableWidth = 150;
 
 class ComparePage extends StatefulWidget {
-  const ComparePage({super.key});
+  final String? mallId;
+  final String? mallName;
+  final bool autoOpenSelection;
+
+  const ComparePage(
+      {super.key,
+      this.mallId,
+      this.mallName,
+      this.autoOpenSelection = false}); // 添加参数
 
   @override
   State<ComparePage> createState() => _ComparePageState();
@@ -73,6 +81,13 @@ class _ComparePageState extends State<ComparePage> {
   void initState() {
     super.initState();
 
+    if (widget.mallId != null && widget.mallId!.isNotEmpty) {
+      _mallSelectedIds = widget.mallId!.split(',');
+    }
+    if (widget.mallName != null && widget.mallName!.isNotEmpty) {
+      _mallSelectedNames = widget.mallName!.split(',');
+    }
+
     _loadInitialData();
   }
 
@@ -115,6 +130,9 @@ class _ComparePageState extends State<ComparePage> {
       setState(() {
         _isLoading = false;
       });
+      if (widget.autoOpenSelection) {
+        Future.microtask(() => _showSelectionDialog());
+      }
     }
   }
 
@@ -152,8 +170,6 @@ class _ComparePageState extends State<ComparePage> {
             // 更新弹框中的商场数据
           });
         }
-
-        print('根据省份加载商场数据: ${_malls.length}个商场');
       }
     } catch (e) {
       print('加载商场数据失败: $e');
@@ -192,7 +208,6 @@ class _ComparePageState extends State<ComparePage> {
                     'provinceId': city['provinceId'].toString(),
                   })
               .toList();
-          print('cities: $cities');
         });
       }
     } catch (e) {
@@ -251,7 +266,7 @@ class _ComparePageState extends State<ComparePage> {
       isScrollControlled: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Container(
-          height: MediaQuery.of(context).size.height * 0.72,
+          height: MediaQuery.of(context).size.height * 0.8,
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -271,32 +286,65 @@ class _ComparePageState extends State<ComparePage> {
               // 标题
               Padding(
                 padding: const EdgeInsets.all(20),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '选择${_selectedType == 'mall' ? '商场' : '城市'}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(20),
+                    Row(
+                      children: [
+                        Text(
+                          '选择${_selectedType == 'mall' ? '商场' : '城市'}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
                         ),
-                        child: Icon(
-                          Icons.close,
-                          size: 16,
-                          color: Colors.grey[600],
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
+                    if (_selectedNames.isNotEmpty) ...[
+                      Text(
+                        '已选择 ${_selectedNames.length} 个${_selectedType == 'mall' ? '商场' : '城市'}:',
+                        style: const TextStyle(
+                            fontSize: 13, color: Colors.black54),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: _selectedNames
+                            .map(
+                              (name) => Chip(
+                                label: Text(name,
+                                    style: const TextStyle(fontSize: 10)),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: const VisualDensity(
+                                    horizontal: -4, vertical: -4),
+                                backgroundColor: const Color(0xFFF5F5F5),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -981,7 +1029,7 @@ class _ComparePageState extends State<ComparePage> {
     );
   }
 
-  Future<void> _fetchComparisonData() async {
+  Future<void> _fetchComparisonData({saveReport = false}) async {
     if (_selectedIds.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请至少选择2个项目进行对比')),
@@ -998,6 +1046,7 @@ class _ComparePageState extends State<ComparePage> {
         'ids': _selectedIds,
         'type': _selectedType,
         'brandIds': selectedBrandIds,
+        'saveReport': saveReport
       });
 
       if (response['success'] == true) {
@@ -1010,6 +1059,9 @@ class _ComparePageState extends State<ComparePage> {
                 response['data']['results'] ?? []);
           }
         });
+      }
+      if (saveReport) {
+        Fluttertoast.showToast(msg: '保存成功');
       }
     } catch (e) {
       print('获取对比数据失败: $e');
@@ -1272,6 +1324,24 @@ class _ComparePageState extends State<ComparePage> {
                     onPressed: _captureAndShowImage,
                     icon: const Icon(Icons.camera_alt, size: 16),
                     label: const Text('生成图片'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              if (_comparisonData.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _fetchComparisonData(saveReport: true),
+                    icon: const Icon(Icons.download, size: 16),
+                    label: const Text('保存报告'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
