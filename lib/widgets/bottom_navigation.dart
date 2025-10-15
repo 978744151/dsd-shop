@@ -97,22 +97,33 @@ class _CustomBottomNavigationState extends State<CustomBottomNavigation> {
         if (index == 2) {
           await _handleShopCartTap(context, index);
         } else if (index == 3) {
-          // 如果点击的是消息图标（索引为3），刷新未读数量并通知notifications页面刷新
-          await _getUnreadCount();
-          // 发送事件通知notifications页面刷新数据
-          eventBus.fire(NotificationsRefreshEvent());
+          // 如果点击的是消息图标（索引为3）
+          if (widget.currentIndex == index) {
+            // 重复点击同一个标签，刷新未读数量并通知notifications页面刷新
+            await _getUnreadCount();
+            eventBus.fire(NotificationsRefreshEvent());
+          }
           widget.onTap?.call(index);
         } else if (index == 1) {
-          // 如果点击的是社区图标（索引为1），发送刷新事件
-          eventBus.fire(MessagePageRefreshEvent());
+          // 如果点击的是社区图标（索引为1）
+          if (widget.currentIndex == index) {
+            // 重复点击同一个标签，发送刷新事件
+            eventBus.fire(MessagePageRefreshEvent());
+          }
           widget.onTap?.call(index);
         } else if (index == 0) {
-          // 如果点击的是欢迎图标（索引为0），发送首页刷新事件
-          eventBus.fire(HomePageRefreshEvent());
+          // 如果点击的是欢迎图标（索引为0）
+          if (widget.currentIndex == index) {
+            // 重复点击同一个标签，发送首页刷新事件
+            eventBus.fire(HomePageRefreshEvent());
+          }
           widget.onTap?.call(index);
         } else if (index == 4) {
-          // 如果点击的是我的图标（索引为4），发送我的页面刷新事件
-          eventBus.fire(MinePageRefreshEvent());
+          // 如果点击的是我的图标（索引为4）
+          if (widget.currentIndex == index) {
+            // 重复点击同一个标签，发送我的页面刷新事件
+            eventBus.fire(MinePageRefreshEvent());
+          }
           widget.onTap?.call(index);
         } else {
           widget.onTap?.call(index);
