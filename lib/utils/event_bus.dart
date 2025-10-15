@@ -17,3 +17,18 @@ class UnreadCountUpdateEvent {
 class NotificationsRefreshEvent {
   NotificationsRefreshEvent();
 }
+
+// 社区页面刷新事件
+class MessagePageRefreshEvent {
+  MessagePageRefreshEvent();
+}
+
+// 首页刷新事件
+class HomePageRefreshEvent {
+  HomePageRefreshEvent();
+}
+
+// 我的页面刷新事件
+class MinePageRefreshEvent {
+  MinePageRefreshEvent();
+}

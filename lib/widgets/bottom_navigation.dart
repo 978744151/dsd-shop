@@ -102,6 +102,18 @@ class _CustomBottomNavigationState extends State<CustomBottomNavigation> {
           // 发送事件通知notifications页面刷新数据
           eventBus.fire(NotificationsRefreshEvent());
           widget.onTap?.call(index);
+        } else if (index == 1) {
+          // 如果点击的是社区图标（索引为1），发送刷新事件
+          eventBus.fire(MessagePageRefreshEvent());
+          widget.onTap?.call(index);
+        } else if (index == 0) {
+          // 如果点击的是欢迎图标（索引为0），发送首页刷新事件
+          eventBus.fire(HomePageRefreshEvent());
+          widget.onTap?.call(index);
+        } else if (index == 4) {
+          // 如果点击的是我的图标（索引为4），发送我的页面刷新事件
+          eventBus.fire(MinePageRefreshEvent());
+          widget.onTap?.call(index);
         } else {
           widget.onTap?.call(index);
         }

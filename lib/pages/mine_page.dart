@@ -18,6 +18,8 @@ import '../api/comment_api.dart';
 import '../api/brand.dart';
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import '../widgets/custom_refresh_widget.dart';
+import '../utils/event_bus.dart';
+import 'dart:async';
 
 class NFT {
   final String id;
@@ -73,6 +75,7 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
   bool isLoading = true;
   double _scrollProgress = 0.0; // 添加滚动进度变量
   int unreadCount = 0;
+  late StreamSubscription _refreshSubscription; // 添加刷新事件订阅
 
   @override
   void initState() {
@@ -119,12 +122,33 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
     );
 
     _getToken();
+    
+    // 监听我的页面刷新事件
+    _refreshSubscription = eventBus.on<MinePageRefreshEvent>().listen((_) {
+      _refreshMinePage();
+    });
+  }
+
+  // 刷新我的页面的方法
+  Future<void> _refreshMinePage() async {
+    // 刷新所有数据
+    switch (_tabController.index) {
+      case 0: // 我的笔记
+        await fetchBlogs(userInfo['_id']);
+        break;
+      case 1: // 我的报告
+        await fetchComparisonReports();
+        break;
+      case 2: // 售出藏品
+        break;
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _scrollController.dispose(); // 释放滚动控制器
+    _refreshSubscription.cancel(); // 取消刷新事件订阅
     super.dispose();
   }
 

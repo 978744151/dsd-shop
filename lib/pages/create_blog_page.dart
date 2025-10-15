@@ -30,20 +30,12 @@ class CreateBlogPage extends StatefulWidget {
 class _CreateBlogPageState extends State<CreateBlogPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
+  final TextEditingController _tagController = TextEditingController();
   List<XFile> _xFiles = []; // 保存XFile用于H5平台
   List<File> _images = []; // 保存File用于App平台
   final ImagePicker _picker = ImagePicker();
   List<String> _selectedTags = [];
-  final List<String> _suggestedTags = [
-    '汇数通起飞',
-    '狰',
-    '孔子',
-    '兵家',
-    '儒家',
-    '财神',
-    '一鹿生花',
-    '百家争鸣'
-  ];
+  final List<String> _suggestedTags = [];
   bool _validateForm() {
     if (_titleController.text.isEmpty) {
       Fluttertoast.showToast(msg: '请填写标题');
@@ -397,6 +389,7 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
                       hintStyle: TextStyle(color: Colors.grey[400]),
                     ),
                   ),
+                  SizedBox(height: 50),
                 ],
               ),
             ),
@@ -411,6 +404,77 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('#', style: TextStyle(fontSize: 16)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _tagController,
+                          decoration: InputDecoration(
+                            hintText: '输入标签内容',
+                            hintStyle: TextStyle(
+                                color: Colors.grey[400], fontSize: 14),
+                            border: InputBorder.none,
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                          ),
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (value) {
+                            String newTag = value.trim();
+                            if (newTag.isEmpty) return;
+                            if (newTag.startsWith('#')) {
+                              newTag = newTag.substring(1);
+                            }
+                            setState(() {
+                              if (!_selectedTags.contains(newTag)) {
+                                _selectedTags.add(newTag);
+                              }
+                            });
+                            _tagController.clear();
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (_selectedTags.length > 5) {
+                            Fluttertoast.showToast(msg: '最多添加5个标签');
+                            return;
+                          }
+                          String newTag = _tagController.text.trim();
+                          if (newTag.isEmpty) return;
+                          if (newTag.startsWith('#')) {
+                            newTag = newTag.substring(1);
+                          }
+                          setState(() {
+                            if (!_selectedTags.contains(newTag)) {
+                              _selectedTags.add(newTag);
+                            }
+                          });
+                          _tagController.clear();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                        ),
+                        child: const Text('添加'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     children: _suggestedTags.map((tag) {
@@ -426,6 +490,7 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
                           });
                         },
                         child: Container(
+                          color: Theme.of(context).primaryColor,
                           padding:
                               EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           margin: EdgeInsets.only(bottom: 8),
@@ -433,24 +498,64 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
                             color:
                                 isSelected ? Colors.red[50] : Colors.grey[100],
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isSelected
-                                  ? Theme.of(context).primaryColor
-                                  : Colors.transparent,
-                            ),
                           ),
                           child: Text(
                             '#$tag',
                             style: TextStyle(
                               color: isSelected
                                   ? Theme.of(context).primaryColor
-                                  : Colors.grey[600],
+                                  : Colors.white,
                             ),
                           ),
                         ),
                       );
                     }).toList(),
                   ),
+                  const SizedBox(height: 8),
+                  // 自定义标签展示区
+                  Builder(builder: (context) {
+                    final customTags = _selectedTags
+                        .where((t) => !_suggestedTags.contains(t))
+                        .toList();
+                    if (customTags.isEmpty) return const SizedBox.shrink();
+                    return Wrap(
+                      spacing: 8,
+                      children: customTags.map((tag) {
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedTags.remove(tag);
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Theme.of(context).primaryColor,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('#$tag',
+                                    style: TextStyle(
+                                        color: Colors.black, fontSize: 12)),
+                                const SizedBox(width: 6),
+                                Icon(Icons.close,
+                                    size: 14,
+                                    color: Theme.of(context).primaryColor),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  }),
                 ],
               ),
             ),
@@ -465,6 +570,7 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _tagController.dispose();
     super.dispose();
   }
 }

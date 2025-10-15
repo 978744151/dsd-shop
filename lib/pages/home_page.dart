@@ -8,6 +8,8 @@ import '../models/mall.dart';
 import '../widgets/custom_refresh_widget.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:nft_once/pages/message_page.dart';
+import '../utils/event_bus.dart';
+import 'dart:async';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -30,6 +32,7 @@ class _HomePageState extends State<HomePage> {
   bool recommendHasMore = true;
   bool recommendLoadingMore = false;
   final ScrollController _recommendScrollController = ScrollController();
+  late StreamSubscription _refreshSubscription; // 添加刷新事件订阅
 
   @override
   void initState() {
@@ -38,12 +41,18 @@ class _HomePageState extends State<HomePage> {
     fetchMall();
     fetchRecommendBlogs();
     _recommendScrollController.addListener(_onRecommendScroll);
+
+    // 监听首页刷新事件
+    _refreshSubscription = eventBus.on<HomePageRefreshEvent>().listen((_) {
+      _refreshHomePage();
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose(); // 只在dispose时释放控制器
     _recommendScrollController.dispose();
+    _refreshSubscription.cancel(); // 取消刷新事件订阅
     super.dispose();
   }
 
@@ -182,6 +191,25 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         recommendLoadingMore = false;
       });
+    }
+  }
+
+  // 刷新首页的方法
+  Future<void> _refreshHomePage() async {
+    setState(() {
+      recommendPage = 1;
+    });
+    await fetchBrand();
+    await fetchMall();
+    await fetchRecommendBlogs();
+
+    // 刷新完成后，将滚动位置重置到顶部
+    if (_recommendScrollController.hasClients) {
+      _recommendScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     }
   }
 

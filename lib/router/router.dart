@@ -17,6 +17,7 @@ import '../pages/settings_page.dart';
 import '../pages/blog_detail_page.dart';
 import '../pages/message_page.dart';
 import '../pages/create_blog_page.dart';
+import '../pages/search_blog_page.dart';
 import '../pages/history_page.dart';
 import '../pages/favorites_page.dart';
 import '../pages/follow_page.dart';
@@ -102,6 +103,11 @@ final router = GoRouter(
                   path: 'create',
                   parentNavigatorKey: _rootNavigatorKey,
                   builder: (context, state) => CreateBlogPage(),
+                ),
+                GoRoute(
+                  path: 'search',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const SearchBlogPage(),
                 ),
               ],
             ),

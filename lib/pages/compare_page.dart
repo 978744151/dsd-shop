@@ -47,6 +47,7 @@ class _ComparePageState extends State<ComparePage> {
 
   bool _isLoading = false;
   bool _isLoadingData = false;
+  bool _isSelectionSheetOpen = false;
 
   // Screenshot controller
   ScreenshotController screenshotController = ScreenshotController();
@@ -82,13 +83,48 @@ class _ComparePageState extends State<ComparePage> {
     super.initState();
 
     if (widget.mallId != null && widget.mallId!.isNotEmpty) {
-      _mallSelectedIds = widget.mallId!.split(',');
+      setState(() {
+        _mallSelectedIds = widget.mallId!.split(',');
+      });
     }
     if (widget.mallName != null && widget.mallName!.isNotEmpty) {
-      _mallSelectedNames = widget.mallName!.split(',');
+      setState(() {
+        _mallSelectedNames = widget.mallName!.split(',');
+      });
     }
 
     _loadInitialData();
+  }
+
+  @override
+  void didUpdateWidget(ComparePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    bool needUpdate = false;
+
+    if (widget.mallId != oldWidget.mallId) {
+      _mallSelectedIds = (widget.mallId != null && widget.mallId!.isNotEmpty)
+          ? widget.mallId!.split(',')
+          : [];
+      needUpdate = true;
+    }
+
+    if (widget.mallName != oldWidget.mallName) {
+      _mallSelectedNames =
+          (widget.mallName != null && widget.mallName!.isNotEmpty)
+              ? widget.mallName!.split(',')
+              : [];
+      needUpdate = true;
+    }
+
+    if (needUpdate) {
+      _selectedType = 'mall';
+      setState(() {});
+
+      if (widget.autoOpenSelection) {
+        _openSelectionDialogSafely();
+      }
+    }
   }
 
   Future<void> _loadInitialData() async {
@@ -259,7 +295,17 @@ class _ComparePageState extends State<ComparePage> {
     }
   }
 
+  void _openSelectionDialogSafely() {
+    if (_isSelectionSheetOpen) {
+      Navigator.of(context).pop();
+      Future.microtask(() => _showSelectionDialog());
+      return;
+    }
+    Future.microtask(() => _showSelectionDialog());
+  }
+
   void _showSelectionDialog() {
+    _isSelectionSheetOpen = true;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -301,7 +347,10 @@ class _ComparePageState extends State<ComparePage> {
                         ),
                         const Spacer(),
                         GestureDetector(
-                          onTap: () => Navigator.pop(context),
+                          onTap: () {
+                            _isSelectionSheetOpen = false;
+                            Navigator.pop(context);
+                          },
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -421,7 +470,9 @@ class _ComparePageState extends State<ComparePage> {
           ),
         ),
       ),
-    );
+    ).whenComplete(() {
+      _isSelectionSheetOpen = false;
+    });
   }
 
   Widget _buildProvinceAndCitySelector(StateSetter setModalState) {
@@ -1271,8 +1322,9 @@ class _ComparePageState extends State<ComparePage> {
               // 开始对比/重新选择按钮
               Expanded(
                 child: ElevatedButton(
-                  onPressed:
-                      !_isLoadingData ? () => _showSelectionDialog() : null,
+                  onPressed: !_isLoadingData
+                      ? () => _openSelectionDialogSafely()
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,

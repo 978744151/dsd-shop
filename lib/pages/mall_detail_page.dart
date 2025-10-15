@@ -722,22 +722,51 @@ class _MallDetailPageState extends State<MallDetailPage> {
               ),
               const SizedBox(height: 12),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '查看品牌',
-                    style: TextStyle(
-                      color: Colors.blue[700],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // 取出当前商场的所有品牌的 brandId（过滤空值），作为预选项
+
+                      // 只要有一个品牌就带入预选并自动打开选择弹窗
+                      final query =
+                          'mallId=${mall.id}&open=true&mallName=${mall.name}';
+                      print(query);
+                      context.go('/compare?$query');
+                    },
+                    icon: const Icon(Icons.compare_arrows, size: 16),
+                    label: const Text('去对比'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.black87,
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      minimumSize: const Size(0, 28),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 12,
-                    color: Colors.blue[700],
-                  ),
+                  Row(
+                    children: [
+                      Text(
+                        '查看品牌',
+                        style: TextStyle(
+                          color: Colors.blue[700],
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 12,
+                        color: Colors.blue[700],
+                      ),
+                    ],
+                  )
                 ],
               ),
             ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:convert'; // 添加这行
+import 'package:flutter/services.dart'; // 新增：用于剪贴板
 
 import '../api/comment_api.dart';
 import 'package:intl/intl.dart'; // 添加这行
@@ -30,6 +31,7 @@ class BlogInfo {
   final String content;
   final String createdAt;
   final String type;
+  final List<String> tags; // 新增：标签列表
   final List<Comment> replies;
   final List<String> images;
   final Map<String, dynamic>? user; // 添加这行
@@ -42,6 +44,7 @@ class BlogInfo {
     this.content = '',
     this.createdAt = '',
     this.type = '',
+    this.tags = const [], // 新增：默认空列表
     this.replies = const [],
     this.images = const [],
     this.user, // 添加这行
@@ -56,6 +59,7 @@ class BlogInfo {
       content: json['content'] ?? '',
       createdAt: json['createdAt'] ?? '',
       type: json['type'] ?? '',
+      tags: List<String>.from(json['tags'] ?? []), // 新增：解析标签
       images: List<String>.from(json['images'] ?? []),
       user: json['user'] as Map<String, dynamic>?, // 添加这行
       isFollowed: json['isFollowed'] ?? false, // 添加这行
@@ -86,6 +90,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
   // 用于滚动到指定评论
   final Map<String, GlobalKey> _topCommentKeys = {};
   bool _didScrollToComment = false;
+  bool _ignoreNextTap = false; // 新增：长按后屏蔽下一次点击，避免触发输入框
 
   @override
   void initState() {
@@ -595,6 +600,21 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                     height: 1.8,
                                   ),
                                 ),
+                                const SizedBox(height: 12),
+                                if (blogInfo.tags.isNotEmpty)
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 4,
+                                    children: blogInfo.tags
+                                        .map((tag) => Text('#$tag',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                              color: Theme.of(context)
+                                                  .primaryColor,
+                                            )))
+                                        .toList(),
+                                  ),
                                 const SizedBox(height: 24),
                                 Row(
                                   children: [
@@ -654,6 +674,10 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                       Expanded(
                                         child: GestureDetector(
                                           onTap: () {
+                                            if (_ignoreNextTap) {
+                                              _ignoreNextTap = false;
+                                              return;
+                                            }
                                             setState(() {
                                               _replyToName = '';
                                               _currentCommentId = null;
@@ -710,7 +734,10 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                               return _topCommentKeys[id] ??= GlobalKey();
                             },
                             onReply: (commentId, replyTo, replyToName) {
-                              // 修改这里，添加 replyToName 参数
+                              if (_ignoreNextTap) {
+                                _ignoreNextTap = false;
+                                return;
+                              }
                               FocusScope.of(context)
                                   .requestFocus(_commentFocusNode);
                               setState(() {
@@ -968,6 +995,179 @@ class CommentItem extends StatelessWidget {
     }
   }
 
+  // 新增：展示自己的评论操作弹框 - 使用从底部弹出的Dialog
+  Future<void> _showOwnCommentActions(BuildContext context) {
+    return showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (ctx, animation, secondaryAnimation) {
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(0),
+                  bottomRight: Radius.circular(0),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -8),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 顶部指示条
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  // 标题
+
+                  const SizedBox(height: 20),
+                  // 操作按钮
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: TextButton.icon(
+                            onPressed: () async {
+                              Navigator.of(ctx).pop();
+                              try {
+                                final result = await showOkCancelAlertDialog(
+                                  context: context,
+                                  title: '删除评论',
+                                  message: '确定要删除这条评论吗？',
+                                  okLabel: '删除',
+                                  cancelLabel: '取消',
+                                  isDestructiveAction: true,
+                                );
+                                if (result == OkCancelResult.ok) {
+                                  final resp = await HttpClient.delete(
+                                      'comment/${comment.id}');
+                                  if ((resp is Map &&
+                                      (resp['success'] == true ||
+                                          resp['code'] == 200))) {
+                                    final state =
+                                        context.findAncestorStateOfType<
+                                            _BlogDetailPageState>();
+                                    state?.fetchComments();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('已删除评论')),
+                                    );
+                                  }
+                                }
+                              } catch (e) {}
+                            },
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(Icons.delete_forever),
+                            label: const Text(
+                              '删除',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: TextButton.icon(
+                            onPressed: () async {
+                              Navigator.of(ctx).pop();
+                              await Clipboard.setData(
+                                  ClipboardData(text: comment.content));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('内容已复制')),
+                              );
+                            },
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.grey[200],
+                              foregroundColor: Colors.black87,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(Icons.copy),
+                            label: const Text(
+                              '复制',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // 取消按钮
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.grey[100],
+                        foregroundColor: Colors.black54,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '取消',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 1),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          )),
+          child: child,
+        );
+      },
+    ).then((value) {
+      // 弹框关闭后清除焦点
+      FocusScope.of(context).unfocus();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final keyForTop = (parentComment == null && topKeyProvider != null)
@@ -978,12 +1178,43 @@ class CommentItem extends StatelessWidget {
       children: [
         InkWell(
           onTap: () {
+            final state =
+                context.findAncestorStateOfType<_BlogDetailPageState>();
+            if (state != null && state._ignoreNextTap) {
+              // 屏蔽长按后的首次点击，防止触发输入框
+              state._ignoreNextTap = false;
+              return;
+            }
             if (onReply != null) {
               onReply!(
                 comment.id,
                 comment.user?['_id'] ?? '',
                 comment.author, // 传递当前评论的作者名
               );
+            }
+          },
+          onLongPress: () {
+            final state =
+                context.findAncestorStateOfType<_BlogDetailPageState>();
+            // 长按后先屏蔽下一次点击
+            state?._ignoreNextTap = true;
+            // 移除：长按时不再立即清除输入焦点，改为在弹框关闭后清除
+            final isOwn = state != null &&
+                (state.userInfo['_id'] != null) &&
+                (state.userInfo['_id'] == comment.user?['_id']);
+            if (isOwn) {
+              _showOwnCommentActions(context).whenComplete(() {
+                // 弹框关闭时清除焦点，避免输入框弹出
+                FocusScope.of(context).unfocus();
+                final s =
+                    context.findAncestorStateOfType<_BlogDetailPageState>();
+                if (s != null) {
+                  s._ignoreNextTap = false; // 弹框关闭后恢复点击
+                }
+              });
+            } else {
+              // 非本人评论：保持 _ignoreNextTap 为 true，直到下一次 onTap 被消费后再自动重置
+              // 在 onTap 中会检测并重置为 false
             }
           },
           child: Padding(

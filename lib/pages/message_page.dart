@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:nft_once/pages/blog_detail_page.dart';
+import 'package:nft_once/pages/search_blog_page.dart';
 import '../utils/http_client.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/event_bus.dart';
@@ -19,6 +20,7 @@ class Blog {
   final String type;
   final String defaultImage;
   final Map<String, dynamic>? user; // 直接使用 Map
+  final int favoriteCount;
 
   Blog({
     required this.id,
@@ -27,6 +29,7 @@ class Blog {
     required this.createName,
     required this.createdAt,
     required this.type,
+    this.favoriteCount = 0,
     required this.defaultImage,
     this.user,
   });
@@ -40,6 +43,7 @@ class Blog {
       createdAt: json['createdAt'] ?? '',
       type: json['type'] ?? '',
       defaultImage: json['defaultImage'] ?? '',
+      favoriteCount: json['favoriteCount'] ?? 0,
       user: json['user'], // 直接使用 Map
     );
   }
@@ -57,7 +61,8 @@ class _MessagePageState extends State<MessagePage>
   List<Blog> blogs = [];
   bool isLoading = true;
   final ScrollController _scrollController = ScrollController();
-  late StreamSubscription _subscription; // 添加这一行
+  late StreamSubscription _subscription;
+  late StreamSubscription _refreshSubscription; // 添加刷新事件订阅 // 添加这一行
   String currentTab = '推荐'; // 添加当前标签状态
   int page = 1;
   bool hasMore = true;
@@ -75,11 +80,17 @@ class _MessagePageState extends State<MessagePage>
     _subscription = eventBus.on<BlogCreatedEvent>().listen((_) {
       fetchBlogs();
     });
+
+    // 监听社区页面刷新事件
+    _refreshSubscription = eventBus.on<MessagePageRefreshEvent>().listen((_) {
+      _refreshMessagePage();
+    });
   }
 
   @override
   void dispose() {
     _subscription.cancel(); // 取消订阅
+    _refreshSubscription.cancel(); // 取消刷新事件订阅
     _scrollController.dispose();
     super.dispose();
   }
@@ -108,12 +119,12 @@ class _MessagePageState extends State<MessagePage>
 
     try {
       // 根据当前标签获取不同的数据
-      String endpoint = 'blogs/all?page=$page';
+      String endpoint = 'blogs/all?page=$page&sortByLatest=false';
 
       if (currentTab == '关注') {
-        endpoint = 'blogs/all?page=$page';
+        endpoint = 'blogs/following?page=$page';
       } else if (currentTab == '最新') {
-        endpoint = 'blogs/latest?page=$page';
+        endpoint = 'blogs/all?page=$page&sortByLatest=true';
       }
 
       final response = await HttpClient.get(endpoint);
@@ -147,6 +158,15 @@ class _MessagePageState extends State<MessagePage>
     return Future.value();
   }
 
+  // 刷新社区页面的方法
+  Future<void> _refreshMessagePage() async {
+    setState(() {
+      page = 1;
+      hasMore = true;
+    });
+    await fetchBlogs();
+  }
+
   Future<void> loadMore() async {
     if (!mounted || isLoadingMore || !hasMore) return;
     setState(() {
@@ -154,11 +174,12 @@ class _MessagePageState extends State<MessagePage>
     });
     try {
       final nextPage = page + 1;
-      String endpoint = 'blogs/all?page=$nextPage';
+      String endpoint = 'blogs/all?page=$nextPage&sortByLatest=false';
+
       if (currentTab == '关注') {
-        endpoint = 'blogs/all?page=$nextPage';
+        endpoint = 'blogs/following?page=$nextPage';
       } else if (currentTab == '最新') {
-        endpoint = 'blogs/latest?page=$nextPage';
+        endpoint = 'blogs/all?page=$nextPage&sortByLatest=true';
       }
       final response = await HttpClient.get(endpoint);
       if (!mounted) return;
@@ -205,177 +226,202 @@ class _MessagePageState extends State<MessagePage>
             // backgroundColor:
             // const Color.fromARGB(110, 238, 232, 230), // 取消注释并设置为白色
             backgroundColor: const Color(0xFFF9f9f9),
-            appBar: PreferredSize(
-                preferredSize: const Size.fromHeight(kToolbarHeight),
-                child: GestureDetector(
-                  onTap: () {
-                    _scrollController.animateTo(
-                      0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  child: AppBar(
-                    elevation: 0,
-                    backgroundColor: Colors.white70,
-                    title: Row(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    currentTab = '关注';
-                                    page = 1;
-                                    hasMore = true;
-                                    blogs.clear();
-                                  });
-                                  fetchBlogs();
-                                },
-                                child: _TabItem(
-                                    text: '关注', isActive: currentTab == '关注'),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    currentTab = '推荐';
-                                    page = 1;
-                                    hasMore = true;
-                                    blogs.clear();
-                                  });
-                                  fetchBlogs();
-                                },
-                                child: _TabItem(
-                                    text: '推荐', isActive: currentTab == '推荐'),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    currentTab = '最新';
-                                    page = 1;
-                                    hasMore = true;
-                                    blogs.clear();
-                                  });
-                                  fetchBlogs();
-                                },
-                                child: _TabItem(
-                                    text: '最新', isActive: currentTab == '最新'),
-                              ),
-                            ],
+            body: Column(
+              children: [
+                // 自定义AppBar
+                Container(
+                  height: kToolbarHeight + MediaQuery.of(context).padding.top,
+                  padding:
+                      EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFffffff),
+                  ),
+                  child: GestureDetector(
+                    onTap: () {
+                      _scrollController.animateTo(
+                        0,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    child: Container(
+                      height: kToolbarHeight,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      currentTab = '关注';
+                                      page = 1;
+                                      hasMore = true;
+                                      blogs.clear();
+                                    });
+                                    fetchBlogs();
+                                  },
+                                  child: _TabItem(
+                                      text: '关注', isActive: currentTab == '关注'),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      currentTab = '推荐';
+                                      page = 1;
+                                      hasMore = true;
+                                      blogs.clear();
+                                    });
+                                    fetchBlogs();
+                                  },
+                                  child: _TabItem(
+                                      text: '推荐', isActive: currentTab == '推荐'),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      currentTab = '最新';
+                                      page = 1;
+                                      hasMore = true;
+                                      blogs.clear();
+                                    });
+                                    fetchBlogs();
+                                  },
+                                  child: _TabItem(
+                                      text: '最新', isActive: currentTab == '最新'),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.search,
+                                  color: Color(0xFF8C8C8C)),
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const SearchBlogPage(),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                          child: IconButton(
-                            icon: const Icon(Icons.search,
-                                color: Color(0xFF8C8C8C)),
-                            onPressed: () {},
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                )),
-            body: isLoading
-                ? const LoadingIndicatorWidget()
-                : CustomRefreshWidget(
-                    onRefresh: () async {
-                      setState(() {
-                        page = 1;
-                        hasMore = true;
-                      });
-                      await fetchBlogs();
-                    }, // 确保这里连接到 fetchBlogs
-                    child: blogs.isEmpty
-                        ? ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            // 将 Center 改为 ListView 以支持下拉刷新
-                            children: [
-                              Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 100),
-                                  child: Text(
-                                    getEmptyStateText(),
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Color(0xFF8C8C8C),
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : CustomScrollView(
-                            controller: _scrollController, // 添加控制器
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            slivers: [
-                              SliverToBoxAdapter(
-                                  child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight:
-                                      MediaQuery.of(context).size.height *
-                                          0.9, // 修改这里
-                                ),
-                                child: Column(
+                ),
+                // 页面内容
+                Expanded(
+                  child: isLoading
+                      ? const LoadingIndicatorWidget()
+                      : CustomRefreshWidget(
+                          onRefresh: () async {
+                            setState(() {
+                              page = 1;
+                              hasMore = true;
+                            });
+                            await fetchBlogs();
+                          }, // 确保这里连接到 fetchBlogs
+                          child: blogs.isEmpty
+                              ? ListView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  // 将 Center 改为 ListView 以支持下拉刷新
                                   children: [
-                                    MasonryGridView.count(
-                                      shrinkWrap: true,
-                                      physics:
-                                          const NeverScrollableScrollPhysics(),
-                                      key: const PageStorageKey(
-                                        'message_grid',
-                                      ), // 添加 key 保存状态
-                                      crossAxisCount: 2,
-                                      mainAxisSpacing: 8,
-                                      crossAxisSpacing: 8,
-                                      padding: const EdgeInsets.all(8),
-                                      itemCount: blogs.length,
-                                      itemBuilder: (context, index) {
-                                        final blog = blogs[index];
-                                        // 根据内容长度动态计算高度
-                                        final contentLength =
-                                            blog.title.length +
-                                                blog.content.length;
-                                        final randomHeight =
-                                            180.0 + (contentLength % 3) * 40;
-
-                                        return RedBookCard(
-                                          avatar: '',
-                                          name: blog.createName,
-                                          title: blog.title,
-                                          content: blog.content,
-                                          time: blog.createdAt,
-                                          type: blog.type,
-                                          defaultImage: blog.defaultImage,
-                                          likes: 0,
-                                          comments: 0,
-                                          height: randomHeight,
-                                          id: blog.id,
-                                          user: blog.user,
-                                        );
-                                      },
+                                    Center(
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.only(top: 100),
+                                        child: Text(
+                                          getEmptyStateText(),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Color(0xFF8C8C8C),
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ],
-                                ),
-                              )),
-                              SliverToBoxAdapter(
-                                child: SizedBox(
-                                  height: isLoadingMore ? 56 : 0,
-                                  child: isLoadingMore
-                                      ? const Center(
-                                          child: CircularProgressIndicator(),
-                                        )
-                                      : null,
-                                ),
-                              ),
-                            ],
-                          ))),
+                                )
+                              : CustomScrollView(
+                                  controller: _scrollController, // 添加控制器
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  slivers: [
+                                    SliverToBoxAdapter(
+                                        child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        minHeight:
+                                            MediaQuery.of(context).size.height *
+                                                0.9, // 修改这里
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          MasonryGridView.count(
+                                            shrinkWrap: true,
+                                            physics:
+                                                const NeverScrollableScrollPhysics(),
+                                            key: const PageStorageKey(
+                                              'message_grid',
+                                            ), // 添加 key 保存状态
+                                            crossAxisCount: 2,
+                                            mainAxisSpacing: 8,
+                                            crossAxisSpacing: 8,
+                                            padding: const EdgeInsets.all(8),
+                                            itemCount: blogs.length,
+                                            itemBuilder: (context, index) {
+                                              final blog = blogs[index];
+                                              // 根据内容长度动态计算高度
+                                              final contentLength =
+                                                  blog.title.length +
+                                                      blog.content.length;
+                                              final randomHeight = 180.0 +
+                                                  (contentLength % 3) * 40;
+
+                                              return RedBookCard(
+                                                avatar: '',
+                                                name: blog.createName,
+                                                title: blog.title,
+                                                content: blog.content,
+                                                time: blog.createdAt,
+                                                type: blog.type,
+                                                defaultImage: blog.defaultImage,
+                                                likes: blog.favoriteCount,
+                                                comments: 0,
+                                                height: randomHeight,
+                                                id: blog.id,
+                                                user: blog.user,
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    )),
+                                    SliverToBoxAdapter(
+                                      child: SizedBox(
+                                        height: isLoadingMore ? 56 : 0,
+                                        child: isLoadingMore
+                                            ? const Center(
+                                                child:
+                                                    CircularProgressIndicator(),
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                  ],
+                                )),
+                ),
+              ],
+            )),
         Positioned(
           right: 10,
           bottom: 20,
@@ -637,7 +683,7 @@ class RedBookCard extends StatelessWidget {
         // ... existing code ...
         // context.go('/message/messageDetail/$id');
         // ... existing code ...
-        Navigator.of(context).push(
+        Navigator.of(context, rootNavigator: true).push(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) {
               // 使用 CupertinoPageScaffold 并启用滑动返回
