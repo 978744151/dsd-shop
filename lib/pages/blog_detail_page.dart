@@ -10,6 +10,7 @@ import '../utils/http_client.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import '../utils/storage.dart'; // 添加导入
 import 'package:adaptive_dialog/adaptive_dialog.dart';
+import 'package:fluttertoast/fluttertoast.dart'; // 替换为fluttertoast导入
 
 class BlogDetailPage extends StatefulWidget {
   final String id; // 添加 id 参数
@@ -20,6 +21,7 @@ class BlogDetailPage extends StatefulWidget {
     this.commentId = '',
   });
 
+  @override
   @override
   State<BlogDetailPage> createState() => _BlogDetailPageState();
 }
@@ -91,6 +93,9 @@ class _BlogDetailPageState extends State<BlogDetailPage>
   final Map<String, GlobalKey> _topCommentKeys = {};
   bool _didScrollToComment = false;
   bool _ignoreNextTap = false; // 新增：长按后屏蔽下一次点击，避免触发输入框
+  Offset _startPosition = Offset.zero; // 添加滑动开始位置变量
+  bool _isNavigating = false; // 添加导航状态标志，防止重复触发
+  int _currentImageIndex = 0; // 添加当前图片索引变量
 
   @override
   void initState() {
@@ -394,142 +399,613 @@ class _BlogDetailPageState extends State<BlogDetailPage>
 
   // 添加焦点监听处理
   void _handleFocusChange() {
+    // 如果正在忽略下一次点击，不要显示输入框
+    if (_ignoreNextTap) {
+      return;
+    }
     setState(() {
       _showOverlay = _commentFocusNode.hasFocus;
     });
   }
 
+  // 显示全屏图片查看器
+  void _showFullScreenImage(BuildContext context, int initialIndex) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return FullScreenImageViewer(
+            images: blogInfo.images,
+            initialIndex: initialIndex,
+          );
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
+  // 提交举报
+  Future<void> _submitBlogReport(BuildContext context, String reportTypeId,
+      {String targetType = 'blog'}) async {
+    try {
+      final response = await HttpClient.post(
+        'report',
+        body: {
+          'targetId': widget.id,
+          'targetType': targetType,
+          'reasonType': reportTypeId,
+        },
+      );
+
+      if (response['code'] == 200 || response['success'] == true) {
+        Fluttertoast.showToast(msg: '举报已提交，感谢您的反馈');
+      } else {
+        Fluttertoast.showToast(msg: response['message'] ?? '举报失败');
+      }
+    } catch (e) {
+      Fluttertoast.showToast(msg: '举报失败，请稍后重试');
+    }
+  }
+
+  // 博客举报对话框
+  Future<void> _showBlogReportDialog(BuildContext context) async {
+    try {
+      // 获取举报类型列表
+      final response = await HttpClient.get('report/types');
+      if (response['code'] != 200 && response['success'] != true) {
+        Fluttertoast.showToast(msg: '获取举报类型失败');
+        return;
+      }
+
+      final List<dynamic> reportTypes = response['data']['reasonTypes'] ?? [];
+      if (reportTypes.isEmpty) {
+        Fluttertoast.showToast(msg: '暂无举报类型');
+        return;
+      }
+
+      String? selectedType;
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '',
+        barrierColor: Colors.black54,
+        transitionDuration: const Duration(milliseconds: 300),
+        pageBuilder: (ctx, animation, secondaryAnimation) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return Align(
+                alignment: Alignment.bottomCenter,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, -8),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 顶部指示条
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        // 标题
+                        const Text(
+                          '举报评论',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          '请选择举报原因：',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // 举报选项列表
+                        ...reportTypes.map((type) {
+                          final typeId = type['key'];
+                          final typeName = type['label'] ?? '未知类型';
+                          return Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  selectedType = typeId;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: selectedType == typeId
+                                      ? Colors.red.withOpacity(0.1)
+                                      : Colors.grey[50],
+                                  border: Border.all(
+                                    color: selectedType == typeId
+                                        ? Colors.red
+                                        : Colors.grey[300]!,
+                                    width: 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      selectedType == typeId
+                                          ? Icons.radio_button_checked
+                                          : Icons.radio_button_unchecked,
+                                      color: selectedType == typeId
+                                          ? Colors.red
+                                          : Colors.grey[400],
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        typeName,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: selectedType == typeId
+                                              ? Colors.red
+                                              : Colors.black87,
+                                          fontWeight: selectedType == typeId
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        const SizedBox(height: 20),
+                        // 操作按钮
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 48,
+                                child: TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(),
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: Colors.grey[100],
+                                    foregroundColor: Colors.black54,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    '取消',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: SizedBox(
+                                height: 48,
+                                child: TextButton(
+                                  onPressed: selectedType == null
+                                      ? null
+                                      : () async {
+                                          Navigator.of(ctx).pop();
+                                          await _submitBlogReport(
+                                            context,
+                                            selectedType!,
+                                            targetType: 'blog',
+                                          );
+                                        },
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: selectedType == null
+                                        ? Colors.grey[300]
+                                        : Colors.red,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    '提交举报',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+        transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 1),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            )),
+            child: child,
+          );
+        },
+      );
+    } catch (e) {
+      Fluttertoast.showToast(msg: '获取举报类型失败');
+    }
+  }
+
+  // 分享和举报对话框 - 使用_showCommentActions的样式
+  Future<void> _showShareAndReportDialog(BuildContext context) async {
+    return showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (ctx, animation, secondaryAnimation) {
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -8),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 顶部指示条
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // 操作按钮
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: TextButton.icon(
+                            onPressed: () async {
+                              Navigator.of(ctx).pop();
+                              await Clipboard.setData(ClipboardData(
+                                  text:
+                                      'https://example.com/blog/${widget.id}'));
+                              Fluttertoast.showToast(msg: '链接已复制');
+                            },
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.grey[200],
+                              foregroundColor: Colors.black87,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(Icons.share),
+                            label: const Text(
+                              '分享链接',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: TextButton.icon(
+                            onPressed: () async {
+                              Navigator.of(ctx).pop();
+                              _showBlogReportDialog(context);
+                            },
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(Icons.report),
+                            label: const Text(
+                              '举报',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // 取消按钮
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.grey[100],
+                        foregroundColor: Colors.black54,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '取消',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 1),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          )),
+          child: child,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: const Color(0xFFFFFFFF),
-        appBar: AppBar(
-          // 在 AppBar 中修改返回按钮的处理
-
-          backgroundColor: const Color(0xFFFFFFFF),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/message');
-                // context.go('/message');
-              }
-              // if (Navigator.canPop(context)) {
-              //   // 添加检查
-              //   Navigator.pop(context);
-              // }
-            },
+      backgroundColor: const Color(0xFFFFFFFF),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFFFFFFF),
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.transparent,
+                width: 0,
+              ),
+            ),
           ),
-
-          title: Row(
-            children: [
-              SvgPicture.network(
-                "https://api.dicebear.com/9.x/big-ears/svg",
-                height: 36,
-                width: 36,
-                placeholderBuilder: (BuildContext context) => const Icon(
-                  Icons.person,
-                  size: 36,
-                  color: Color(0xFF1890FF),
-                ),
-              ),
-              const SizedBox(width: 8), // 减小间距
-              Expanded(
-                child: Text(
-                  blogInfo.createName,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+          child: SafeArea(
+            child: Container(
+              height: kToolbarHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                children: [
+                  // 返回按钮
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/message');
+                      }
+                    },
                   ),
-                  maxLines: 1, // 限制一行
-                  overflow: TextOverflow.ellipsis, // 超出显示省略号
-                ),
-              ),
-              const SizedBox(width: 8), // 减小间距
-              if (blogInfo.user?['_id'] != userInfo['_id'])
-                TextButton(
-                  onPressed: () async {
-                    print(isFollowing);
-                    if (isFollowing == true) {
-                      final result = await showModalActionSheet<int>(
-                        context: context,
-                        title: '取消关注',
-                        message: '不再关注该作者？',
-                        actions: [
-                          SheetAction(
-                            label: '不再关注',
-                            key: 1,
-                            isDestructiveAction: true,
+                  // 用户信息区域
+                  Expanded(
+                    child: Row(
+                      children: [
+                        SvgPicture.network(
+                          "https://api.dicebear.com/9.x/big-ears/svg",
+                          height: 36,
+                          width: 36,
+                          placeholderBuilder: (BuildContext context) =>
+                              const Icon(
+                            Icons.person,
+                            size: 36,
+                            color: Color(0xFF1890FF),
                           ),
-                        ],
-                        cancelLabel: '取消',
-                      );
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            blogInfo.createName,
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // 关注按钮
+                        if (blogInfo.user?['_id'] != userInfo['_id'])
+                          TextButton(
+                            onPressed: () async {
+                              print(isFollowing);
+                              if (isFollowing == true) {
+                                final result = await showModalActionSheet<int>(
+                                  context: context,
+                                  title: '取消关注',
+                                  message: '不再关注该作者？',
+                                  actions: [
+                                    SheetAction(
+                                      label: '不再关注',
+                                      key: 1,
+                                      isDestructiveAction: true,
+                                    ),
+                                  ],
+                                  cancelLabel: '取消',
+                                );
 
-                      if (result == 1) {
-                        try {
-                          final response = await HttpClient.post(
-                            'follow/unfollow',
-                            body: {'userId': blogInfo.user?['_id']},
-                          );
+                                if (result == 1) {
+                                  try {
+                                    final response = await HttpClient.post(
+                                      'follow/unfollow',
+                                      body: {'userId': blogInfo.user?['_id']},
+                                    );
 
-                          if (response['success'] == true) {
-                            if (mounted) {
-                              fetchBlogDetail();
-                            }
-                          }
-                        } catch (e) {
-                          if (mounted) {}
-                        }
-                      }
-                    } else {
-                      try {
-                        final response = await HttpClient.post(
-                          'follow/follow',
-                          body: {'userId': blogInfo.user?['_id']},
-                        );
+                                    if (response['success'] == true) {
+                                      if (mounted) {
+                                        fetchBlogDetail();
+                                      }
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {}
+                                  }
+                                }
+                              } else {
+                                try {
+                                  final response = await HttpClient.post(
+                                    'follow/follow',
+                                    body: {'userId': blogInfo.user?['_id']},
+                                  );
 
-                        if (response['success'] == true) {
-                          if (mounted) {
-                            fetchBlogDetail(); // 重新获取笔记信息以更新关注状态
-                          }
-                        }
-                      } catch (e) {
-                        if (mounted) {}
-                      }
-                    }
-                  },
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                                  if (response['success'] == true) {
+                                    if (mounted) {
+                                      fetchBlogDetail();
+                                    }
+                                  }
+                                } catch (e) {
+                                  if (mounted) {}
+                                }
+                              }
+                            },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: isFollowing
+                                    ? const BorderSide(
+                                        color:
+                                            Color.fromARGB(59, 146, 138, 138))
+                                    : BorderSide.none,
+                              ),
+                              backgroundColor:
+                                  isFollowing ? const Color(0xFFFFFFFF) : null,
+                            ),
+                            child: Text(
+                              isFollowing ? '已关注' : '关注',
+                              style: TextStyle(
+                                color: isFollowing
+                                    ? Colors.black
+                                    : const Color(0xFFFFFFFF),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: isFollowing
-                          ? const BorderSide(
-                              color: Color.fromARGB(59, 146, 138, 138))
-                          : BorderSide.none,
-                    ),
-                    backgroundColor:
-                        isFollowing ? const Color(0xFFFFFFFF) : null,
                   ),
-                  child: Text(
-                    isFollowing ? '已关注' : '关注',
-                    style: TextStyle(
-                      color:
-                          isFollowing ? Colors.black : const Color(0xFFFFFFFF),
-                      fontSize: 12,
-                    ),
+                  // 分享按钮
+                  IconButton(
+                    icon: const Icon(Icons.share, color: Colors.black),
+                    onPressed: () {
+                      _showShareAndReportDialog(context);
+                    },
                   ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
-        body: Stack(children: [
+      ),
+      body: GestureDetector(
+        onHorizontalDragStart: (details) {
+          // 记录滑动开始位置
+          _startPosition = details.globalPosition;
+          _isNavigating = false; // 重置导航状态
+        },
+        onHorizontalDragUpdate: (details) {
+          // 如果已经在导航中，直接返回
+          if (_isNavigating) return;
+
+          // 计算滑动距离
+          final delta = details.globalPosition - _startPosition;
+
+          // 检测从左边缘开始的右滑手势
+          if (_startPosition.dx < 50 && delta.dx > 100) {
+            _isNavigating = true; // 设置导航状态
+            // 触发返回
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/message');
+            }
+          }
+        },
+        child: Stack(children: [
           Column(
             children: [
               Expanded(
@@ -543,32 +1019,70 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                         children: <Widget>[
                           // 添加轮播图
                           if (blogInfo.images.isNotEmpty) ...[
-                            CarouselSlider.builder(
-                              itemCount: blogInfo.images.length,
-                              itemBuilder: (context, index, realIndex) {
-                                return Container(
-                                  width: MediaQuery.of(context).size.width,
-                                  margin:
-                                      const EdgeInsets.symmetric(horizontal: 0),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(0),
-                                    image: DecorationImage(
-                                      image:
-                                          NetworkImage(blogInfo.images[index]),
-                                      fit: BoxFit.cover,
+                            Stack(
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    _showFullScreenImage(context, _currentImageIndex);
+                                  },
+                                  child: CarouselSlider.builder(
+                                    itemCount: blogInfo.images.length,
+                                    itemBuilder: (context, index, realIndex) {
+                                      return Container(
+                                        width: MediaQuery.of(context).size.width,
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 0),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(0),
+                                          image: DecorationImage(
+                                            image: NetworkImage(
+                                                blogInfo.images[index]),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    options: CarouselOptions(
+                                      height: 400,
+                                      viewportFraction: 1.0,
+                                      autoPlay: false,
+                                      enlargeCenterPage: false,
+                                      autoPlayInterval:
+                                          const Duration(seconds: 3),
+                                      autoPlayAnimationDuration:
+                                          const Duration(milliseconds: 800),
+                                      onPageChanged: (index, reason) {
+                                        setState(() {
+                                          _currentImageIndex = index;
+                                        });
+                                      },
                                     ),
                                   ),
-                                );
-                              },
-                              options: CarouselOptions(
-                                height: 400,
-                                viewportFraction: 1.0,
-                                autoPlay: false,
-                                enlargeCenterPage: false,
-                                autoPlayInterval: const Duration(seconds: 3),
-                                autoPlayAnimationDuration:
-                                    const Duration(milliseconds: 800),
-                              ),
+                                ),
+                                // 图片数量指示器
+                                if (blogInfo.images.length > 1)
+                                  Positioned(
+                                    bottom: 16,
+                                    right: 16,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.6),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        '${_currentImageIndex + 1}/${blogInfo.images.length}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                             const SizedBox(height: 16),
                           ],
@@ -729,13 +1243,16 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                           return CommentItem(
                             comment: comments[index],
                             parentComment: null,
+                            blogId: widget.id, // 传递博客id
                             topKeyProvider: () {
                               final id = comments[index].id;
                               return _topCommentKeys[id] ??= GlobalKey();
                             },
                             onReply: (commentId, replyTo, replyToName) {
-                              if (_ignoreNextTap) {
-                                _ignoreNextTap = false;
+                              final state = context.findAncestorStateOfType<
+                                  _BlogDetailPageState>();
+                              if (state != null && state._ignoreNextTap) {
+                                // 长按期间不处理回复，直接返回
                                 return;
                               }
                               FocusScope.of(context)
@@ -817,6 +1334,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                         child: TextField(
                           controller: _commentController,
                           focusNode: _commentFocusNode, // 添加 focusNode
+                          autofocus: false, // 禁止自动获取焦点
                           textInputAction: TextInputAction.send, // 添加这行
                           onSubmitted: (value) {
                             // 添加这行
@@ -914,7 +1432,9 @@ class _BlogDetailPageState extends State<BlogDetailPage>
               ],
             ),
           ),
-        ]));
+        ]),
+      ),
+    );
   }
 }
 
@@ -966,6 +1486,7 @@ class CommentItem extends StatelessWidget {
   final Comment? parentComment;
   final Function(String, String, String)? onReply; // 修改回调函数类型，添加用户名参数
   final GlobalKey Function()? topKeyProvider;
+  final String blogId; // 添加博客id参数
 
   const CommentItem({
     super.key,
@@ -973,6 +1494,7 @@ class CommentItem extends StatelessWidget {
     this.parentComment,
     this.onReply,
     this.topKeyProvider,
+    required this.blogId, // 添加必需的博客id参数
   });
   // 修改 _handleLike 方法
   Future<void> _handleLike(BuildContext context) async {
@@ -995,8 +1517,8 @@ class CommentItem extends StatelessWidget {
     }
   }
 
-  // 新增：展示自己的评论操作弹框 - 使用从底部弹出的Dialog
-  Future<void> _showOwnCommentActions(BuildContext context) {
+  // 统一的评论操作弹框 - 使用showGeneralDialog
+  Future<void> _showCommentActions(BuildContext context, bool isOwn) async {
     return showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -1010,14 +1532,11 @@ class CommentItem extends StatelessWidget {
             color: Colors.transparent,
             child: Container(
               width: double.infinity,
-              margin: const EdgeInsets.all(0),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
-                  bottomLeft: Radius.circular(0),
-                  bottomRight: Radius.circular(0),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -1041,8 +1560,6 @@ class CommentItem extends StatelessWidget {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  // 标题
-
                   const SizedBox(height: 20),
                   // 操作按钮
                   Row(
@@ -1053,59 +1570,9 @@ class CommentItem extends StatelessWidget {
                           child: TextButton.icon(
                             onPressed: () async {
                               Navigator.of(ctx).pop();
-                              try {
-                                final result = await showOkCancelAlertDialog(
-                                  context: context,
-                                  title: '删除评论',
-                                  message: '确定要删除这条评论吗？',
-                                  okLabel: '删除',
-                                  cancelLabel: '取消',
-                                  isDestructiveAction: true,
-                                );
-                                if (result == OkCancelResult.ok) {
-                                  final resp = await HttpClient.delete(
-                                      'comment/${comment.id}');
-                                  if ((resp is Map &&
-                                      (resp['success'] == true ||
-                                          resp['code'] == 200))) {
-                                    final state =
-                                        context.findAncestorStateOfType<
-                                            _BlogDetailPageState>();
-                                    state?.fetchComments();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('已删除评论')),
-                                    );
-                                  }
-                                }
-                              } catch (e) {}
-                            },
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            icon: const Icon(Icons.delete_forever),
-                            label: const Text(
-                              '删除',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: TextButton.icon(
-                            onPressed: () async {
-                              Navigator.of(ctx).pop();
                               await Clipboard.setData(
                                   ClipboardData(text: comment.content));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('内容已复制')),
-                              );
+                              Fluttertoast.showToast(msg: '内容已复制');
                             },
                             style: TextButton.styleFrom(
                               backgroundColor: Colors.grey[200],
@@ -1122,6 +1589,77 @@ class CommentItem extends StatelessWidget {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      if (isOwn)
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: TextButton.icon(
+                              onPressed: () async {
+                                Navigator.of(ctx).pop();
+                                final confirmResult =
+                                    await showOkCancelAlertDialog(
+                                  context: context,
+                                  title: '删除评论',
+                                  message: '确定要删除这条评论吗？',
+                                  okLabel: '删除',
+                                  cancelLabel: '取消',
+                                  isDestructiveAction: true,
+                                );
+                                if (confirmResult == OkCancelResult.ok) {
+                                  try {
+                                    final resp = await HttpClient.delete(
+                                        'comment/${comment.id}');
+                                    if ((resp is Map &&
+                                        (resp['success'] == true ||
+                                            resp['code'] == 200))) {
+                                      final state =
+                                          context.findAncestorStateOfType<
+                                              _BlogDetailPageState>();
+                                      state?.fetchComments();
+                                      Fluttertoast.showToast(msg: '已删除评论');
+                                    }
+                                  } catch (e) {}
+                                }
+                              },
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.delete_forever),
+                              label: const Text(
+                                '删除',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: TextButton.icon(
+                              onPressed: () async {
+                                Navigator.of(ctx).pop();
+                                _showReportDialog(context);
+                              },
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.report),
+                              label: const Text(
+                                '举报',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -1162,10 +1700,266 @@ class CommentItem extends StatelessWidget {
           child: child,
         );
       },
-    ).then((value) {
-      // 弹框关闭后清除焦点
-      FocusScope.of(context).unfocus();
-    });
+    );
+  }
+
+  // 举报对话框
+  // 举报对话框 - 使用showGeneralDialog
+  Future<void> _showReportDialog(BuildContext context) async {
+    try {
+      // 获取举报类型列表
+      final response = await HttpClient.get('report/types');
+      if (response['code'] != 200 && response['success'] != true) {
+        Fluttertoast.showToast(msg: '获取举报类型失败');
+        return;
+      }
+
+      final List<dynamic> reportTypes = response['data']['reasonTypes'] ?? [];
+      if (reportTypes.isEmpty) {
+        Fluttertoast.showToast(msg: '暂无举报类型');
+        return;
+      }
+
+      String? selectedType;
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '',
+        barrierColor: Colors.black54,
+        transitionDuration: const Duration(milliseconds: 300),
+        pageBuilder: (ctx, animation, secondaryAnimation) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return Align(
+                alignment: Alignment.bottomCenter,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, -8),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 顶部指示条
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        // 标题
+                        const Text(
+                          '举报评论',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          '请选择举报原因：',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // 举报选项列表
+                        ...reportTypes.map((type) {
+                          final typeId = type['key'];
+                          final typeName = type['label'] ?? '未知类型';
+                          return Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  selectedType = typeId;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: selectedType == typeId
+                                      ? Colors.red.withOpacity(0.1)
+                                      : Colors.grey[50],
+                                  border: Border.all(
+                                    color: selectedType == typeId
+                                        ? Colors.red
+                                        : Colors.grey[300]!,
+                                    width: 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      selectedType == typeId
+                                          ? Icons.radio_button_checked
+                                          : Icons.radio_button_unchecked,
+                                      color: selectedType == typeId
+                                          ? Colors.red
+                                          : Colors.grey[400],
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        typeName,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: selectedType == typeId
+                                              ? Colors.red
+                                              : Colors.black87,
+                                          fontWeight: selectedType == typeId
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        const SizedBox(height: 20),
+                        // 操作按钮
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 48,
+                                child: TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(),
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: Colors.grey[100],
+                                    foregroundColor: Colors.black54,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    '取消',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: SizedBox(
+                                height: 48,
+                                child: TextButton(
+                                  onPressed: selectedType == null
+                                      ? null
+                                      : () async {
+                                          Navigator.of(ctx).pop();
+                                          await _submitReport(
+                                            context,
+                                            selectedType!,
+                                            targetType: 'comment',
+                                            blogId:
+                                                blogId, // 使用CommentItem的blogId属性
+                                          );
+                                        },
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: selectedType == null
+                                        ? Colors.grey[300]
+                                        : Colors.red,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    '提交举报',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+        transitionBuilder: (ctx, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 1),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            )),
+            child: child,
+          );
+        },
+      );
+    } catch (e) {
+      Fluttertoast.showToast(msg: '获取举报类型失败');
+    }
+  }
+
+  // 提交举报
+  Future<void> _submitReport(BuildContext context, String reportTypeId,
+      {String targetType = 'comment', String? blogId}) async {
+    print('提交举报${comment}');
+    try {
+      final response = await HttpClient.post(
+        'report',
+        body: {
+          'targetId': comment.id,
+          'targetType': targetType,
+          'reasonType': reportTypeId,
+          'blogId': blogId,
+        },
+      );
+
+      if (response['code'] == 200 || response['success'] == true) {
+        Fluttertoast.showToast(msg: '举报已提交，感谢您的反馈');
+      } else {
+        Fluttertoast.showToast(msg: response['message'] ?? '举报失败');
+      }
+    } catch (e) {
+      Fluttertoast.showToast(msg: '举报失败，请稍后重试');
+    }
   }
 
   @override
@@ -1198,23 +1992,34 @@ class CommentItem extends StatelessWidget {
                 context.findAncestorStateOfType<_BlogDetailPageState>();
             // 长按后先屏蔽下一次点击
             state?._ignoreNextTap = true;
-            // 移除：长按时不再立即清除输入焦点，改为在弹框关闭后清除
+
+            // 立即清除焦点，防止弹框期间输入框获得焦点
+            FocusScope.of(context).unfocus();
+
             final isOwn = state != null &&
                 (state.userInfo['_id'] != null) &&
                 (state.userInfo['_id'] == comment.user?['_id']);
             if (isOwn) {
-              _showOwnCommentActions(context).whenComplete(() {
-                // 弹框关闭时清除焦点，避免输入框弹出
-                FocusScope.of(context).unfocus();
+              _showCommentActions(context, true).whenComplete(() {
                 final s =
                     context.findAncestorStateOfType<_BlogDetailPageState>();
                 if (s != null) {
                   s._ignoreNextTap = false; // 弹框关闭后恢复点击
+                  // 确保弹框关闭后焦点被完全清除
+                  FocusScope.of(context).unfocus();
                 }
               });
             } else {
-              // 非本人评论：保持 _ignoreNextTap 为 true，直到下一次 onTap 被消费后再自动重置
-              // 在 onTap 中会检测并重置为 false
+              // 非本人评论：显示复制和举报选项
+              _showCommentActions(context, false).whenComplete(() {
+                final s =
+                    context.findAncestorStateOfType<_BlogDetailPageState>();
+                if (s != null) {
+                  s._ignoreNextTap = false; // 弹框关闭后恢复点击
+                  // 确保弹框关闭后焦点被完全清除
+                  FocusScope.of(context).unfocus();
+                }
+              });
             }
           },
           child: Padding(
@@ -1368,11 +2173,149 @@ class CommentItem extends StatelessWidget {
             (reply) => CommentItem(
               comment: reply,
               parentComment: comment,
+              blogId: blogId, // 传递博客id
               onReply: onReply,
             ),
           ),
         ],
       ],
+    );
+  }
+}
+
+// 全屏图片查看器组件
+class FullScreenImageViewer extends StatefulWidget {
+  final List<String> images;
+  final int initialIndex;
+
+  const FullScreenImageViewer({
+    Key? key,
+    required this.images,
+    required this.initialIndex,
+  }) : super(key: key);
+
+  @override
+  _FullScreenImageViewerState createState() => _FullScreenImageViewerState();
+}
+
+class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // 图片查看器
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.images.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              return GestureDetector(
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+                child: InteractiveViewer(
+                  child: Center(
+                    child: Image.network(
+                      widget.images[index],
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Icon(
+                            Icons.error,
+                            color: Colors.white,
+                            size: 50,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          // 顶部关闭按钮和图片计数
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  if (widget.images.length > 1)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        '${_currentIndex + 1}/${widget.images.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

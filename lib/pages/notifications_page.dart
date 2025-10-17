@@ -64,7 +64,7 @@ class _NotificationsPageState extends State<NotificationsPage>
   void initState() {
     super.initState();
     fetchNotifications();
-    
+
     // 监听通知页面刷新事件
     _refreshSubscription = eventBus.on<NotificationsRefreshEvent>().listen((_) {
       _refreshNotifications();
@@ -265,6 +265,7 @@ class _NotificationsPageState extends State<NotificationsPage>
             child: RefreshIndicator(
               onRefresh: refreshList,
               color: Theme.of(context).primaryColor,
+              backgroundColor: Colors.white,
               child: NotificationListener<ScrollNotification>(
                 onNotification: (scroll) {
                   if (scroll.metrics.pixels >=

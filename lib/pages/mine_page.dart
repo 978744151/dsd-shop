@@ -122,7 +122,7 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
     );
 
     _getToken();
-    
+
     // 监听我的页面刷新事件
     _refreshSubscription = eventBus.on<MinePageRefreshEvent>().listen((_) {
       _refreshMinePage();
@@ -131,17 +131,18 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
 
   // 刷新我的页面的方法
   Future<void> _refreshMinePage() async {
+    print('刷新我的页面${_tabController.index}');
     // 刷新所有数据
-    switch (_tabController.index) {
-      case 0: // 我的笔记
-        await fetchBlogs(userInfo['_id']);
-        break;
-      case 1: // 我的报告
-        await fetchComparisonReports();
-        break;
-      case 2: // 售出藏品
-        break;
-    }
+    // switch (_tabController.index) {
+    //   case 0: // 我的笔记
+    //     await fetchBlogs(userInfo['_id']);
+    //     break;
+    //   case 1: // 我的报告
+    //     await fetchComparisonReports();
+    //     break;
+    //   case 2: // 售出藏品
+    //     break;
+    // }
   }
 
   @override

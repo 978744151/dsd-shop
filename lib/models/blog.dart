@@ -32,6 +32,8 @@ class Blog {
       createdAt: json['createdAt'] ?? '',
       type: json['type'] ?? '',
       defaultImage: json['defaultImage'] ?? '',
+      avatar: json['avatar'],
+      name: json['name'],
       user: json['user'], // 直接使用 Map
     );
   }

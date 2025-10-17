@@ -157,29 +157,29 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         const SizedBox(height: 40),
                         // Logo或图标
-                        Center(
-                          child: Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFFFFFFFF),
-                              boxShadow: [
-                                BoxShadow(
-                                  // ignore: deprecated_member_use
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.flutter_dash,
-                              size: 40,
-                              color: Color(0xFF1890FF),
-                            ),
-                          ),
-                        ),
+                        // Center(
+                        //   child: Container(
+                        //     width: 80,
+                        //     height: 80,
+                        //     decoration: BoxDecoration(
+                        //       shape: BoxShape.circle,
+                        //       color: const Color(0xFFFFFFFF),
+                        //       boxShadow: [
+                        //         BoxShadow(
+                        //           // ignore: deprecated_member_use
+                        //           color: Colors.black.withOpacity(0.1),
+                        //           blurRadius: 10,
+                        //           offset: const Offset(0, 5),
+                        //         ),
+                        //       ],
+                        //     ),
+                        //     child: const Icon(
+                        //       Icons.flutter_dash,
+                        //       size: 40,
+                        //       color: Color(0xFF1890FF),
+                        //     ),
+                        //   ),
+                        // ),
                         const SizedBox(height: 40),
                         const Text(
                           '欢迎回来',
