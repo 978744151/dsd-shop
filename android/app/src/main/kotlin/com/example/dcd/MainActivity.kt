@@ -1,5 +1,0 @@
-package com.example.dcd
-
-import io.flutter.embedding.android.FlutterActivity
-
-class MainActivity : FlutterActivity()
