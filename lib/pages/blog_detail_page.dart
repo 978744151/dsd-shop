@@ -9,7 +9,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/http_client.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import '../utils/storage.dart'; // 添加导入
-import 'package:adaptive_dialog/adaptive_dialog.dart';
+// import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:fluttertoast/fluttertoast.dart'; // 替换为fluttertoast导入
 
 class BlogDetailPage extends StatefulWidget {
@@ -892,18 +892,27 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                             onPressed: () async {
                               print(isFollowing);
                               if (isFollowing == true) {
-                                final result = await showModalActionSheet<int>(
+                              final result = await showDialog<int>(
                                   context: context,
-                                  title: '取消关注',
-                                  message: '不再关注该作者？',
-                                  actions: [
-                                    SheetAction(
-                                      label: '不再关注',
-                                      key: 1,
-                                      isDestructiveAction: true,
-                                    ),
-                                  ],
-                                  cancelLabel: '取消',
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      title: const Text('取消关注'),
+                                      content: const Text('不再关注该作者？'),
+                                      actions: <Widget>[
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(null),
+                                          child: const Text('取消'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(1),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.red,
+                                          ),
+                                          child: const Text('不再关注'),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 );
 
                                 if (result == 1) {
@@ -1212,7 +1221,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                             ),
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 12, vertical: 4),
-                                            child: const Row(
+                                            child:  Row(
                                               children: [
                                                 Text(
                                                   '说点什么吧...',
@@ -1595,18 +1604,32 @@ class CommentItem extends StatelessWidget {
                           child: SizedBox(
                             height: 48,
                             child: TextButton.icon(
-                              onPressed: () async {
+                            onPressed: () async {
                                 Navigator.of(ctx).pop();
-                                final confirmResult =
-                                    await showOkCancelAlertDialog(
+                                final confirmResult = await showDialog<bool>(
                                   context: context,
-                                  title: '删除评论',
-                                  message: '确定要删除这条评论吗？',
-                                  okLabel: '删除',
-                                  cancelLabel: '取消',
-                                  isDestructiveAction: true,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      title: const Text('删除评论'),
+                                      content: const Text('确定要删除这条评论吗？'),
+                                      actions: <Widget>[
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(false),
+                                          child: const Text('取消'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(true),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.red,
+                                          ),
+                                          child: const Text('删除'),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 );
-                                if (confirmResult == OkCancelResult.ok) {
+                                
+                                if (confirmResult == true) {
                                   try {
                                     final resp = await HttpClient.delete(
                                         'comment/${comment.id}');

@@ -19,7 +19,7 @@ class HttpClient {
   }
 
   static Future<Map<String, String>> _getHeaders() async {
-    final token = await _getToken();
+    final token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGYyMDhlNjNmMmM0Y2JkMDNhYjJiZDgiLCJlbWFpbCI6Ijk3ODc0NDE1MUBxcS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NjA3OTE2OTMsImV4cCI6MTc2MTM5NjQ5M30.bTDdzycTiuDMab5LViHgihm9r3HAnYZCu_LWruhE3Gg" ?? await _getToken();
 
     return {
       'Content-Type': 'application/json',

@@ -5,6 +5,7 @@ import '../utils/storage.dart';
 import '../utils/http_client.dart';
 import '../api/comment_api.dart';
 import '../utils/event_bus.dart';
+import '../config/env.dart';
 
 class CustomBottomNavigation extends StatefulWidget {
   final int currentIndex;
@@ -57,7 +58,7 @@ class _CustomBottomNavigationState extends State<CustomBottomNavigation> {
         });
       }
     } catch (e) {
-      print('获取未读消息数量失败: $e');
+      print('获取未读消息数量失败: ${ApiConfig.baseUrl}');
     }
   }
 
@@ -81,7 +82,8 @@ class _CustomBottomNavigationState extends State<CustomBottomNavigation> {
     final isLoggedIn = await _checkLoginStatus();
     if (!isLoggedIn) {
       // 未登录，跳转到登录页面
-      context.go('/login');
+      // context.go('/login');
+       widget.onTap?.call(index);
     } else {
       // 已登录，执行正常导航
       widget.onTap?.call(index);

@@ -108,6 +108,7 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (e) {
+      print(e);
       if (!mounted) return;
       setState(() {
         isLoading = false;
@@ -733,7 +734,7 @@ class _HomePageState extends State<HomePage> {
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Column(
+          child:  Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.play_arrow, color: Colors.grey, size: 16),
@@ -823,7 +824,7 @@ class _HomePageState extends State<HomePage> {
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Column(
+      child:  Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
@@ -879,7 +880,7 @@ class _HomePageState extends State<HomePage> {
               color: Colors.grey[200],
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Column(
+            child:  Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.play_arrow, color: Colors.grey),

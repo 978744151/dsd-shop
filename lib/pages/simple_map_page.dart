@@ -1089,7 +1089,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                 ),
                                 indicatorSize: TabBarIndicatorSize.tab,
                                 dividerColor: Colors.transparent,
-                                tabs: const [
+                                tabs:  [
                                   Tab(
                                     child: Row(
                                       mainAxisAlignment:

@@ -1,4 +1,3 @@
-import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -833,18 +832,27 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _logout() async {
     try {
-      final result = await showModalActionSheet<int>(
+      final result = await showDialog<int>(
         context: context,
-        title: '退出登录',
-        message: '确定要退出登录吗？',
-        actions: [
-          SheetAction(
-            label: '确定',
-            key: 1,
-            isDestructiveAction: true,
-          ),
-        ],
-        cancelLabel: '取消',
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('退出登录'),
+            content: const Text('确定要退出登录吗？'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(null),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(1),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
+                child: const Text('确定'),
+              ),
+            ],
+          );
+        },
       );
       if (result == 1) {
         // 清除所有SharedPreferences数据

@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@flutter-tpl/dcd": "file:"
+  }
+}

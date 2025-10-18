@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
-import 'package:screenshot/screenshot.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart'; // Add this import for RenderRepaintBoundary
+import 'package:flutter_screenshot_callback/flutter_screenshot_callback.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:nft_once/api/brand.dart';
 import '../utils/http_client.dart';
@@ -49,10 +51,9 @@ class _ComparePageState extends State<ComparePage> {
   bool _isLoadingData = false;
   bool _isSelectionSheetOpen = false;
 
-  // Screenshot controller
-  ScreenshotController screenshotController = ScreenshotController();
-  ScreenshotController fullTableScreenshotController = ScreenshotController();
-
+  // 截图相关
+  final GlobalKey _screenshotKey = GlobalKey();
+  final GlobalKey _fullTableScreenshotKey = GlobalKey();
   // 省市数据
   List<Map<String, dynamic>> provinces = [];
   List<Map<String, dynamic>> cities = [];
@@ -1133,11 +1134,11 @@ class _ComparePageState extends State<ComparePage> {
         children: [
           _buildCustomHeader(),
           // 隐藏的完整表格用于截图
-          Positioned(
+      Positioned(
             left: -10000, // 移到屏幕外，不可见但可以截图
             top: 0,
-            child: Screenshot(
-              controller: fullTableScreenshotController,
+            child: RepaintBoundary(
+              key: _fullTableScreenshotKey,
               child: _buildFullTableForScreenshot(),
             ),
           ),
@@ -1420,9 +1421,7 @@ class _ComparePageState extends State<ComparePage> {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.all(16),
-        child: Screenshot(
-          controller: screenshotController,
-          child: Container(
+        child:  Container(
             constraints: const BoxConstraints(
               maxHeight: 800, // 限制最大高度以减少内存使用
               maxWidth: 1200, // 限制最大宽度
@@ -1445,7 +1444,6 @@ class _ComparePageState extends State<ComparePage> {
               ],
             ),
           ),
-        ),
       ),
     );
   }
@@ -2104,23 +2102,37 @@ class _ComparePageState extends State<ComparePage> {
   // 生成表格截图
   Future<void> _captureAndShowImage() async {
     if (!mounted) return;
-
     try {
-      // 等待一帧确保UI稳定
+
+      // 延迟确保UI已经完全渲染
       await Future.delayed(const Duration(milliseconds: 300));
-
-      // 捕获完整表格截图，包含所有品牌数据
-      final Uint8List? image = await fullTableScreenshotController.capture(
-        delay: const Duration(milliseconds: 200),
-        pixelRatio: 2.0, // 适中的像素比例，平衡质量和性能
-      );
-
-      if (mounted && image != null) {
-        _showImageDialog(image);
-      } else if (mounted) {
+      
+      // 使用 RepaintBoundary 捕获 widget
+      RenderRepaintBoundary? boundary = 
+          _fullTableScreenshotKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      
+      if (boundary == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('截图生成失败，请重试')),
         );
+        return;
+      }
+      
+      // 捕获图像
+      final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      print('1234');
+      if (byteData == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('截图生成失败，请重试')),
+        );
+        return;
+      }
+      
+      Uint8List imageBytes = byteData.buffer.asUint8List();
+      
+      if (mounted) {
+        _showImageDialog(imageBytes);
       }
     } catch (e) {
       print('截图错误: $e');
@@ -2135,7 +2147,7 @@ class _ComparePageState extends State<ComparePage> {
   // 显示生成的图片
   void _showImageDialog(Uint8List imageBytes) {
     if (!mounted) return;
-
+    print('1234');
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {

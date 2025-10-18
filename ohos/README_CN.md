@@ -1,0 +1,1 @@
+- [中文](../camera_ohos/README_CN.md)

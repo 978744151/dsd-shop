@@ -179,7 +179,7 @@ class _BrandCenterPageState extends State<BrandCenterPage> {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : filteredBrands.isEmpty
-                    ? const Center(
+                    ?  Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

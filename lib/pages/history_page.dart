@@ -1,4 +1,3 @@
-import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -280,19 +279,29 @@ class _HistoryPageState extends State<HistoryPage>
     //     // );
     //   },
     // );
-    final result = await showModalActionSheet<int>(
+    final result = await showDialog<int>(
       context: context,
-      title: '清空历史记录',
-      message: '确定要清空所有浏览历史吗？\n此操作无法撤销',
-      actions: [
-        SheetAction(
-          label: '确定',
-          key: 1,
-          isDestructiveAction: true,
-        ),
-      ],
-      cancelLabel: '取消',
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('清空历史记录'),
+          content: const Text('确定要清空所有浏览历史吗？\n此操作无法撤销'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(1),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('确定'),
+            ),
+          ],
+        );
+      },
     );
+    
     if (result == 1) {
       try {
         await HttpClient.delete('blogs/history');

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart'; // Add this import for RenderRepaintBoundary
+import 'package:flutter_screenshot_callback/flutter_screenshot_callback.dart';
+
 import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:typed_data';
-import 'package:screenshot/screenshot.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import '../utils/http_client.dart';
 import '../api/brand.dart';
+import 'dart:ui' as ui;
 
 const Color kHeaderBackgroundColor = Color(0xFFF4F8FF);
 
@@ -21,9 +24,7 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
   List<Map<String, dynamic>> _comparisonData = [];
   String _title = '';
   // Screenshot controllers
-  final ScreenshotController fullTableScreenshotController =
-      ScreenshotController();
-
+  final GlobalKey _tableKey = GlobalKey();
   @override
   void initState() {
     super.initState();
@@ -66,17 +67,35 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
   Future<void> _captureAndShowImage() async {
     if (!mounted) return;
     try {
+      // 延迟确保UI已经完全渲染
       await Future.delayed(const Duration(milliseconds: 300));
-      final Uint8List? image = await fullTableScreenshotController.capture(
-        delay: const Duration(milliseconds: 200),
-        pixelRatio: 2.0,
-      );
-      if (mounted && image != null) {
-        _showImageDialog(image);
-      } else if (mounted) {
+      
+      // 使用 RepaintBoundary 捕获 widget
+      RenderRepaintBoundary? boundary = 
+          _tableKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      
+      if (boundary == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('截图生成失败，请重试')),
         );
+        return;
+      }
+      
+      // 捕获图像
+      ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      
+      if (byteData == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('截图生成失败，请重试')),
+        );
+        return;
+      }
+      
+      Uint8List imageBytes = byteData.buffer.asUint8List();
+      
+      if (mounted) {
+        _showImageDialog(imageBytes);
       }
     } catch (e) {
       // ignore: avoid_print
@@ -171,9 +190,6 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
         name: "comparison_table_${DateTime.now().millisecondsSinceEpoch}",
       );
       if (result != null && result['isSuccess'] == true) {
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   const SnackBar(content: Text('图片已保存到相册')),
-        // );
         Fluttertoast.showToast(
           msg: "图片已保存到相册",
         );
@@ -190,6 +206,7 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
       );
     }
   }
+
 
   Color _getScoreColor(double score) {
     if (score >= 80) return Colors.green;
@@ -581,8 +598,8 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: SingleChildScrollView(
-                    child: Screenshot(
-                      controller: fullTableScreenshotController,
+                       child: RepaintBoundary(
+                      key: _tableKey,
                       child: _buildFullTableForScreenshot(),
                     ),
                   ),

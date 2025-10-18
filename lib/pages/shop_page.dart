@@ -153,7 +153,7 @@ class _ShopPageState extends State<ShopPage> {
               color: Colors.grey[200],
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Column(
+            child:  Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
@@ -188,7 +188,7 @@ class _ShopPageState extends State<ShopPage> {
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Center(
+                child:  Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -207,7 +207,7 @@ class _ShopPageState extends State<ShopPage> {
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Center(
+                child:  Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -243,7 +243,7 @@ class _ShopPageState extends State<ShopPage> {
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Column(
+          child:  Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.play_arrow, color: Colors.grey, size: 16),
@@ -282,7 +282,7 @@ class _ShopPageState extends State<ShopPage> {
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Column(
+      child:  Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
@@ -338,7 +338,7 @@ class _ShopPageState extends State<ShopPage> {
               color: Colors.grey[200],
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Column(
+            child:  Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.play_arrow, color: Colors.grey),

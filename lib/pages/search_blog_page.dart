@@ -248,7 +248,7 @@ class _SearchBlogPageState extends State<SearchBlogPage> {
                       onPressed: () => _searchBlogs(_searchController.text),
                       style: TextButton.styleFrom(
                         backgroundColor: Colors.transparent,
-                        overlayColor: Colors.transparent,
+                        // overlayColor: Colors.transparent,
                       ),
                       child: const Text(
                         '搜索',

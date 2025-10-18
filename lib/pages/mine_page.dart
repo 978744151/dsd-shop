@@ -341,20 +341,18 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                           SvgPicture.network(
                             userInfo['avatar'] ??
                                 'https://api.dicebear.com/9.x/avataaars/svg?seed=Felix',
-                            height: 35.0, // 固定头像大小，使用double类型
-                            width: 35.0,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                height: 35.0,
-                                width: 35.0,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.person,
-                                    color: Colors.grey),
-                              );
-                            },
+                            height: 35,
+                            width: 35,
+                            placeholderBuilder: (BuildContext context) => Container(
+                              height: 35,
+                              width: 35,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.person,
+                                  color: Colors.grey),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           // 用户名和等级 - 简化为只显示用户名
@@ -431,20 +429,18 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                               SvgPicture.network(
                                 userInfo['avatar'] ??
                                     'https://api.dicebear.com/9.x/avataaars/svg?seed=Felix',
-                                height: 35,
-                                width: 35,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    height: 35,
-                                    width: 35,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.person,
-                                        color: Colors.grey),
-                                  );
-                                },
+                                height: 35.0,
+                                width: 35.0,
+                                placeholderBuilder: (BuildContext context) => Container(
+                                  height: 35.0,
+                                  width: 35.0,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.person,
+                                      color: Colors.grey),
+                                ),
                               ),
                               const SizedBox(width: 12),
                               // 用户名和等级
@@ -812,7 +808,7 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
 
     return AnimationLimiter(
       child: myReportsList.isEmpty
-          ? const Center(
+          ?  Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -1452,7 +1448,7 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
   // 构建我的笔记列表
   Widget _buildMyCollections() {
     if (myBlogsList.isEmpty) {
-      return const Center(
+      return  Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

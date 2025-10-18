@@ -502,17 +502,15 @@ class _FollowPageState extends State<FollowPage>
             user.avatar ?? '',
             height: 35, // 固定头像大小
             width: 35,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                height: 35,
-                width: 35,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.person, color: Colors.grey),
-              );
-            },
+            placeholderBuilder: (BuildContext context) => Container(
+              height: 35,
+              width: 35,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.person, color: Colors.grey),
+            ),
           ),
           const SizedBox(width: 16),
           // 用户信息
