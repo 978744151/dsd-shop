@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart'; // Add this import for RenderRepaintBoundary
-import 'package:flutter_screenshot_callback/flutter_screenshot_callback.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:nft_once/api/brand.dart';
+import 'package:nft_once/utils/toast_util.dart';
 import '../utils/http_client.dart';
 import '../models/mall.dart';
-import '../models/brand.dart';
 
 // 全局颜色常量定义
 const Color kHeaderBackgroundColor = Color(0xFFF4F8FF);
@@ -1113,7 +1108,7 @@ class _ComparePageState extends State<ComparePage> {
         });
       }
       if (saveReport) {
-        Fluttertoast.showToast(msg: '保存成功');
+        ToastUtil.showPrimary('保存成功');
       }
     } catch (e) {
       print('获取对比数据失败: $e');
@@ -2102,7 +2097,6 @@ class _ComparePageState extends State<ComparePage> {
   // 生成表格截图
   Future<void> _captureAndShowImage() async {
     if (!mounted) return;
-    try {
 
       // 延迟确保UI已经完全渲染
       await Future.delayed(const Duration(milliseconds: 300));
@@ -2120,8 +2114,9 @@ class _ComparePageState extends State<ComparePage> {
       
       // 捕获图像
       final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+        
       final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      print('1234');
+    print('1234$ByteData');
       if (byteData == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('截图生成失败，请重试')),
@@ -2134,14 +2129,7 @@ class _ComparePageState extends State<ComparePage> {
       if (mounted) {
         _showImageDialog(imageBytes);
       }
-    } catch (e) {
-      print('截图错误: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('截图失败: ${e.toString()}')),
-        );
-      }
-    }
+    
   }
 
   // 显示生成的图片
@@ -2234,24 +2222,14 @@ class _ComparePageState extends State<ComparePage> {
 
       if (mounted) {
         if (result['isSuccess'] == true) {
-          Fluttertoast.showToast(msg: '图片已保存到相册');
+          ToastUtil.showPrimary('图片已保存到相册');
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('保存失败，请检查相册权限'),
-              backgroundColor: Colors.red,
-            ),
-          );
+            ToastUtil.showError('保存失败，请检查相册权限');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('保存失败: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+         ToastUtil.showError('保存失败，$e');
       }
     }
   }

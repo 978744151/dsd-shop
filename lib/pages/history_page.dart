@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:nft_once/pages/blog_detail_page.dart';
+import 'package:nft_once/utils/toast_util.dart';
 import '../utils/http_client.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../utils/event_bus.dart';
 import 'dart:async';
 import '../widgets/loading_indicator_widget.dart';
 import 'package:flutter/cupertino.dart';
 import '../widgets/custom_refresh_widget.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 
 class HistoryBlog {
   final String id;
@@ -311,7 +309,8 @@ class _HistoryPageState extends State<HistoryPage>
           hasMore = true;
         });
         if (mounted) {
-          Fluttertoast.showToast(msg: '历史记录已清空');
+          ToastUtil.showPrimary('历史记录已清空');
+          
         }
       } catch (e) {
         if (mounted) {

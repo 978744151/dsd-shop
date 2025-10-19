@@ -5,6 +5,7 @@ import 'package:flutter_screenshot_callback/flutter_screenshot_callback.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:typed_data';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:nft_once/utils/toast_util.dart';
 import '../utils/http_client.dart';
 import '../api/brand.dart';
 import 'dart:ui' as ui;
@@ -190,9 +191,7 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
         name: "comparison_table_${DateTime.now().millisecondsSinceEpoch}",
       );
       if (result != null && result['isSuccess'] == true) {
-        Fluttertoast.showToast(
-          msg: "图片已保存到相册",
-        );
+        ToastUtil.showPrimary('图片已保存到相册');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('保存失败')),

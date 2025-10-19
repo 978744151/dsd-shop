@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 // import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 // import './utils/http_client.dart';
 import 'package:bot_toast/bot_toast.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+// import 'package:webview_flutter_ohos/webview_flutter_ohos.dart';
 
 // import 'dart:io' show Platform; // 用于检测平台
 import 'package:flutter/services.dart';
@@ -13,7 +13,7 @@ import 'package:flutter/services.dart';
 import 'router/router.dart'; // 添加这行
 
 void main() {
-  SharedPreferences.setMockInitialValues({});
+  // WebViewOhosPlatform.register(); // 这里很重要的初始化步骤
   WidgetsFlutterBinding.ensureInitialized();
 
   // 强制设置 WebViewPlatform 实现

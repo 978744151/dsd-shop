@@ -82,8 +82,7 @@ class _CustomBottomNavigationState extends State<CustomBottomNavigation> {
     final isLoggedIn = await _checkLoginStatus();
     if (!isLoggedIn) {
       // 未登录，跳转到登录页面
-      // context.go('/login');
-       widget.onTap?.call(index);
+      context.go('/login');
     } else {
       // 已登录，执行正常导航
       widget.onTap?.call(index);

@@ -832,37 +832,100 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _logout() async {
     try {
-      final result = await showDialog<int>(
+      final result = await showModalBottomSheet<int>(
         context: context,
+        backgroundColor: Colors.transparent,
         builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('退出登录'),
-            content: const Text('确定要退出登录吗？'),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(null),
-                child: const Text('取消'),
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(1),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                child: const Text('确定'),
-              ),
-            ],
+                const SizedBox(height: 20),
+                const Icon(
+                  Icons.logout_rounded,
+                  size: 40,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '退出登录',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '确定要退出登录吗？',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(null),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Colors.grey[300]!),
+                            ),
+                          ),
+                          child: const Text('取消'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(1),
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('确定退出'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           );
         },
       );
+      
+      // 后续代码保持不变
       if (result == 1) {
-        // 清除所有SharedPreferences数据
         final prefs = await SharedPreferences.getInstance();
         await prefs.clear();
-
-        // 显示成功提示
         ToastUtil.showSuccess('已退出登录');
-
-        // 跳转到登录页面
         if (mounted) {
           context.go('/login');
         }

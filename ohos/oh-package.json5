@@ -1,5 +1,3 @@
-
-
 {
   "modelVersion": "5.0.0",
   "name": "dsd",
@@ -15,6 +13,10 @@
     "@ohos/hypium": "1.0.6"
   },
   "overrides": {
-    "@ohos/flutter_ohos": "file:./har/flutter.har"
+    "@ohos/flutter_module": "file:./entry",
+    "@ohos/flutter_ohos": "file:./har/flutter.har",
+    "image_picker_ohos": "file:./har/image_picker_ohos.har",
+    "shared_preferences_ohos": "file:./har/shared_preferences_ohos.har",
+    "image_gallery_saver": "file:./har/image_gallery_saver.har"
   }
 }

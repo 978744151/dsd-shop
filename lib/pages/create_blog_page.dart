@@ -9,7 +9,7 @@ import 'package:nft_once/utils/toast_util.dart';
 import 'dart:io';
 import 'dart:convert';
 import '../config/env.dart';
-
+import 'dart:async';
 // 添加条件导入
 import 'package:image_picker/image_picker.dart';
 // 在文件顶部添加导入
@@ -38,7 +38,7 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
   final List<String> _suggestedTags = [];
   bool _validateForm() {
     if (_titleController.text.isEmpty) {
-      Fluttertoast.showToast(msg: '请填写标题');
+      ToastUtil.showPrimary('请填写标题');
       return false;
     }
 
@@ -449,7 +449,7 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
                       ElevatedButton(
                         onPressed: () {
                           if (_selectedTags.length > 5) {
-                            Fluttertoast.showToast(msg: '最多添加5个标签');
+                            ToastUtil.showPrimary('最多添加5个标签');
                             return;
                           }
                           String newTag = _tagController.text.trim();

@@ -495,7 +495,7 @@ class _HomePageState extends State<HomePage> {
                 shape: BoxShape.circle,
                 image: DecorationImage(
                   image: NetworkImage(brand.logo ?? ''),
-                  fit: BoxFit.contain,
+                  fit: BoxFit.cover,
                 )),
           ),
           const SizedBox(height: 8),

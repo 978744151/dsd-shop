@@ -11,6 +11,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import '../utils/storage.dart'; // 添加导入
 // import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:fluttertoast/fluttertoast.dart'; // 替换为fluttertoast导入
+import '../utils/toast_util.dart';
 
 class BlogDetailPage extends StatefulWidget {
   final String id; // 添加 id 参数
@@ -119,6 +120,26 @@ class _BlogDetailPageState extends State<BlogDetailPage>
     fetchComments();
     fetchHistory();
     checkFavoriteStatus(); // 检查收藏状态
+  }
+
+  String _timeAgo(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inDays > 0) {
+        return '${difference.inDays}天前';
+      } else if (difference.inHours > 0) {
+        return '${difference.inHours}小时前';
+      } else if (difference.inMinutes > 0) {
+        return '${difference.inMinutes}分钟前';
+      } else {
+        return '刚刚';
+      }
+    } catch (e) {
+      return dateString;
+    }
   }
 
   Future<void> getToken(String token) async {
@@ -283,7 +304,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                         id: reply['id'] ?? '', // 修改：直接获取评论 ID
                         author: reply['user']['username'] ?? '',
                         content: reply['content'] ?? '',
-                        time: formatDateTime(reply['createdAt'] ?? ''),
+                        time: _timeAgo(reply['createdAt'] ?? ''),
                         avatar: reply['user']['avatar'] ?? '',
                         isReply: true,
                         toUserName: reply['toUserName'] ?? '',
@@ -296,7 +317,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                 id: item['id'] ?? '', // 修改：直接获取评论 ID
                 author: item['user']['username'] ?? '',
                 content: item['content'] ?? '',
-                time: formatDateTime(item['createdAt'] ?? ''),
+                time: _timeAgo(item['createdAt'] ?? ''),
                 avatar: item['user']['avatar'] ?? '',
                 isReply: false,
                 replies: replies,
@@ -444,12 +465,12 @@ class _BlogDetailPageState extends State<BlogDetailPage>
       );
 
       if (response['code'] == 200 || response['success'] == true) {
-        Fluttertoast.showToast(msg: '举报已提交，感谢您的反馈');
+        ToastUtil.showPrimary('举报已提交，感谢您的反馈');
       } else {
-        Fluttertoast.showToast(msg: response['message'] ?? '举报失败');
+        ToastUtil.showPrimary(response['message'] ?? '举报失败');
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: '举报失败，请稍后重试');
+      ToastUtil.showPrimary('举报失败，请稍后重试');
     }
   }
 
@@ -459,13 +480,13 @@ class _BlogDetailPageState extends State<BlogDetailPage>
       // 获取举报类型列表
       final response = await HttpClient.get('report/types');
       if (response['code'] != 200 && response['success'] != true) {
-        Fluttertoast.showToast(msg: '获取举报类型失败');
+        ToastUtil.showPrimary('获取举报类型失败');
         return;
       }
 
       final List<dynamic> reportTypes = response['data']['reasonTypes'] ?? [];
       if (reportTypes.isEmpty) {
-        Fluttertoast.showToast(msg: '暂无举报类型');
+        ToastUtil.showPrimary('暂无举报类型');
         return;
       }
 
@@ -680,7 +701,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
         },
       );
     } catch (e) {
-      Fluttertoast.showToast(msg: '获取举报类型失败');
+      ToastUtil.showPrimary('获取举报类型失败');
     }
   }
 
@@ -740,7 +761,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                               await Clipboard.setData(ClipboardData(
                                   text:
                                       'https://example.com/blog/${widget.id}'));
-                              Fluttertoast.showToast(msg: '链接已复制');
+                              ToastUtil.showPrimary('链接已复制');
                             },
                             style: TextButton.styleFrom(
                               backgroundColor: Colors.grey[200],
@@ -892,30 +913,96 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                             onPressed: () async {
                               print(isFollowing);
                               if (isFollowing == true) {
-                              final result = await showDialog<int>(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: const Text('取消关注'),
-                                      content: const Text('不再关注该作者？'),
-                                      actions: <Widget>[
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(null),
-                                          child: const Text('取消'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(1),
-                                          style: TextButton.styleFrom(
-                                            foregroundColor: Colors.red,
-                                          ),
-                                          child: const Text('不再关注'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
+                                    final result = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Icon(
+                Icons.person_remove,
+                color: Colors.orange,
+                size: 40,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '取消关注',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '确定要取消关注该用户吗？',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.grey[300]!),
+                          ),
+                        ),
+                        child: const Text('取消'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('确定取消'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
 
-                                if (result == 1) {
+                                if (result == true) {
                                   try {
                                     final response = await HttpClient.post(
                                       'follow/unfollow',
@@ -1032,21 +1119,24 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                               children: [
                                 GestureDetector(
                                   onTap: () {
-                                    _showFullScreenImage(context, _currentImageIndex);
+                                    _showFullScreenImage(
+                                        context, _currentImageIndex);
                                   },
                                   child: CarouselSlider.builder(
                                     itemCount: blogInfo.images.length,
                                     itemBuilder: (context, index, realIndex) {
                                       return Container(
-                                        width: MediaQuery.of(context).size.width,
+                                        width:
+                                            MediaQuery.of(context).size.width,
                                         margin: const EdgeInsets.symmetric(
                                             horizontal: 0),
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(0),
+                                          borderRadius:
+                                              BorderRadius.circular(0),
                                           image: DecorationImage(
                                             image: NetworkImage(
                                                 blogInfo.images[index]),
-                                            fit: BoxFit.cover,
+                                            fit: BoxFit.contain,
                                           ),
                                         ),
                                       );
@@ -1221,7 +1311,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                             ),
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 12, vertical: 4),
-                                            child:  Row(
+                                            child: Row(
                                               children: [
                                                 Text(
                                                   '说点什么吧...',
@@ -1581,7 +1671,7 @@ class CommentItem extends StatelessWidget {
                               Navigator.of(ctx).pop();
                               await Clipboard.setData(
                                   ClipboardData(text: comment.content));
-                              Fluttertoast.showToast(msg: '内容已复制');
+                              ToastUtil.showPrimary('内容已复制');
                             },
                             style: TextButton.styleFrom(
                               backgroundColor: Colors.grey[200],
@@ -1604,35 +1694,102 @@ class CommentItem extends StatelessWidget {
                           child: SizedBox(
                             height: 48,
                             child: TextButton.icon(
-                            onPressed: () async {
+                              onPressed: () async {
                                 Navigator.of(ctx).pop();
-                                final confirmResult = await showDialog<bool>(
+                                     final confirmResult = await showModalBottomSheet<bool>(
                                   context: context,
+                                  backgroundColor: Colors.transparent,
                                   builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: const Text('删除评论'),
-                                      content: const Text('确定要删除这条评论吗？'),
-                                      actions: <Widget>[
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(false),
-                                          child: const Text('取消'),
+                                    return Container(
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.only(
+                                          topLeft: Radius.circular(20),
+                                          topRight: Radius.circular(20),
                                         ),
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(true),
-                                          style: TextButton.styleFrom(
-                                            foregroundColor: Colors.red,
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            margin: const EdgeInsets.only(top: 8),
+                                            width: 40,
+                                            height: 4,
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[300],
+                                              borderRadius: BorderRadius.circular(2),
+                                            ),
                                           ),
-                                          child: const Text('删除'),
-                                        ),
-                                      ],
+                                          const SizedBox(height: 20),
+                                          const Icon(
+                                            Icons.delete_forever,
+                                            color: Colors.red,
+                                            size: 40,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          const Text(
+                                            '删除评论',
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            '确定要删除这条评论吗？',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 24),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: TextButton(
+                                                    onPressed: () => Navigator.of(context).pop(false),
+                                                    style: TextButton.styleFrom(
+                                                      padding: const EdgeInsets.symmetric(vertical: 15),
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(12),
+                                                        side: BorderSide(color: Colors.grey[300]!),
+                                                      ),
+                                                    ),
+                                                    child: const Text('取消'),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: TextButton(
+                                                    onPressed: () => Navigator.of(context).pop(true),
+                                                    style: TextButton.styleFrom(
+                                                      backgroundColor: Colors.red,
+                                                      foregroundColor: Colors.white,
+                                                      padding: const EdgeInsets.symmetric(vertical: 15),
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(12),
+                                                      ),
+                                                    ),
+                                                    child: const Text('确定删除'),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 20),
+                                        ],
+                                      ),
                                     );
                                   },
                                 );
-                                
+
                                 if (confirmResult == true) {
                                   try {
                                     final resp = await HttpClient.delete(
-                                        'comment/${comment.id}');
+                                        'comment/delete/${comment.id}');
+                                        print('comment/delete/${comment.id}');
                                     if ((resp is Map &&
                                         (resp['success'] == true ||
                                             resp['code'] == 200))) {
@@ -1640,7 +1797,7 @@ class CommentItem extends StatelessWidget {
                                           context.findAncestorStateOfType<
                                               _BlogDetailPageState>();
                                       state?.fetchComments();
-                                      Fluttertoast.showToast(msg: '已删除评论');
+                                      ToastUtil.showPrimary('已删除评论');
                                     }
                                   } catch (e) {}
                                 }
@@ -1733,13 +1890,13 @@ class CommentItem extends StatelessWidget {
       // 获取举报类型列表
       final response = await HttpClient.get('report/types');
       if (response['code'] != 200 && response['success'] != true) {
-        Fluttertoast.showToast(msg: '获取举报类型失败');
+        ToastUtil.showPrimary('获取举报类型失败');
         return;
       }
 
       final List<dynamic> reportTypes = response['data']['reasonTypes'] ?? [];
       if (reportTypes.isEmpty) {
-        Fluttertoast.showToast(msg: '暂无举报类型');
+        ToastUtil.showPrimary('暂无举报类型');
         return;
       }
 
@@ -1956,7 +2113,7 @@ class CommentItem extends StatelessWidget {
         },
       );
     } catch (e) {
-      Fluttertoast.showToast(msg: '获取举报类型失败');
+        ToastUtil.showPrimary('获取举报类型失败');
     }
   }
 
@@ -1976,12 +2133,12 @@ class CommentItem extends StatelessWidget {
       );
 
       if (response['code'] == 200 || response['success'] == true) {
-        Fluttertoast.showToast(msg: '举报已提交，感谢您的反馈');
+        ToastUtil.showPrimary('举报已提交，感谢您的反馈');
       } else {
-        Fluttertoast.showToast(msg: response['message'] ?? '举报失败');
+        ToastUtil.showPrimary(response['message'] ?? '举报失败');
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: '举报失败，请稍后重试');
+      ToastUtil.showPrimary('举报失败，请稍后重试');
     }
   }
 
@@ -2080,7 +2237,75 @@ class CommentItem extends StatelessWidget {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          Text(
+                          const SizedBox(width: 10),
+
+                          const Spacer(),
+
+                        ],
+                      ),
+                      //如果在第一层
+                      if (comment.parentId == '')...[
+                        Row(
+                          children: [
+                             Expanded(
+                              
+                              child: RichText(
+                                text: TextSpan(
+                                      text: comment.content,
+                                      style: const TextStyle(
+                                        color: Color(0xFF333333),
+                                        fontSize: 14,
+
+                                      ),
+                                    ),
+                               
+                              ),
+                            ),
+                          ]
+                           
+                        )
+                        
+                      ],
+                          
+                   
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (comment.toUserName.isNotEmpty) ...[
+                            Expanded(
+                              
+                              child: RichText(
+                                text: TextSpan(
+                                  children: [
+                                    if (comment.toUserName != comment.author)
+                                      TextSpan(
+                                        text: '回复 ${comment.toUserName}: ',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    TextSpan(
+                                      text: comment.content,
+                                      style: const TextStyle(
+                                        color: Color(0xFF333333),
+                                        fontSize: 14,
+
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                               
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                        
+                        ],
+                      ),
+                      Row(
+                        children: [
+                             Text(
                             comment.time,
                             style: TextStyle(
                               color: Colors.grey[600],
@@ -2090,8 +2315,8 @@ class CommentItem extends StatelessWidget {
                           const Spacer(),
                           SizedBox(
                             width: 40,
-                            height: 35,
-                            child: Column(
+                            height: 25,
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               mainAxisAlignment:
                                   MainAxisAlignment.start, // 添加这行
@@ -2127,62 +2352,8 @@ class CommentItem extends StatelessWidget {
                             ),
                           ),
                         ],
-                      ),
-                      //如果在第一层
-                      if (comment.parentId == '')
-                        Row(
-                          children: [
-                            Text(
-                              comment.content ?? '',
-                              style: const TextStyle(
-                                color: Color(0xFF333333),
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // &&
-                          //     comment.toUserName !=
-                          //         parentComment?.user?['name']
-                          if (comment.toUserName.isNotEmpty) ...[
-                            Flexible(
-                              child: RichText(
-                                text: TextSpan(
-                                  children: [
-                                    if (comment.toUserName != comment.author)
-                                      TextSpan(
-                                        text: '回复 ${comment.toUserName}: ',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    TextSpan(
-                                      text: comment.content,
-                                      style: const TextStyle(
-                                        color: Color(0xFF333333),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                softWrap: true,
-                                overflow: TextOverflow.visible,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          // Expanded(
-                          //   child: Text(
-                          //     ,
-                          //     style: const TextStyle(fontSize: 14),
-                          //   ),
-                          // ),
-                        ],
-                      ),
+                      )
+                        
                       // const SizedBox(height: 2),
                     ],
                   ),

@@ -8,8 +8,6 @@ import '../pages/compare_page.dart';
 import '../pages/shell_page.dart';
 import '../pages/mine_page.dart';
 import '../pages/login_page.dart';
-import '../pages/shopDetailEcharts.dart';
-import '../pages/test_map_page.dart';
 import '../pages/simple_map_page.dart';
 import '../pages/mall_detail_page.dart';
 import '../pages/mall_brand_page.dart';
@@ -50,11 +48,6 @@ final router = GoRouter(
               path: '/',
               builder: (context, state) => const HomePage(),
               routes: [
-                GoRoute(
-                  path: 'shopDetailEcharts/:id',
-                  builder: (context, state) =>
-                      ShopDetailEcharts(id: state.pathParameters['id']!),
-                ),
                 GoRoute(
                   path: 'brandMap/:brandId',
                   parentNavigatorKey: _rootNavigatorKey,
@@ -190,9 +183,6 @@ final router = GoRouter(
         return BrandCenterPage(autoFocus: autoFocus);
       },
     ),
-    GoRoute(
-      path: '/test-map',
-      builder: (context, state) => const TestMapPage(),
-    ),
+  
   ],
 );
