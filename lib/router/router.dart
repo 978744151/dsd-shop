@@ -23,6 +23,7 @@ import '../pages/favorites_page.dart';
 import '../pages/follow_page.dart';
 import '../pages/notifications_page.dart';
 import '../pages/brand_center_page.dart';
+import '../pages/feedback_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(); // 添加这行
 
@@ -47,6 +48,10 @@ final router = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
+          path: '/feedback',
+          builder: (context, state) => const FeedbackPage(),
+        ),
+        GoRoute(
               path: '/',
               builder: (context, state) => const HomePage(),
               routes: [

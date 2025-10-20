@@ -1,4 +1,5 @@
 import 'package:adaptive_dialog/adaptive_dialog.dart';
+import 'package:business_savvy/pages/feedback_page.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -678,6 +679,10 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: '获取帮助或提供建议',
             color: Colors.blue,
             onTap: () {
+              // context.push('/feedback');
+              Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+                builder: (context) => FeedbackPage(),
+              ));
               // TODO: 实现帮助与反馈
             },
           ),

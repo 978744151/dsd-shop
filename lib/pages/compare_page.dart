@@ -1,3 +1,4 @@
+import 'package:business_savvy/pages/feedback_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -1160,14 +1161,20 @@ class _ComparePageState extends State<ComparePage> {
               child: _buildFullTableForScreenshot(),
             ),
           ),
-          // 悬浮的红色感叹号按钮
+          // 悬浮的红色感叹号按钮 - 导航到反馈页面
           Positioned(
             right: 0,
             bottom: 10,
             child: FloatingActionButton(
               // shape: CircleBorder(),
               mini: true,
-              onPressed: _showFeedbackBottomSheet,
+              onPressed: () {
+                // 导航到新的反馈页面
+                // context.push('/feedback');
+                Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+                  builder: (context) => FeedbackPage(),
+                ));
+              },
               backgroundColor: Colors.red,
               child: const Icon(
                 Icons.error_outline,
