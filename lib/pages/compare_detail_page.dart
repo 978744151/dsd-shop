@@ -544,7 +544,7 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
               ),
             ),
             child: const Text(
-              '懂商帝: 分值采用自定义输入分数,仅作参考',
+              '懂商帝: 分值采用用户自定义输入分数,仅作参考',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
