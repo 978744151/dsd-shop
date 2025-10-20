@@ -7,7 +7,7 @@ import '../utils/toast_util.dart';
 
 class BrandCenterPage extends StatefulWidget {
   final bool autoFocus;
-  
+
   const BrandCenterPage({Key? key, this.autoFocus = false}) : super(key: key);
 
   @override
@@ -31,7 +31,7 @@ class _BrandCenterPageState extends State<BrandCenterPage> {
     super.initState();
     fetchBrands();
     fetchCategories();
-    
+
     // 如果需要自动聚焦，延迟一帧后聚焦搜索框
     if (widget.autoFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -213,6 +213,20 @@ class _BrandCenterPageState extends State<BrandCenterPage> {
                           return _buildBrandItem(filteredBrands[index]);
                         },
                       ),
+          ),
+          // 底部声明
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: Text(
+                '品牌统计源于网络统计，如有错误，请联系管理员',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
           ),
         ],
       ),

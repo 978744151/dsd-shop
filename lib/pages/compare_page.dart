@@ -10,6 +10,7 @@ import 'package:nft_once/api/brand.dart';
 import '../utils/http_client.dart';
 import '../models/mall.dart';
 import '../models/brand.dart';
+import '../api/feedback_api.dart';
 
 // 全局颜色常量定义
 const Color kHeaderBackgroundColor = Color(0xFFF4F8FF);
@@ -48,6 +49,24 @@ class _ComparePageState extends State<ComparePage> {
   bool _isLoading = false;
   bool _isLoadingData = false;
   bool _isSelectionSheetOpen = false;
+
+  // 反馈相关状态
+  bool _isFeedbackSheetOpen = false;
+  final TextEditingController _feedbackController = TextEditingController();
+  String _selectedFeedbackType = 'bug'; // 默认选择错误报告
+  final ValueNotifier<String> _feedbackLabelNotifier =
+      ValueNotifier<String>('错误报告');
+  bool _isFeedbackTypeDialogOpen = false; // 控制反馈类型选择弹框
+
+  // 反馈类型选项 - 使用label-value形式
+  final List<Map<String, String>> _feedbackTypes = [
+    {'value': 'bug', 'label': '错误报告'},
+    {'value': 'feature', 'label': '功能建议'},
+    {'value': 'improvement', 'label': '改进建议'},
+    {'value': 'question', 'label': '问题咨询'},
+    {'value': 'complaint', 'label': '投诉建议'},
+    {'value': 'other', 'label': '其他'},
+  ];
 
   // Screenshot controller
   ScreenshotController screenshotController = ScreenshotController();
@@ -1141,6 +1160,22 @@ class _ComparePageState extends State<ComparePage> {
               child: _buildFullTableForScreenshot(),
             ),
           ),
+          // 悬浮的红色感叹号按钮
+          Positioned(
+            right: 0,
+            bottom: 10,
+            child: FloatingActionButton(
+              // shape: CircleBorder(),
+              mini: true,
+              onPressed: _showFeedbackBottomSheet,
+              backgroundColor: Colors.red,
+              child: const Icon(
+                Icons.error_outline,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1442,6 +1477,19 @@ class _ComparePageState extends State<ComparePage> {
                     buildScrollableColumnRows: _buildScrollableColumnRows,
                   ),
                 ),
+                // const Padding(
+                //   padding: EdgeInsets.symmetric(vertical: 20),
+                //   child: Center(
+                //     child: Text(
+                //       '品牌统计源于网络统计，如有错误，请点击右侧反馈',
+                //       style: TextStyle(
+                //         fontSize: 12,
+                //         color: Colors.grey,
+                //       ),
+                //       textAlign: TextAlign.center,
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -2087,7 +2135,7 @@ class _ComparePageState extends State<ComparePage> {
               ),
             ),
             child: const Text(
-              '懂商帝: 分值采用自定义输入分数,仅作参考',
+              '懂商帝: 分值采用用户自定义输入分数,仅作统计参考',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
@@ -2241,6 +2289,312 @@ class _ComparePageState extends State<ComparePage> {
           ),
         );
       }
+    }
+  }
+
+  // 显示反馈底部弹框
+  void _showFeedbackBottomSheet() {
+    if (_isFeedbackSheetOpen) return;
+
+    setState(() {
+      _isFeedbackSheetOpen = true;
+    });
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 标题栏
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '用户反馈',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      setState(() {
+                        _isFeedbackSheetOpen = false;
+                      });
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // 反馈类型选择
+              const Text(
+                '反馈类型',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () {
+                  _showFeedbackTypeDialog();
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.white,
+                  ),
+                  child: GestureDetector(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ValueListenableBuilder<String>(
+                          valueListenable: _feedbackLabelNotifier,
+                          builder: (context, value, child) {
+                            return Text(
+                              value,
+                              style: TextStyle(
+                                color: _selectedFeedbackType.isNotEmpty
+                                    ? Colors.black87
+                                    : Colors.grey,
+                                fontSize: 14,
+                              ),
+                            );
+                          },
+                        ),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Colors.grey.shade600,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 输入框
+              const Text(
+                '反馈内容',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: TextField(
+                  controller: _feedbackController,
+                  maxLines: 5,
+                  decoration: const InputDecoration(
+                    hintText: '请输入您的反馈内容...',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 提交按钮
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _submitFeedback,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6366F1),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    '提交反馈',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).whenComplete(() {
+      setState(() {
+        _isFeedbackSheetOpen = false;
+      });
+    });
+  }
+
+  // 显示反馈类型选择弹框
+  void _showFeedbackTypeDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            color: Colors.white,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      '选择反馈类型',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.close),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // 反馈类型列表
+                ...(_feedbackTypes.map((item) {
+                  final isSelected = _selectedFeedbackType == item['value'];
+                  return InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedFeedbackType = item['value']!;
+                        _feedbackLabelNotifier.value = item['label']!;
+                      });
+                      Navigator.of(context).pop();
+
+                      // 延迟一帧后强制刷新整个页面
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Colors.blue.shade50
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isSelected
+                              ? Colors.blue.shade300
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isSelected
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            color: isSelected
+                                ? Colors.blue.shade600
+                                : Colors.grey.shade500,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            item['label']!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isSelected
+                                  ? Colors.blue.shade700
+                                  : Colors.black87,
+                              fontWeight: isSelected
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList()),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 提交反馈
+  Future<void> _submitFeedback() async {
+    final feedback = _feedbackController.text.trim();
+    if (feedback.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请输入反馈内容')),
+      );
+      return;
+    }
+
+    try {
+      // 调用反馈提交API
+      await HttpClient.post(FeedbackApi.submitFeedback, body: {
+        'type': _selectedFeedbackType,
+        'content': feedback,
+      });
+
+      // 清空输入框和重置类型选择
+      _feedbackController.clear();
+      setState(() {
+        _selectedFeedbackType = 'bug';
+      });
+
+      // 关闭弹框
+      Navigator.pop(context);
+
+      // 显示成功提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('反馈提交成功，感谢您的建议！'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      // 显示错误提示
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('反馈提交失败：${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }
@@ -2401,4 +2755,6 @@ class _SyncScrollTableState extends State<_SyncScrollTable> {
       ],
     );
   }
+
+  // 提交反馈
 }

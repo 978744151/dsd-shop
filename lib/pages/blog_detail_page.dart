@@ -283,7 +283,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                         id: reply['id'] ?? '', // 修改：直接获取评论 ID
                         author: reply['user']['username'] ?? '',
                         content: reply['content'] ?? '',
-                        time: formatDateTime(reply['createdAt'] ?? ''),
+                        time: _timeAgo(reply['createdAt'] ?? ''),
                         avatar: reply['user']['avatar'] ?? '',
                         isReply: true,
                         toUserName: reply['toUserName'] ?? '',
@@ -296,7 +296,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                 id: item['id'] ?? '', // 修改：直接获取评论 ID
                 author: item['user']['username'] ?? '',
                 content: item['content'] ?? '',
-                time: formatDateTime(item['createdAt'] ?? ''),
+                time: _timeAgo(item['createdAt'] ?? ''),
                 avatar: item['user']['avatar'] ?? '',
                 isReply: false,
                 replies: replies,
@@ -335,6 +335,26 @@ class _BlogDetailPageState extends State<BlogDetailPage>
     } catch (e) {
       if (!mounted) return;
       // Handle error if needed
+    }
+  }
+
+  String _timeAgo(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inDays > 0) {
+        return '${difference.inDays}天前';
+      } else if (difference.inHours > 0) {
+        return '${difference.inHours}小时前';
+      } else if (difference.inMinutes > 0) {
+        return '${difference.inMinutes}分钟前';
+      } else {
+        return '刚刚';
+      }
+    } catch (e) {
+      return dateString;
     }
   }
 
@@ -1023,17 +1043,20 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                               children: [
                                 GestureDetector(
                                   onTap: () {
-                                    _showFullScreenImage(context, _currentImageIndex);
+                                    _showFullScreenImage(
+                                        context, _currentImageIndex);
                                   },
                                   child: CarouselSlider.builder(
                                     itemCount: blogInfo.images.length,
                                     itemBuilder: (context, index, realIndex) {
                                       return Container(
-                                        width: MediaQuery.of(context).size.width,
+                                        width:
+                                            MediaQuery.of(context).size.width,
                                         margin: const EdgeInsets.symmetric(
                                             horizontal: 0),
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(0),
+                                          borderRadius:
+                                              BorderRadius.circular(0),
                                           image: DecorationImage(
                                             image: NetworkImage(
                                                 blogInfo.images[index]),
@@ -1609,7 +1632,7 @@ class CommentItem extends StatelessWidget {
                                 if (confirmResult == OkCancelResult.ok) {
                                   try {
                                     final resp = await HttpClient.delete(
-                                        'comment/${comment.id}');
+                                        'comment/delete/${comment.id}');
                                     if ((resp is Map &&
                                         (resp['success'] == true ||
                                             resp['code'] == 200))) {
@@ -2057,6 +2080,80 @@ class CommentItem extends StatelessWidget {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+
+                      //如果在第一层
+                      if (comment.parentId == '')
+                        Row(
+                          children: [
+                            Flexible(
+                              child: RichText(
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: comment.content,
+                                      style: const TextStyle(
+                                        color: Color(0xFF333333),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                softWrap: true,
+                                overflow: TextOverflow.visible,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // &&
+                          //     comment.toUserName !=
+                          //         parentComment?.user?['name']
+                          if (comment.toUserName.isNotEmpty) ...[
+                            Flexible(
+                              child: RichText(
+                                text: TextSpan(
+                                  children: [
+                                    if (comment.toUserName != comment.author)
+                                      TextSpan(
+                                        text: '回复 ${comment.toUserName}: ',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    TextSpan(
+                                      text: comment.content,
+                                      style: const TextStyle(
+                                        color: Color(0xFF333333),
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                softWrap: true,
+                                overflow: TextOverflow.visible,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          // Expanded(
+                          //   child: Text(
+                          //     ,
+                          //     style: const TextStyle(fontSize: 14),
+                          //   ),
+                          // ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start, //
+                        children: [
                           Text(
                             comment.time,
                             style: TextStyle(
@@ -2067,8 +2164,8 @@ class CommentItem extends StatelessWidget {
                           const Spacer(),
                           SizedBox(
                             width: 40,
-                            height: 35,
-                            child: Column(
+                            height: 25,
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               mainAxisAlignment:
                                   MainAxisAlignment.start, // 添加这行
@@ -2104,62 +2201,7 @@ class CommentItem extends StatelessWidget {
                             ),
                           ),
                         ],
-                      ),
-                      //如果在第一层
-                      if (comment.parentId == '')
-                        Row(
-                          children: [
-                            Text(
-                              comment.content ?? '',
-                              style: const TextStyle(
-                                color: Color(0xFF333333),
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // &&
-                          //     comment.toUserName !=
-                          //         parentComment?.user?['name']
-                          if (comment.toUserName.isNotEmpty) ...[
-                            Flexible(
-                              child: RichText(
-                                text: TextSpan(
-                                  children: [
-                                    if (comment.toUserName != comment.author)
-                                      TextSpan(
-                                        text: '回复 ${comment.toUserName}: ',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    TextSpan(
-                                      text: comment.content,
-                                      style: const TextStyle(
-                                        color: Color(0xFF333333),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                softWrap: true,
-                                overflow: TextOverflow.visible,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          // Expanded(
-                          //   child: Text(
-                          //     ,
-                          //     style: const TextStyle(fontSize: 14),
-                          //   ),
-                          // ),
-                        ],
-                      ),
+                      )
                       // const SizedBox(height: 2),
                     ],
                   ),

@@ -128,6 +128,7 @@ class _MallBrandPageState extends State<MallBrandPage> {
                       textAlign: TextAlign.center,
                     ),
                   ),
+                  const SizedBox(width: 30),
                 ],
               ),
             ),

@@ -88,7 +88,7 @@ class MyApp extends StatelessWidget {
           buttonColor: Colors.blueGrey[700],
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: Color(0xFF252525),
           elevation: 2,
           margin: EdgeInsets.all(8),

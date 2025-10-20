@@ -98,10 +98,10 @@ class _CustomBottomNavigationState extends State<CustomBottomNavigation> {
           await _handleShopCartTap(context, index);
         } else if (index == 3) {
           // 如果点击的是消息图标（索引为3）
+          await _getUnreadCount();
+          eventBus.fire(NotificationsRefreshEvent());
           if (widget.currentIndex == index) {
             // 重复点击同一个标签，刷新未读数量并通知notifications页面刷新
-            await _getUnreadCount();
-            eventBus.fire(NotificationsRefreshEvent());
           }
           widget.onTap?.call(index);
         } else if (index == 1) {
