@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:nft_once/pages/blog_detail_page.dart';
-import 'package:nft_once/pages/search_blog_page.dart';
+import 'package:business_savvy/pages/blog_detail_page.dart';
+import 'package:business_savvy/pages/search_blog_page.dart';
 import '../utils/http_client.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/event_bus.dart';

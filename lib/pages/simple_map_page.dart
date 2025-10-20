@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_echarts/flutter_echarts.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nft_once/pages/mall_brand_page.dart';
+import 'package:business_savvy/pages/mall_brand_page.dart';
 import '../api/brand.dart';
 import '../utils/http_client.dart';
 import '../models/province.dart';

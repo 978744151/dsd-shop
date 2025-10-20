@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nft_once/pages/simple_map_page.dart';
+import 'package:business_savvy/pages/simple_map_page.dart';
 import '../models/brand.dart';
 import '../api/brand.dart';
 import '../utils/http_client.dart';

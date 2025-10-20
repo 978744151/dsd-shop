@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // 添加foundation导入用于kIsWeb
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nft_once/api/comment_api.dart';
-import 'package:nft_once/router/router.dart';
-import 'package:nft_once/utils/toast_util.dart';
+import 'package:business_savvy/api/comment_api.dart';
+import 'package:business_savvy/router/router.dart';
+import 'package:business_savvy/utils/toast_util.dart';
 
 import 'dart:io';
 import 'dart:convert';

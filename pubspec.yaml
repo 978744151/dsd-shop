@@ -1,5 +1,7 @@
-name: nft_once
-description: A new nft_once.
+name: business_savvy
+
+description: business_savvy
+
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 

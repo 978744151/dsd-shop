@@ -6,7 +6,7 @@ import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:screenshot/screenshot.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
-import 'package:nft_once/api/brand.dart';
+import 'package:business_savvy/api/brand.dart';
 import '../utils/http_client.dart';
 import '../models/mall.dart';
 import '../models/brand.dart';
@@ -1477,19 +1477,19 @@ class _ComparePageState extends State<ComparePage> {
                     buildScrollableColumnRows: _buildScrollableColumnRows,
                   ),
                 ),
-                // const Padding(
-                //   padding: EdgeInsets.symmetric(vertical: 20),
-                //   child: Center(
-                //     child: Text(
-                //       '品牌统计源于网络统计，如有错误，请点击右侧反馈',
-                //       style: TextStyle(
-                //         fontSize: 12,
-                //         color: Colors.grey,
-                //       ),
-                //       textAlign: TextAlign.center,
-                //     ),
-                //   ),
-                // ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text(
+                      '品牌统计源于网络统计，如有错误，请点击右侧反馈',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

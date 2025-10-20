@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nft_once/pages/brand_center_page.dart';
+import 'package:business_savvy/pages/brand_center_page.dart';
 import '../api/brand.dart';
 import '../utils/http_client.dart';
 import '../models/brand.dart';
 import '../models/mall.dart';
 import '../widgets/custom_refresh_widget.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:nft_once/pages/message_page.dart';
+import 'package:business_savvy/pages/message_page.dart';
 import '../utils/event_bus.dart';
 import 'dart:async';
 

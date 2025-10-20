@@ -2,8 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nft_once/models/blog.dart';
-import 'package:nft_once/pages/blog_detail_page.dart';
+import 'package:business_savvy/models/blog.dart';
+import 'package:business_savvy/pages/blog_detail_page.dart';
 
 class RedBookCard extends StatelessWidget {
   final String? avatar;
