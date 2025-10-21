@@ -2,6 +2,7 @@ import { FlutterEngine, Log } from '@ohos/flutter_ohos';
 import ImageGallerySaverPlugin from 'image_gallery_saver';
 import ImagePickerPlugin from 'image_picker_ohos';
 import SharedPreferencesPlugin from 'shared_preferences_ohos';
+import WebViewFlutterPlugin from 'webview_flutter_ohos';
 
 /**
  * Generated file. Do not edit.
@@ -18,6 +19,7 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new ImageGallerySaverPlugin());
       flutterEngine.getPlugins()?.add(new ImagePickerPlugin());
       flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
+      flutterEngine.getPlugins()?.add(new WebViewFlutterPlugin());
     } catch (e) {
       Log.e(
         TAG,

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
-// import 'package:flutter_echarts/flutter_echarts.dart';
+import 'package:flutter_echarts/flutter_echarts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nft_once/pages/mall_brand_page.dart';
 import '../api/brand.dart';
@@ -427,145 +427,144 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                   valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E3A8A)),
                 ),
               )
-            : const Text('暂不持支图表查看'),
-            // Echarts(
-            //     key: ValueKey('map_${_currentMapKey}_${_isProvince}'),
-            //     option: '''
-            //     {
-            //       title: {
-            //         text: '${_isProvince ? _currentMapKey : '${_selectedBrand?.name ?? ''}门店分布图'}',
-            //         subtext: '${_isProvince ? '点击城市查看详情' : '点击省份查看详情'}',
-            //         left: 'center',
-            //         top: 20,
-            //         textStyle: {
-            //           color: '#1E3A8A',
-            //           fontSize: 20,
-            //           fontWeight: 'bold'
-            //         },
-            //         subtextStyle: {
-            //           color: '#64748B',
-            //           fontSize: 14,
-            //           fontWeight: '500'
-            //         }
-            //       },
-            //       tooltip: {
-            //         trigger: 'item',
-            //         backgroundColor: 'rgba(30, 58, 138, 0.9)',
-            //         borderColor: '#1E3A8A',
-            //         borderWidth: 1,
-            //         textStyle: {
-            //           color: '#FFFFFF',
-            //           fontSize: 14
-            //         },
-            //         formatter: '{b}<br/>${_selectedBrand?.name ?? ''}门店: {c}家'
-            //       },
-            //       visualMap: {
-            //         min: 0,
-            //         max: 26,
-            //         left: 'left',
-            //         top: 'bottom',
-            //         text: ['高', '低'],
-            //         calculable: true,
-            //         inRange: {
-            //           color: ['#fff', '#0EA5E9', '#1E3A8A']
-            //         },
-            //         textStyle: {
-            //           color: '#1F2937',
-            //           fontSize: 12,
-            //           fontWeight: '600'
-            //         },
-            //         itemWidth: 20,
-            //         itemHeight: 120
-            //       },
-            //       series: [
-            //         {
-            //           name: '${_isProvince ? _currentMapKey : '${_selectedBrand?.name ?? ''}门店分布'}',
-            //           type: 'map',
-            //           map: '${_currentMapKey}',
-            //           roam: true,
-            //           zoom: ${_isProvince ? 1 : 1.4},
-            //           label: {
-            //             formatter: '{b} : {c}', 
-            //             show: true,
-            //             fontSize: 8,
-            //             color: '#1F2937',
-            //             fontWeight: '500'
-            //           },
-            //           emphasis: {
-            //             label: {
-            //               show: true,
-            //               fontSize: ${_isProvince ? 12 : 10},
-            //               color: '#1E3A8A',
-            //               fontWeight: 'bold'
-            //             },
-            //             itemStyle: {
-            //               areaColor: '#FEF3C7',
-            //               borderColor: '#1E3A8A',
-            //               borderWidth: 2
-            //             }
-            //           },
-            //           itemStyle: {
-            //             borderColor: '#E5E7EB',
-            //             borderWidth: 1,
-            //             areaColor: '#F8FAFC'
-            //           },
-            //           data:${!_isProvince ? json.encode(provinces) : json.encode(_cityData)}
-            //         }
-            //       ]
-            //     }
-            //     ''',
-            //     extraScript: '''
-            //     try {
-            //       // 注册当前地图（全国或省份）
-            //       var currentGeoJson = ${_currentMapJsonString!};
-            //       echarts.registerMap('${_currentMapKey}', currentGeoJson);
+            : Echarts(
+                key: ValueKey('map_${_currentMapKey}_${_isProvince}'),
+                option: '''
+                {
+                  title: {
+                    text: '${_isProvince ? _currentMapKey : '${_selectedBrand?.name ?? ''}门店分布图'}',
+                    subtext: '${_isProvince ? '点击城市查看详情' : '点击省份查看详情'}',
+                    left: 'center',
+                    top: 20,
+                    textStyle: {
+                      color: '#1E3A8A',
+                      fontSize: 20,
+                      fontWeight: 'bold'
+                    },
+                    subtextStyle: {
+                      color: '#64748B',
+                      fontSize: 14,
+                      fontWeight: '500'
+                    }
+                  },
+                  tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(30, 58, 138, 0.9)',
+                    borderColor: '#1E3A8A',
+                    borderWidth: 1,
+                    textStyle: {
+                      color: '#FFFFFF',
+                      fontSize: 14
+                    },
+                    formatter: '{b}<br/>${_selectedBrand?.name ?? ''}门店: {c}家'
+                  },
+                  visualMap: {
+                    min: 0,
+                    max: 26,
+                    left: 'left',
+                    top: 'bottom',
+                    text: ['高', '低'],
+                    calculable: true,
+                    inRange: {
+                      color: ['#fff', '#0EA5E9', '#1E3A8A']
+                    },
+                    textStyle: {
+                      color: '#1F2937',
+                      fontSize: 12,
+                      fontWeight: '600'
+                    },
+                    itemWidth: 20,
+                    itemHeight: 120
+                  },
+                  series: [
+                    {
+                      name: '${_isProvince ? _currentMapKey : '${_selectedBrand?.name ?? ''}门店分布'}',
+                      type: 'map',
+                      map: '${_currentMapKey}',
+                      roam: true,
+                      zoom: ${_isProvince ? 1 : 1.4},
+                      label: {
+                        formatter: '{b} : {c}', 
+                        show: true,
+                        fontSize: 8,
+                        color: '#1F2937',
+                        fontWeight: '500'
+                      },
+                      emphasis: {
+                        label: {
+                          show: true,
+                          fontSize: ${_isProvince ? 12 : 10},
+                          color: '#1E3A8A',
+                          fontWeight: 'bold'
+                        },
+                        itemStyle: {
+                          areaColor: '#FEF3C7',
+                          borderColor: '#1E3A8A',
+                          borderWidth: 2
+                        }
+                      },
+                      itemStyle: {
+                        borderColor: '#E5E7EB',
+                        borderWidth: 1,
+                        areaColor: '#F8FAFC'
+                      },
+                      data:${!_isProvince ? json.encode(provinces) : json.encode(_cityData)}
+                    }
+                  ]
+                }
+                ''',
+                extraScript: '''
+                try {
+                  // 注册当前地图（全国或省份）
+                  var currentGeoJson = ${_currentMapJsonString!};
+                  echarts.registerMap('${_currentMapKey}', currentGeoJson);
 
-            //       // 绑定点击事件，通知 Flutter 处理下钻
-            //       chart.off('click');
-            //       chart.on('click', function(params) {
-            //         if (params && params.name) {
-            //           // 传递完整的params对象，包含所有数据
-            //           Messager.postMessage(JSON.stringify({ 
-            //             type: 'map_click', 
-            //             name: params.name,
-            //             data: params.data,  // 包含shopCount, brandCount等数据
-            //             value: params.value,
-            //             dataIndex: params.dataIndex,
-            //             seriesIndex: params.seriesIndex,
-            //             componentType: params.componentType
-            //           }));
-            //         }
-            //       });
-            //     } catch (e) {
-            //       console.error('注册地图失败:', e);
-            //     }
-            //   ''',
-            //     onMessage: (String message) async {
-            //       if (_isShowingStoreDialog) {
-            //         return;
-            //       }
-            //       // 解析点击事件
-            //       try {
-            //         final Map<String, dynamic> m = json.decode(message);
-            //         print('点击事件: $m');
+                  // 绑定点击事件，通知 Flutter 处理下钻
+                  chart.off('click');
+                  chart.on('click', function(params) {
+                    if (params && params.name) {
+                      // 传递完整的params对象，包含所有数据
+                      Messager.postMessage(JSON.stringify({ 
+                        type: 'map_click', 
+                        name: params.name,
+                        data: params.data,  // 包含shopCount, brandCount等数据
+                        value: params.value,
+                        dataIndex: params.dataIndex,
+                        seriesIndex: params.seriesIndex,
+                        componentType: params.componentType
+                      }));
+                    }
+                  });
+                } catch (e) {
+                  console.error('注册地图失败:', e);
+                }
+              ''',
+                onMessage: (String message) async {
+                  if (_isShowingStoreDialog) {
+                    return;
+                  }
+                  // 解析点击事件
+                  try {
+                    final Map<String, dynamic> m = json.decode(message);
+                    print('点击事件: $m');
 
-            //         if (m['type'] == 'map_click') {
-            //           if (!_isProvince) {
-            //             // 点击省份，进入省份视图
-            //             setState(() {
-            //               provinceId = m['data']['id'];
-            //             });
-            //             _drillDownToProvince(m['name']?.toString() ?? '');
-            //           } else {
-            //             // 点击市区，显示门店列表底部弹框
-            //             final cityId = m['data']['id'];
-            //             final cityName = m['name']?.toString() ?? '';
-            //             _showStoreBottomSheet(cityId, cityName);
-            //           }
-            //         }
-            //       } catch (_) {}
-            //     },
-            //   ),
+                    if (m['type'] == 'map_click') {
+                      if (!_isProvince) {
+                        // 点击省份，进入省份视图
+                        setState(() {
+                          provinceId = m['data']['id'];
+                        });
+                        _drillDownToProvince(m['name']?.toString() ?? '');
+                      } else {
+                        // 点击市区，显示门店列表底部弹框
+                        final cityId = m['data']['id'];
+                        final cityName = m['name']?.toString() ?? '';
+                        _showStoreBottomSheet(cityId, cityName);
+                      }
+                    }
+                  } catch (_) {}
+                },
+              ),
       ),
     );
   }
@@ -1091,17 +1090,17 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                 indicatorSize: TabBarIndicatorSize.tab,
                                 dividerColor: Colors.transparent,
                                 tabs:  [
-                                  // Tab(
-                                  //   child: Row(
-                                  //     mainAxisAlignment:
-                                  //         MainAxisAlignment.center,
-                                  //     children: [
-                                  //       Icon(Icons.map, size: 18),
-                                  //       SizedBox(width: 6),
-                                  //       Text('地图视图'),
-                                  //     ],
-                                  //   ),
-                                  // ),
+                                  Tab(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.map, size: 18),
+                                        SizedBox(width: 6),
+                                        Text('地图视图'),
+                                      ],
+                                    ),
+                                  ),
                                   Tab(
                                     child: Row(
                                       mainAxisAlignment:
@@ -1133,7 +1132,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                         controller: _tabController!,
                         physics: const NeverScrollableScrollPhysics(),
                         children: [
-                          // _buildMapView(),
+                          _buildMapView(),
                           _buildListView(),
                         ],
                       ),

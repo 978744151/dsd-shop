@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/http_client.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:nft_once/pages/user_profile.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -322,9 +322,12 @@ class _LoginPageState extends State<LoginPage> {
                           child: TextButton(
                             onPressed: () {
                               // 处理注册操作
+                               Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+                                builder: (context) => UserAgreementPage(),
+                              ));
                             },
                             child: const Text(
-                              '还没有账号？立即注册',
+                              '请同意用户协议和隐私政策',
                               style: TextStyle(
                                 color: const Color(0xFFFFFFFF),
                                 fontSize: 14,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:nft_once/pages/feedback_page.dart';
 import 'dart:io';
 import '../utils/storage.dart';
 import 'dart:convert';
@@ -677,6 +678,9 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: '获取帮助或提供建议',
             color: Colors.blue,
             onTap: () {
+              Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+                builder: (context) => FeedbackPage(),
+              ));
               // TODO: 实现帮助与反馈
             },
           ),
