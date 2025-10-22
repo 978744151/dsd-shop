@@ -132,6 +132,8 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
   // 刷新我的页面的方法
   Future<void> _refreshMinePage() async {
     print('刷新我的页面${_tabController.index}');
+    // 调用_getToken更新用户信息
+    await _getToken();
     // 刷新所有数据
     // switch (_tabController.index) {
     //   case 0: // 我的笔记
@@ -285,6 +287,7 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
       body: CustomRefreshWidget(
         onRefresh: () async {
           // 刷新所有数据
+          _getToken();
           switch (_tabController.index) {
             case 0: // 我的笔记
               fetchBlogs(userInfo['_id']);

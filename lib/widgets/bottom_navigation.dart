@@ -23,28 +23,36 @@ class CustomBottomNavigation extends StatefulWidget {
 class _CustomBottomNavigationState extends State<CustomBottomNavigation> {
   int unreadCount = 0;
   Timer? _timer; // 添加定时器变量
-  late StreamSubscription _eventSubscription; // 添加事件订阅
+  StreamSubscription? _eventSubscription; // 添加事件订阅，改为可空类型
 
   @override
   void initState() {
     super.initState();
-    _getUnreadCount();
-    // 启动定时器，每10秒调用一次_getUnreadCount
-    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      _getUnreadCount();
-    });
+    _initializeIfLoggedIn();
+  }
 
-    // 监听未读消息数量更新事件
-    _eventSubscription = eventBus.on<UnreadCountUpdateEvent>().listen((_) {
+  // 检查用户是否已登录，只有登录用户才初始化未读消息功能
+  Future<void> _initializeIfLoggedIn() async {
+    final token = await Storage.getString('token');
+    if (token != null && token.isNotEmpty) {
       _getUnreadCount();
-    });
+      // 启动定时器，每10秒调用一次_getUnreadCount
+      _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
+        _getUnreadCount();
+      });
+
+      // 监听未读消息数量更新事件
+      _eventSubscription = eventBus.on<UnreadCountUpdateEvent>().listen((_) {
+        _getUnreadCount();
+      });
+    }
   }
 
   @override
   void dispose() {
     // 清理定时器和事件订阅
     _timer?.cancel();
-    _eventSubscription.cancel();
+    _eventSubscription?.cancel();
     super.dispose();
   }
 
@@ -78,14 +86,15 @@ class _CustomBottomNavigationState extends State<CustomBottomNavigation> {
 
   // 处理购物车点击事件
   Future<void> _handleShopCartTap(BuildContext context, int index) async {
-    final isLoggedIn = await _checkLoginStatus();
-    if (!isLoggedIn) {
-      // 未登录，跳转到登录页面
-      context.go('/login');
-    } else {
-      // 已登录，执行正常导航
-      widget.onTap?.call(index);
-    }
+    // final isLoggedIn = await _checkLoginStatus();
+    // if (!isLoggedIn) {
+    //   // 未登录，跳转到登录页面
+    //   context.go('/login');
+    // } else {
+    //   // 已登录，执行正常导航
+
+    // }
+    widget.onTap?.call(index);
   }
 
   @override
