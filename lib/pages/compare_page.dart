@@ -2198,7 +2198,7 @@ class _ComparePageState extends State<ComparePage> {
                       ),
                       alignment: Alignment.centerLeft,
                       child: brandData == null
-                          ? Text('暂无门店',
+                          ? Text('-',
                               style: TextStyle(
                                   color: columnColor.withOpacity(0.6)))
                           : Column(
