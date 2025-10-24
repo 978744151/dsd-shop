@@ -1,3 +1,4 @@
+import 'package:business_savvy/pages/blacklist_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:business_savvy/pages/blog_detail_page.dart';
@@ -6,6 +7,7 @@ import 'package:business_savvy/pages/compare_page.dart';
 import 'package:business_savvy/pages/history_page.dart';
 import 'package:business_savvy/pages/favorites_page.dart';
 import 'package:business_savvy/pages/follow_page.dart';
+import 'package:business_savvy/pages/blacklist_page.dart';
 import 'package:business_savvy/pages/notifications_page.dart';
 // import 'package:business_savvy/pages/nft/nft_edition_detail.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -465,29 +467,29 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                                           ),
                                         ),
                                         const SizedBox(width: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 4, vertical: 1),
-                                          decoration: BoxDecoration(
-                                            color: Colors.blue[50],
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.verified_user,
-                                                  size: 12,
-                                                  color: Colors.blue[700]),
-                                              const SizedBox(width: 2),
-                                              Text(
-                                                '会员',
-                                                style: TextStyle(
-                                                    fontSize: 10,
-                                                    color: Colors.blue[700]),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
+                                        // Container(
+                                        //   padding: const EdgeInsets.symmetric(
+                                        //       horizontal: 4, vertical: 1),
+                                        //   decoration: BoxDecoration(
+                                        //     color: Colors.blue[50],
+                                        //     borderRadius:
+                                        //         BorderRadius.circular(4),
+                                        //   ),
+                                        //   child: Row(
+                                        //     children: [
+                                        //       Icon(Icons.verified_user,
+                                        //           size: 12,
+                                        //           color: Colors.blue[700]),
+                                        //       const SizedBox(width: 2),
+                                        //       Text(
+                                        //         '会员',
+                                        //         style: TextStyle(
+                                        //             fontSize: 10,
+                                        //             color: Colors.blue[700]),
+                                        //       ),
+                                        //     ],
+                                        //   ),
+                                        // ),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
@@ -536,6 +538,7 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                               _buildMainFunction(Icons.star_border, '收藏'),
                               _buildMainFunction(Icons.person_add, '关注'),
                               _buildMainFunction(Icons.people, '粉丝'),
+                              _buildMainFunction(Icons.block, '黑名单'),
                               // _buildMainFunction(Icons.message, '消息',
                               // hasNotification: true),
                             ],
@@ -1163,15 +1166,13 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
             ),
           );
         } else if (label == '关注') {
-          Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(
-              builder: (context) => const FollowPage(),
-            ),
-          );
+          context.push('/follow?tab=0');
         } else if (label == '粉丝') {
+          context.push('/follow?tab=1');
+        } else if (label == '黑名单') {
           Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
-              builder: (context) => const FollowPage(),
+              builder: (context) => const BlacklistPage(),
             ),
           );
         } else if (label == '消息') {

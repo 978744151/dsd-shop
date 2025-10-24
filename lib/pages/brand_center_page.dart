@@ -219,7 +219,7 @@ class _BrandCenterPageState extends State<BrandCenterPage> {
             padding: EdgeInsets.symmetric(vertical: 20),
             child: Center(
               child: Text(
-                '品牌统计源于网络统计，如有错误，请联系管理员',
+                '品牌统计源官网和网络统计，如有错误，请联系管理员',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey,
@@ -267,41 +267,41 @@ class _BrandCenterPageState extends State<BrandCenterPage> {
           ),
           const SizedBox(height: 12),
           // 分类筛选
-          if (categories.isNotEmpty) ...[
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '品牌分类',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 28,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: categories.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return _buildCategoryChip(
-                        '全部', '', selectedCategoryId.isEmpty);
-                  }
-                  final category = categories[index - 1];
-                  final categoryId = category['value'] ?? '';
-                  final categoryName = category['label'] ?? '';
-                  return _buildCategoryChip(
-                    categoryName,
-                    categoryId,
-                    selectedCategoryId == categoryId,
-                  );
-                },
-              ),
-            ),
-          ],
+          // if (categories.isNotEmpty) ...[
+          //   Align(
+          //     alignment: Alignment.centerLeft,
+          //     child: Text(
+          //       '品牌分类',
+          //       style: TextStyle(
+          //         fontSize: 14,
+          //         fontWeight: FontWeight.w500,
+          //         color: Colors.grey[700],
+          //       ),
+          //     ),
+          //   ),
+          //   const SizedBox(height: 8),
+          //   SizedBox(
+          //     height: 28,
+          //     child: ListView.builder(
+          //       scrollDirection: Axis.horizontal,
+          //       itemCount: categories.length + 1,
+          //       itemBuilder: (context, index) {
+          //         if (index == 0) {
+          //           return _buildCategoryChip(
+          //               '全部', '', selectedCategoryId.isEmpty);
+          //         }
+          //         final category = categories[index - 1];
+          //         final categoryId = category['value'] ?? '';
+          //         final categoryName = category['label'] ?? '';
+          //         return _buildCategoryChip(
+          //           categoryName,
+          //           categoryId,
+          //           selectedCategoryId == categoryId,
+          //         );
+          //       },
+          //     ),
+          //   ),
+          // ],
         ],
       ),
     );

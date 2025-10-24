@@ -47,7 +47,7 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
           },
         ),
       )
-      ..loadRequest(Uri.parse('https://www.example.com/privacy-policy'));
+      ..loadRequest(Uri.parse('http://nfttools.cn/privacy-policy'));
   }
 
   @override
@@ -109,7 +109,7 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
         children: [
           // WebView内容
           WebViewWidget(controller: _controller),
-          
+
           // 加载指示器
           if (_isLoading)
             Container(

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:business_savvy/pages/feedback_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_echarts/flutter_echarts.dart';
@@ -350,18 +351,34 @@ class _SimpleMapPageState extends State<SimpleMapPage>
   }
 
   // 获取门店列表的方法
-  Future<void> fetchStores(String cityId, String cityName) async {
+  Future<void> fetchStores(String cityId, String cityName,
+      {String? customProvinceId}) async {
     if (!mounted) return;
     try {
       setState(() {
         _storeLoading = true;
       });
-      // 调用 brandApi.getBrandTree 接口，传入 level=3 获取门店数据
-      final response = await HttpClient.get(brandApi.getBrandDetail, params: {
+
+      // 检查是否为直辖市
+      final municipalities = ['北京', '上海', '天津', '重庆'];
+      final isMunicipality = municipalities.contains(cityName);
+
+      Map<String, dynamic> params = {
         'brandId': widget.brandId,
-        'provinceId': provinceId,
-        'cityId': cityId,
-      });
+      };
+
+      if (isMunicipality) {
+        // 直辖市：使用cityId作为provinceId，不传cityId
+        params['provinceId'] = cityId;
+      } else {
+        // 普通城市：传入provinceId和cityId
+        params['provinceId'] = customProvinceId ?? provinceId;
+        params['cityId'] = cityId;
+      }
+      params['limit'] = 999;
+      // 调用 brandApi.getBrandDetail 接口获取门店数据
+      final response =
+          await HttpClient.get(brandApi.getBrandDetail, params: params);
 
       if (!mounted) return;
 
@@ -433,7 +450,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                 {
                   title: {
                     text: '${_isProvince ? _currentMapKey : '${_selectedBrand?.name ?? ''}门店分布图'}',
-                    subtext: '${_isProvince ? '点击城市查看详情' : '点击省份查看详情'}',
+                    subtext: '${_isProvince ? '点击城市查看详情' : '点击省份查看详情 (已收录${_selectedBrand?.storeCount ?? '-'}个)'}',
                     left: 'center',
                     top: 20,
                     textStyle: {
@@ -550,11 +567,22 @@ class _SimpleMapPageState extends State<SimpleMapPage>
 
                     if (m['type'] == 'map_click') {
                       if (!_isProvince) {
-                        // 点击省份，进入省份视图
-                        setState(() {
-                          provinceId = m['data']['id'];
-                        });
-                        _drillDownToProvince(m['name']?.toString() ?? '');
+                        // 点击省份
+                        final provinceName = m['name']?.toString() ?? '';
+                        final provinceDataId = m['data']['id'];
+
+                        // 检查是否为直辖市
+                        final municipalities = ['北京', '上海', '天津', '重庆'];
+                        if (municipalities.contains(provinceName)) {
+                          // 直辖市直接显示门店列表，使用省份ID作为城市ID
+                          _showStoreBottomSheet(provinceDataId, provinceName);
+                        } else {
+                          // 普通省份，进入省份视图
+                          setState(() {
+                            provinceId = provinceDataId;
+                          });
+                          _drillDownToProvince(provinceName);
+                        }
                       } else {
                         // 点击市区，显示门店列表底部弹框
                         final cityId = m['data']['id'];
@@ -829,6 +857,11 @@ class _SimpleMapPageState extends State<SimpleMapPage>
   }
 
   Widget _buildListView() {
+    // 过滤掉门店数量为0的数据
+    final filteredData = _isProvince
+        ? _cityData.where((item) => (item['value'] as int) > 0).toList()
+        : provinces.where((item) => (item['value'] as int) > 0).toList();
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -842,9 +875,9 @@ class _SimpleMapPageState extends State<SimpleMapPage>
       ),
       child: ListView.builder(
         padding: const EdgeInsets.all(20),
-        itemCount: _isProvince ? _cityData.length : provinces.length,
+        itemCount: filteredData.length,
         itemBuilder: (context, index) {
-          final province = _isProvince ? _cityData[index] : provinces[index];
+          final province = filteredData[index];
 
           final value = province['value'] as int;
           final name = province['name'] as String;
@@ -852,9 +885,9 @@ class _SimpleMapPageState extends State<SimpleMapPage>
           // 根据数值设置颜色渐变
           Color getColorByValue(int val) {
             if (val >= 20) return const Color(0xFF1E3A8A); // 深蓝
-            if (val >= 15) return const Color(0xFF3B82F6); // 蓝色
-            if (val >= 10) return const Color(0xFF10B981); // 绿色
-            if (val >= 5) return const Color(0xFFF59E0B); // 橙色
+            if (val >= 10) return const Color(0xFF3B82F6); // 蓝色
+            if (val >= 5) return const Color(0xFF10B981); // 绿色
+            if (val > 0) return const Color(0xFFF59E0B); // 橙色
             return const Color(0xFFEF4444); // 红色
           }
 
@@ -1210,6 +1243,29 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                     ),
               ),
             ),
+          // 悬浮的红色感叹号按钮 - 导航到反馈页面
+          Positioned(
+            right: 20,
+            bottom: 60,
+            child: FloatingActionButton(
+              // shape: CircleBorder(),
+              mini: true,
+              onPressed: () {
+                // 导航到新的反馈页面
+                // context.push('/feedback');
+                Navigator.of(context, rootNavigator: true)
+                    .push(MaterialPageRoute(
+                  builder: (context) => FeedbackPage(),
+                ));
+              },
+              backgroundColor: Colors.red,
+              child: const Icon(
+                Icons.error_outline,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
         ],
       ),
     );

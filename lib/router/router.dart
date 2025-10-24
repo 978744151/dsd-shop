@@ -24,6 +24,8 @@ import '../pages/follow_page.dart';
 import '../pages/notifications_page.dart';
 import '../pages/brand_center_page.dart';
 import '../pages/feedback_page.dart';
+import '../pages/user_profile_page.dart';
+import '../pages/blacklist_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>(); // 添加这行
 
@@ -174,7 +176,10 @@ final router = GoRouter(
     GoRoute(
       path: '/follow',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const FollowPage(),
+      builder: (context, state) {
+        final initialTabIndex = int.tryParse(state.queryParameters['tab'] ?? '0') ?? 0;
+        return FollowPage(initialTabIndex: initialTabIndex);
+      },
     ),
     GoRoute(
       path: '/notifications',
@@ -198,6 +203,19 @@ final router = GoRouter(
     GoRoute(
       path: '/test-map',
       builder: (context, state) => const TestMapPage(),
+    ),
+    GoRoute(
+      path: '/user/:userId',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final userId = state.pathParameters['userId']!;
+        return UserProfilePage(userId: userId);
+      },
+    ),
+    GoRoute(
+      path: '/blacklist',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const BlacklistPage(),
     ),
   ],
 );

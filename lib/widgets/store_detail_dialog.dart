@@ -94,7 +94,7 @@ class StoreDetailDialog extends StatelessWidget {
                             color: Colors.grey[50],
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: Colors.grey[200]!,
+                              color: Colors.grey[200] ?? Colors.grey,
                               width: 1,
                             ),
                           ),

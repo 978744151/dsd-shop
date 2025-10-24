@@ -19,16 +19,22 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _verificationCodeController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isSendingCode = false;
   int _countdown = 0;
   // 添加验证状态
   bool _isEmailValid = true;
   bool _isCodeValid = true;
+  bool _isPasswordValid = true;
   String _emailError = '';
   String _codeError = '';
+  String _passwordError = '';
   // 添加协议同意状态
   bool _agreeToTerms = false;
+  // 添加登录方式切换状态
+  bool _isPasswordLogin = false; // false: 验证码登录, true: 密码登录
+  bool _obscurePassword = true; // 密码是否隐藏
 
   // 添加验证方法
   void _validateInputs() {
@@ -38,20 +44,31 @@ class _LoginPageState extends State<LoginPage> {
       _isEmailValid = emailRegex.hasMatch(_emailController.text);
       _emailError = _isEmailValid ? '' : '请输入有效的邮箱地址';
 
-      // 验证码验证
-      _isCodeValid = _verificationCodeController.text.length >= 4;
-      _codeError = _isCodeValid ? '' : '请输入有效的验证码';
+      if (_isPasswordLogin) {
+        // 密码验证
+        _isPasswordValid = _passwordController.text.length >= 6;
+        _passwordError = _isPasswordValid ? '' : '密码至少6位';
+      } else {
+        // 验证码验证
+        _isCodeValid = _verificationCodeController.text.length >= 4;
+        _codeError = _isCodeValid ? '' : '请输入有效的验证码';
+      }
     });
   }
 
   // 检查是否可以登录
   bool _canLogin() {
-    return _emailController.text.isNotEmpty &&
-        _verificationCodeController.text.isNotEmpty;
+    if (_isPasswordLogin) {
+      return _emailController.text.isNotEmpty &&
+          _passwordController.text.isNotEmpty;
+    } else {
+      return _emailController.text.isNotEmpty &&
+          _verificationCodeController.text.isNotEmpty;
+    }
   }
 
   Future<void> _login() async {
-    // 检查邮箱和验证码是否为空
+    // 检查邮箱是否为空
     if (_emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请输入邮箱地址')),
@@ -59,11 +76,21 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    if (_verificationCodeController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入验证码')),
-      );
-      return;
+    // 根据登录方式检查不同的输入
+    if (_isPasswordLogin) {
+      if (_passwordController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请输入密码')),
+        );
+        return;
+      }
+    } else {
+      if (_verificationCodeController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请输入验证码')),
+        );
+        return;
+      }
     }
 
     // 如果未同意协议，显示确认弹框
@@ -73,17 +100,30 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     _validateInputs();
-    if (!_isEmailValid || !_isCodeValid) {
+    if (!_isEmailValid ||
+        (_isPasswordLogin ? !_isPasswordValid : !_isCodeValid)) {
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final data = await HttpClient.post('auth/email-login', body: {
-        'email': _emailController.text,
-        'code': _verificationCodeController.text,
-      });
+      Map<String, dynamic> data;
+
+      if (_isPasswordLogin) {
+        // 密码登录
+        data = await HttpClient.post('auth/login', body: {
+          'email': _emailController.text,
+          'password': _passwordController.text,
+        });
+      } else {
+        // 验证码登录
+        data = await HttpClient.post('auth/email-login', body: {
+          'email': _emailController.text,
+          'code': _verificationCodeController.text,
+        });
+      }
+
       if (data['success'] == true) {
         // 修改这里，根据实际返回的数据结构获取 token
         final token = data['data']['token']; // 修改这行
@@ -97,7 +137,9 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('登录失败，请检查邮箱和验证码')),
+            SnackBar(
+                content: Text(
+                    _isPasswordLogin ? '登录失败，请检查邮箱和密码' : '登录失败，请检查邮箱和验证码')),
           );
         }
       }
@@ -572,8 +614,81 @@ class _LoginPageState extends State<LoginPage> {
                             padding: const EdgeInsets.all(24.0),
                             child: Column(
                               children: [
-                                // 原有的TextField和按钮代码保持不变
-                                // 修改 TextField 部分
+                                // 登录方式切换Tab
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _isPasswordLogin = false;
+                                            });
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 12),
+                                            decoration: BoxDecoration(
+                                              color: !_isPasswordLogin
+                                                  ? Theme.of(context)
+                                                      .primaryColor
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              '验证码登录',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: !_isPasswordLogin
+                                                    ? Colors.white
+                                                    : Colors.grey[600],
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _isPasswordLogin = true;
+                                            });
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 12),
+                                            decoration: BoxDecoration(
+                                              color: _isPasswordLogin
+                                                  ? Theme.of(context)
+                                                      .primaryColor
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              '密码登录',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: _isPasswordLogin
+                                                    ? Colors.white
+                                                    : Colors.grey[600],
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                // 邮箱输入框（两种登录方式都需要）
                                 TextField(
                                   controller: _emailController,
                                   onChanged: (value) => _validateInputs(),
@@ -598,93 +713,139 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 ),
                                 const SizedBox(height: 16),
-                                // 验证码输入框
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: TextField(
-                                        controller: _verificationCodeController,
-                                        keyboardType: TextInputType.number,
-                                        maxLength: 6,
-                                        onChanged: (value) => _validateInputs(),
-                                        decoration: InputDecoration(
-                                          labelText: '验证码',
-                                          prefixIcon: const Icon(
-                                              Icons.verified_user_outlined),
-                                          counterText: '',
-                                          border: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          enabledBorder: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                            borderSide: BorderSide(
-                                              color: _isCodeValid
-                                                  ? Colors.grey[300]!
-                                                  : Colors.red,
+                                // 根据登录方式显示不同的输入框
+                                if (!_isPasswordLogin) ...[
+                                  // 验证码登录输入框
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller:
+                                              _verificationCodeController,
+                                          keyboardType: TextInputType.number,
+                                          maxLength: 6,
+                                          onChanged: (value) =>
+                                              _validateInputs(),
+                                          decoration: InputDecoration(
+                                            labelText: '验证码',
+                                            prefixIcon: const Icon(
+                                                Icons.verified_user_outlined),
+                                            counterText: '',
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
-                                          ),
-                                          errorText: _codeError.isNotEmpty
-                                              ? _codeError
-                                              : null,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Container(
-                                      width: 120,
-                                      height: 56, // 与TextField高度保持一致
-                                      alignment: Alignment.center,
-                                      child: ElevatedButton(
-                                        onPressed:
-                                            (_isSendingCode || _countdown > 0)
-                                                ? null
-                                                : _sendVerificationCode,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor:
-                                              Theme.of(context).primaryColor,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          minimumSize: const Size(120, 48),
-                                        ),
-                                        child: _isSendingCode
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<
-                                                          Color>(Colors.white),
-                                                ),
-                                              )
-                                            : Text(
-                                                _countdown > 0
-                                                    ? '${_countdown}s'
-                                                    : '发送验证码',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12,
-                                                ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: BorderSide(
+                                                color: _isCodeValid
+                                                    ? Colors.grey[300]!
+                                                    : Colors.red,
                                               ),
+                                            ),
+                                            errorText: _codeError.isNotEmpty
+                                                ? _codeError
+                                                : null,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                // 垃圾邮件提示
-                                Text(
-                                  '未收到验证码？请检查垃圾邮件文件夹',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
+                                      const SizedBox(width: 12),
+                                      Container(
+                                        width: 120,
+                                        height: 56, // 与TextField高度保持一致
+                                        alignment: Alignment.center,
+                                        child: ElevatedButton(
+                                          onPressed:
+                                              (_isSendingCode || _countdown > 0)
+                                                  ? null
+                                                  : _sendVerificationCode,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                Theme.of(context).primaryColor,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            minimumSize: const Size(120, 48),
+                                          ),
+                                          child: _isSendingCode
+                                              ? const SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                                Color>(
+                                                            Colors.white),
+                                                  ),
+                                                )
+                                              : Text(
+                                                  _countdown > 0
+                                                      ? '${_countdown}s'
+                                                      : '发送验证码',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
+                                  const SizedBox(height: 8),
+                                  // 垃圾邮件提示
+                                  Text(
+                                    '未收到验证码？请检查垃圾邮件文件夹',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ] else ...[
+                                  // 密码登录输入框
+                                  TextField(
+                                    controller: _passwordController,
+                                    obscureText: _obscurePassword,
+                                    onChanged: (value) => _validateInputs(),
+                                    decoration: InputDecoration(
+                                      labelText: '输入你的密码',
+                                      prefixIcon:
+                                          const Icon(Icons.lock_outlined),
+                                      suffixIcon: IconButton(
+                                        icon: Icon(
+                                          _obscurePassword
+                                              ? Icons.visibility_outlined
+                                              : Icons.visibility_off_outlined,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _obscurePassword =
+                                                !_obscurePassword;
+                                          });
+                                        },
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(
+                                          color: _isPasswordValid
+                                              ? Colors.grey[300]!
+                                              : Colors.red,
+                                        ),
+                                      ),
+                                      errorText: _passwordError.isNotEmpty
+                                          ? _passwordError
+                                          : null,
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 16),
                                 // 用户协议和免责声明复选框
                                 Row(
@@ -750,7 +911,8 @@ class _LoginPageState extends State<LoginPage> {
                                   child: ElevatedButton(
                                     onPressed: _isLoading ? null : _login,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF1890FF),
+                                      backgroundColor:
+                                          Theme.of(context).primaryColor,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),

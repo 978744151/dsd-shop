@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:business_savvy/models/blog.dart';
 import 'package:business_savvy/pages/blog_detail_page.dart';
+import '../utils/toast_util.dart';
 
 class RedBookCard extends StatelessWidget {
   final String? avatar;
@@ -49,6 +50,11 @@ class RedBookCard extends StatelessWidget {
         // 获取点击位置（全局坐标）
         final tapX = details.globalPosition.dx;
         final tapY = details.globalPosition.dy;
+        print(user);
+        if (user == null) {
+          ToastUtil.showPrimary('此文章已被删除');
+          return;
+        }
         Navigator.of(context, rootNavigator: true).push(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) {
@@ -208,11 +214,11 @@ class RedBookCard extends StatelessWidget {
 
   Widget _buildAvatar() {
     if (user != null &&
-        user!.containsKey('avatar') &&
-        user!['avatar'] != null) {
+        user?.containsKey('avatar') == true &&
+        user?['avatar'] != null) {
       try {
         return SvgPicture.network(
-          user!['avatar'],
+          user?['avatar'] ?? '',
           height: 15,
           width: 15,
           placeholderBuilder: (BuildContext context) => const CircleAvatar(

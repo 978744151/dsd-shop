@@ -1,10 +1,11 @@
 class ApiConfig {
   // 不同环境的baseUrl
-  static const String devBaseUrl = 'http://192.168.2.66:5002/api/';
+  // static const String devBaseUrl = 'http://192.168.2.66:5002/api/';
 
-  // static const String devBaseUrl = 'http://8.155.53.210:3001/api/';
+  static const String devBaseUrl = 'http://8.155.53.210:3001/api/';
   static const String testBaseUrl = 'http://test-api.example.com/api/v1';
   static const String prodBaseUrl = 'http://8.155.53.210:3000/api/v1';
+
 
   // 当前使用的环境
   static const String baseUrl = devBaseUrl; // 可以根据构建环境切换

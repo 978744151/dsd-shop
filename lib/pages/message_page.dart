@@ -1,3 +1,4 @@
+import 'package:business_savvy/utils/toast_util.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -45,7 +46,7 @@ class Blog {
       type: json['type'] ?? '',
       defaultImage: json['defaultImage'] ?? '',
       favoriteCount: json['favoriteCount'] ?? 0,
-      user: json['user'], // 直接使用 Map
+      user: json['user'] ?? {}, // 直接使用 Map
     );
   }
 }
@@ -499,13 +500,17 @@ class RedBookCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapUp: (TapUpDetails details) {
+        if (user == null) {
+          ToastUtil.showPrimary('此文章已被删除');
+          return;
+        }
         // 获取屏幕尺寸
         final screenSize = MediaQuery.of(context).size;
 
         // 获取点击位置（全局坐标）
         final tapX = details.globalPosition.dx;
         final tapY = details.globalPosition.dy;
-        Navigator.of(context).push(
+        Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (context) => BlogDetailPage(
               id: id,
@@ -643,11 +648,12 @@ class RedBookCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      SvgPicture.network(
-                        user!['avatar'],
-                        height: 15, // 根据是否为回复设置不同高度
-                        width: 15, // 根据是否为回复设置不同宽度
-                      ),
+                      if (user != null)
+                        SvgPicture.network(
+                          user!['avatar'] ?? '',
+                          height: 15, // 根据是否为回复设置不同高度
+                          width: 15, // 根据是否为回复设置不同宽度
+                        ),
                       // CircleAvatar(
                       //   radius: 10,
                       //   backgroundColor: const Color(0xFFE6F7FF),

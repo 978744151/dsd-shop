@@ -1,5 +1,6 @@
 import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:business_savvy/pages/feedback_page.dart';
+import 'package:business_savvy/pages/privacy_policy_page.dart';
 import 'package:business_savvy/pages/user_agreement_page.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -125,10 +126,10 @@ class _SettingsPageState extends State<SettingsPage> {
         }
 
         ToastUtil.showSuccess('设置保存成功');
-        
+
         // 触发mine页面刷新事件，让mine页面调用_getToken更新用户信息
         eventBus.fire(MinePageRefreshEvent());
-        
+
         if (context.canPop()) {
           context.pop();
         } else {
@@ -428,8 +429,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   const SizedBox(height: 10),
                   // 头像部分
-                  _buildModernAvatarSection(),
-                  const SizedBox(height: 30),
+                  // _buildModernAvatarSection(),
+                  // const SizedBox(height: 30),
                   // 用户信息设置
                   _buildUserInfoSection(),
                   const SizedBox(height: 30),
@@ -671,6 +672,21 @@ class _SettingsPageState extends State<SettingsPage> {
           //     // TODO: 实现通知设置
           //   },
           // ),
+          _buildModernSettingItem(
+            icon: Icons.privacy_tip_outlined,
+            title: '隐私协议',
+            subtitle: '隐私协议',
+            color: Colors.green,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PrivacyPolicyPage(),
+                ),
+              );
+              // TODO: 实现隐私设置
+            },
+          ),
           _buildModernSettingItem(
             icon: Icons.privacy_tip_outlined,
             title: '协议和声明',

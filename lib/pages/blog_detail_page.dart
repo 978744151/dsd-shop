@@ -11,6 +11,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import '../utils/storage.dart'; // 添加导入
 import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:fluttertoast/fluttertoast.dart'; // 替换为fluttertoast导入
+import 'user_profile_page.dart'; // 添加UserProfilePage导入
 
 class BlogDetailPage extends StatefulWidget {
   final String id; // 添加 id 参数
@@ -287,7 +288,8 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                         : '从评论中挑选要隐藏的词：${initialText.length > 24 ? initialText.substring(0, 24) + '...' : initialText}',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
+                      borderSide:
+                          BorderSide(color: Colors.grey[300] ?? Colors.grey),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 10),
@@ -736,7 +738,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                   border: Border.all(
                                     color: selectedType == typeId
                                         ? Colors.red
-                                        : Colors.grey[300]!,
+                                        : Colors.grey[300] ?? Colors.grey,
                                     width: 1,
                                   ),
                                   borderRadius: BorderRadius.circular(12),
@@ -908,33 +910,33 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                   // 操作按钮
                   Row(
                     children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: TextButton.icon(
-                            onPressed: () async {
-                              Navigator.of(ctx).pop();
-                              await Clipboard.setData(ClipboardData(
-                                  text:
-                                      'https://example.com/blog/${widget.id}'));
-                              Fluttertoast.showToast(msg: '链接已复制');
-                            },
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.grey[200],
-                              foregroundColor: Colors.black87,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            icon: const Icon(Icons.share),
-                            label: const Text(
-                              '分享链接',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
+                      // Expanded(
+                      //   child: SizedBox(
+                      //     height: 48,
+                      //     child: TextButton.icon(
+                      //       onPressed: () async {
+                      //         Navigator.of(ctx).pop();
+                      //         await Clipboard.setData(ClipboardData(
+                      //             text:
+                      //                 'https://example.com/blog/${widget.id}'));
+                      //         Fluttertoast.showToast(msg: '链接已复制');
+                      //       },
+                      //       style: TextButton.styleFrom(
+                      //         backgroundColor: Colors.grey[200],
+                      //         foregroundColor: Colors.black87,
+                      //         shape: RoundedRectangleBorder(
+                      //           borderRadius: BorderRadius.circular(12),
+                      //         ),
+                      //       ),
+                      //       icon: const Icon(Icons.share),
+                      //       label: const Text(
+                      //         '分享链接',
+                      //         style: TextStyle(fontWeight: FontWeight.w600),
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
+                      // const SizedBox(width: 12),
                       Expanded(
                         child: SizedBox(
                           height: 48,
@@ -959,139 +961,367 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: TextButton.icon(
-                            onPressed: () async {
-                              Navigator.of(ctx).pop();
-                              await showModalBottomSheet<void>(
-                                context: context,
-                                backgroundColor: Colors.transparent,
-                                builder: (bCtx) {
-                                  return Align(
-                                    alignment: Alignment.bottomCenter,
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      child: Container(
-                                        width: double.infinity,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: const BorderRadius.only(
-                                            topLeft: Radius.circular(20),
-                                            topRight: Radius.circular(20),
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.1),
-                                              blurRadius: 20,
-                                              offset: const Offset(0, -8),
+                      // 如果是自己的博客显示删除按钮，否则显示拉黑按钮
+                      if (userInfo['_id'] == blogInfo.user?['_id'])
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: TextButton.icon(
+                              onPressed: () async {
+                                Navigator.of(ctx).pop();
+                                await showModalBottomSheet<void>(
+                                  context: context,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (bCtx) {
+                                    return Align(
+                                      alignment: Alignment.bottomCenter,
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: Container(
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                const BorderRadius.only(
+                                              topLeft: Radius.circular(20),
+                                              topRight: Radius.circular(20),
                                             ),
-                                          ],
-                                        ),
-                                        padding: const EdgeInsets.all(20),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Center(
-                                              child: Container(
-                                                width: 40,
-                                                height: 4,
-                                                margin: const EdgeInsets.only(bottom: 16),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.grey[300],
-                                                  borderRadius: BorderRadius.circular(2),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withOpacity(0.1),
+                                                blurRadius: 20,
+                                                offset: const Offset(0, -8),
+                                              ),
+                                            ],
+                                          ),
+                                          padding: const EdgeInsets.all(20),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Center(
+                                                child: Container(
+                                                  width: 40,
+                                                  height: 4,
+                                                  margin: const EdgeInsets.only(
+                                                      bottom: 16),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[300],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            2),
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                            const Text(
-                                              '确认拉黑',
-                                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            const Text(
-                                              '拉黑后对方将无法和你互动，是否确认？',
-                                              style: TextStyle(fontSize: 14, color: Colors.grey),
-                                            ),
-                                            const SizedBox(height: 20),
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: SizedBox(
-                                                    height: 44,
-                                                    child: TextButton(
-                                                      onPressed: () => Navigator.of(bCtx).pop(),
-                                                      style: TextButton.styleFrom(
-                                                        backgroundColor: Colors.grey[100],
-                                                        foregroundColor: Colors.black54,
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius: BorderRadius.circular(12),
+                                              const Text(
+                                                '确认删除',
+                                                style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              const Text(
+                                                '删除后无法恢复，是否确认删除这篇博客？',
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey),
+                                              ),
+                                              const SizedBox(height: 20),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: SizedBox(
+                                                      height: 44,
+                                                      child: TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.of(bCtx)
+                                                                .pop(),
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              Colors.grey[100],
+                                                          foregroundColor:
+                                                              Colors.black54,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                          ),
                                                         ),
+                                                        child: const Text('取消'),
                                                       ),
-                                                      child: const Text('取消'),
                                                     ),
                                                   ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: SizedBox(
-                                                    height: 44,
-                                                    child: TextButton(
-                                                      onPressed: () async {
-                                                        try {
-                                                          final resp = await HttpClient.post('user/block', body: {
-                                                            'userId': blogInfo?.user?['_id'],
-                                                          });
-                                                          if ((resp is Map && (resp['success'] == true || resp['code'] == 200))) {
-                                                            Fluttertoast.showToast(msg: '已拉黑该用户');
-                                                          } else {
-                                                            Fluttertoast.showToast(msg: '拉黑失败，请稍后重试');
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: SizedBox(
+                                                      height: 44,
+                                                      child: TextButton(
+                                                        onPressed: () async {
+                                                          try {
+                                                            final resp = await HttpClient
+                                                                .delete(NftApi
+                                                                    .deleteBlog(
+                                                                        widget
+                                                                            .id));
+                                                            if ((resp is Map &&
+                                                                (resp['success'] ==
+                                                                        true ||
+                                                                    resp['code'] ==
+                                                                        200))) {
+                                                              Fluttertoast
+                                                                  .showToast(
+                                                                      msg:
+                                                                          '博客已删除');
+                                                              Navigator.of(bCtx)
+                                                                  .pop();
+                                                              Navigator.of(
+                                                                      context)
+                                                                  .pop();
+                                                            } else {
+                                                              Fluttertoast
+                                                                  .showToast(
+                                                                      msg:
+                                                                          '删除失败，请稍后重试');
+                                                            }
+                                                          } catch (e) {
+                                                            Fluttertoast.showToast(
+                                                                msg:
+                                                                    '删除失败，请稍后重试');
                                                           }
-                                                        } catch (e) {
-                                                          Fluttertoast.showToast(msg: '拉黑失败，请稍后重试');
-                                                        } finally {
-                                                          if (Navigator.of(bCtx).canPop()) {
-                                                            Navigator.of(bCtx).pop();
-                                                          }
-                                                        }
-                                                      },
-                                                      style: TextButton.styleFrom(
-                                                        backgroundColor: Colors.orange,
-                                                        foregroundColor: Colors.white,
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius: BorderRadius.circular(12),
+                                                        },
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              Colors.red,
+                                                          foregroundColor:
+                                                              Colors.white,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                          ),
                                                         ),
+                                                        child:
+                                                            const Text('确认删除'),
                                                       ),
-                                                      child: const Text('确认拉黑'),
                                                     ),
                                                   ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                    );
+                                  },
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.delete),
+                              label: const Text(
+                                '删除',
+                                style: TextStyle(fontWeight: FontWeight.w600),
                               ),
                             ),
-                            icon: const Icon(Icons.block),
-                            label: const Text(
-                              '拉黑',
-                              style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: TextButton.icon(
+                              onPressed: () async {
+                                Navigator.of(ctx).pop();
+                                await showModalBottomSheet<void>(
+                                  context: context,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (bCtx) {
+                                    return Align(
+                                      alignment: Alignment.bottomCenter,
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: Container(
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                const BorderRadius.only(
+                                              topLeft: Radius.circular(20),
+                                              topRight: Radius.circular(20),
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withOpacity(0.1),
+                                                blurRadius: 20,
+                                                offset: const Offset(0, -8),
+                                              ),
+                                            ],
+                                          ),
+                                          padding: const EdgeInsets.all(20),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Center(
+                                                child: Container(
+                                                  width: 40,
+                                                  height: 4,
+                                                  margin: const EdgeInsets.only(
+                                                      bottom: 16),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[300],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            2),
+                                                  ),
+                                                ),
+                                              ),
+                                              const Text(
+                                                '确认拉黑',
+                                                style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              const Text(
+                                                '拉黑后对方将无法和你互动，是否确认？',
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey),
+                                              ),
+                                              const SizedBox(height: 20),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: SizedBox(
+                                                      height: 44,
+                                                      child: TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.of(bCtx)
+                                                                .pop(),
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              Colors.grey[100],
+                                                          foregroundColor:
+                                                              Colors.black54,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                          ),
+                                                        ),
+                                                        child: const Text('取消'),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: SizedBox(
+                                                      height: 44,
+                                                      child: TextButton(
+                                                        onPressed: () async {
+                                                          try {
+                                                            final resp =
+                                                                await HttpClient
+                                                                    .post(
+                                                                        'blacklist/${blogInfo?.user?['_id']}',
+                                                                        body: {
+                                                                  'id': blogInfo
+                                                                          ?.user?[
+                                                                      '_id'],
+                                                                });
+                                                            if ((resp is Map &&
+                                                                (resp['success'] ==
+                                                                        true ||
+                                                                    resp['code'] ==
+                                                                        200))) {
+                                                              Fluttertoast
+                                                                  .showToast(
+                                                                      msg:
+                                                                          '已拉黑该用户');
+                                                            } else {
+                                                              Fluttertoast
+                                                                  .showToast(
+                                                                      msg: resp[
+                                                                          'message']);
+                                                            }
+                                                          } catch (e) {
+                                                            // Fluttertoast.showToast(
+                                                            //     msg:
+                                                            //         '拉黑失败，请稍后重试');
+                                                          } finally {
+                                                            if (Navigator.of(
+                                                                    bCtx)
+                                                                .canPop()) {
+                                                              Navigator.of(bCtx)
+                                                                  .pop();
+                                                            }
+                                                          }
+                                                        },
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              Colors.orange,
+                                                          foregroundColor:
+                                                              Colors.white,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                          ),
+                                                        ),
+                                                        child:
+                                                            const Text('确认拉黑'),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.block),
+                              label: const Text(
+                                '拉黑',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -1172,17 +1402,31 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                   Expanded(
                     child: Row(
                       children: [
-                        SvgPicture.network(
-                          "https://api.dicebear.com/9.x/big-ears/svg",
-                          height: 36,
-                          width: 36,
-                          placeholderBuilder: (BuildContext context) =>
-                              const Icon(
-                            Icons.person,
-                            size: 36,
-                            color: Color(0xFF1890FF),
+                        if (blogInfo != null && blogInfo.user != null)
+                          GestureDetector(
+                            onTap: () {
+                              if (blogInfo.user != null) {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => UserProfilePage(
+                                      userId: blogInfo.user!['_id'],
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            child: SvgPicture.network(
+                              blogInfo.user?['avatar'],
+                              height: 36,
+                              width: 36,
+                              placeholderBuilder: (BuildContext context) =>
+                                  const Icon(
+                                Icons.person,
+                                size: 36,
+                                color: Color(0xFF1890FF),
+                              ),
+                            ),
                           ),
-                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -1490,14 +1734,36 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                   ),
                                   child: Row(
                                     children: [
-                                      SvgPicture.network(
-                                        "https://api.dicebear.com/9.x/big-ears/svg",
-                                        height: 30,
-                                        width: 30,
-                                        placeholderBuilder:
-                                            (BuildContext context) =>
-                                                const Icon(Icons.person),
-                                      ),
+                                      if (blogInfo != null &&
+                                          blogInfo.user != null)
+                                        GestureDetector(
+                                          onTap: () {
+                                            if (blogInfo.user?['_id'] != null) {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      UserProfilePage(
+                                                    userId:
+                                                        blogInfo.user!['_id'],
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                          child: SvgPicture.network(
+                                            blogInfo.user?['avatar'],
+                                            height: 36,
+                                            width: 36,
+                                            placeholderBuilder:
+                                                (BuildContext context) =>
+                                                    const Icon(
+                                              Icons.person,
+                                              size: 36,
+                                              color: Color(0xFF1890FF),
+                                            ),
+                                          ),
+                                        ),
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: GestureDetector(
@@ -2028,13 +2294,13 @@ class CommentItem extends StatelessWidget {
                                                             } else {
                                                               Fluttertoast
                                                                   .showToast(
-                                                                      msg:
-                                                                          '删除失败，请稍后重试');
+                                                                      msg: resp[
+                                                                          'message']);
                                                             }
                                                           } catch (e) {
-                                                            Fluttertoast.showToast(
-                                                                msg:
-                                                                    '删除失败，请稍后重试');
+                                                            // Fluttertoast.showToast(
+                                                            //     msg:
+                                                            //         '删除失败，请稍后重试');
                                                           } finally {
                                                             if (Navigator.of(
                                                                     bCtx)
@@ -2290,7 +2556,7 @@ class CommentItem extends StatelessWidget {
                                   border: Border.all(
                                     color: selectedType == typeId
                                         ? Colors.red
-                                        : Colors.grey[300]!,
+                                        : Colors.grey[300] ?? Colors.grey,
                                     width: 1,
                                   ),
                                   borderRadius: BorderRadius.circular(12),
@@ -2512,14 +2778,28 @@ class CommentItem extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SvgPicture.network(
-                  comment.avatar,
-                  height: comment.isReply ? 30 : 38, // 根据是否为回复设置不同高度
-                  width: comment.isReply ? 30 : 38, // 根据是否为回复设置不同宽度
-                  placeholderBuilder: (BuildContext context) => Icon(
-                    Icons.person,
-                    size: comment.isReply ? 30 : 38, // 占位图标也相应调整大小
-                    color: const Color(0xFF1890FF),
+                GestureDetector(
+                  onTap: () {
+                    if (comment.user?['_id'] != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserProfilePage(
+                            userId: comment.user!['_id'],
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: SvgPicture.network(
+                    comment.avatar,
+                    height: comment.isReply ? 30 : 38, // 根据是否为回复设置不同高度
+                    width: comment.isReply ? 30 : 38, // 根据是否为回复设置不同宽度
+                    placeholderBuilder: (BuildContext context) => Icon(
+                      Icons.person,
+                      size: comment.isReply ? 30 : 38, // 占位图标也相应调整大小
+                      color: const Color(0xFF1890FF),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -2590,7 +2870,12 @@ class CommentItem extends StatelessWidget {
                                         ),
                                       ),
                                     TextSpan(
-                                      text: (context.findAncestorStateOfType<_BlogDetailPageState>()?._maskDislikedWords(comment.content ?? '') ?? (comment.content ?? '')),
+                                      text: (context
+                                              .findAncestorStateOfType<
+                                                  _BlogDetailPageState>()
+                                              ?._maskDislikedWords(
+                                                  comment.content ?? '') ??
+                                          (comment.content ?? '')),
                                       style: const TextStyle(
                                         color: Color(0xFF333333),
                                         fontSize: 13,

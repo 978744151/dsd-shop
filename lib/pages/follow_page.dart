@@ -41,7 +41,9 @@ class FollowUser {
 }
 
 class FollowPage extends StatefulWidget {
-  const FollowPage({super.key});
+  final int initialTabIndex;
+  
+  const FollowPage({super.key, this.initialTabIndex = 0});
 
   @override
   State<FollowPage> createState() => _FollowPageState();
@@ -66,7 +68,7 @@ class _FollowPageState extends State<FollowPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: widget.initialTabIndex);
 
     // 初始加载数据
     fetchFollowing();

@@ -98,6 +98,23 @@ class _ComparePageState extends State<ComparePage> {
   List<String> get _selectedNames =>
       _selectedType == 'mall' ? _mallSelectedNames : _citySelectedNames;
 
+  // 为不同列分配颜色的方法
+  Color _getColumnColor(int index) {
+    List<Color> colors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.red,
+      Colors.teal,
+      Colors.indigo,
+      Colors.pink,
+      Colors.amber,
+      Colors.cyan,
+    ];
+    return colors[index % colors.length];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1171,7 +1188,8 @@ class _ComparePageState extends State<ComparePage> {
               onPressed: () {
                 // 导航到新的反馈页面
                 // context.push('/feedback');
-                Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+                Navigator.of(context, rootNavigator: true)
+                    .push(MaterialPageRoute(
                   builder: (context) => FeedbackPage(),
                 ));
               },
@@ -1488,7 +1506,7 @@ class _ComparePageState extends State<ComparePage> {
                   padding: EdgeInsets.symmetric(vertical: 20),
                   child: Center(
                     child: Text(
-                      '品牌统计源于网络统计，如有错误，请点击右侧反馈',
+                      '品牌统计源官网和网络，如有错误，请点击右侧反馈',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey,
@@ -1533,7 +1551,7 @@ class _ComparePageState extends State<ComparePage> {
         ),
         alignment: Alignment.centerLeft,
         child: const Text(
-          '汇总信息',
+          '品牌数量',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 14,
@@ -1543,7 +1561,7 @@ class _ComparePageState extends State<ComparePage> {
       ),
     );
 
-    // 添加综合总分行
+    // // 添加综合总分行
     rows.add(
       Container(
         height: 60,
@@ -1555,7 +1573,7 @@ class _ComparePageState extends State<ComparePage> {
         ),
         alignment: Alignment.centerLeft,
         child: const Text(
-          '综合总分',
+          '门店数量',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 14,
@@ -1619,22 +1637,22 @@ class _ComparePageState extends State<ComparePage> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 2, horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: _getBrandScoreColor(averageScore),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          averageScore.round().toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                      // Container(
+                      //   padding: const EdgeInsets.symmetric(
+                      //       vertical: 2, horizontal: 4),
+                      //   decoration: BoxDecoration(
+                      //     color: _getBrandScoreColor(averageScore),
+                      //     borderRadius: BorderRadius.circular(8),
+                      //   ),
+                      //   child: Text(
+                      //     averageScore.round().toString(),
+                      //     style: const TextStyle(
+                      //       color: Colors.white,
+                      //       fontSize: 8,
+                      //       fontWeight: FontWeight.bold,
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   )
                 : Text(
@@ -1678,19 +1696,29 @@ class _ComparePageState extends State<ComparePage> {
           ),
         ),
         child: Row(
-          children: _comparisonData.map((data) {
+          children: _comparisonData.asMap().entries.map((entry) {
+            int index = entry.key;
+            var data = entry.value;
             List<dynamic> brands = data['brands'] ?? [];
             int brandCount = brands.length;
+            Color columnColor = _getColumnColor(index);
 
             return Container(
               width: 150,
               padding: const EdgeInsets.all(12),
               alignment: Alignment.centerLeft,
+              decoration: BoxDecoration(
+                color: columnColor.withOpacity(0.05),
+                border: Border(
+                  right: BorderSide(color: Colors.grey.shade300, width: 0.5),
+                ),
+              ),
               child: Text(
-                '品牌数: $brandCount',
-                style: const TextStyle(
+                '总计: $brandCount',
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
+                  color: columnColor.withOpacity(0.8),
                 ),
               ),
             );
@@ -1709,21 +1737,30 @@ class _ComparePageState extends State<ComparePage> {
           ),
         ),
         child: Row(
-          children: _comparisonData.map((data) {
+          children: _comparisonData.asMap().entries.map((entry) {
+            int index = entry.key;
+            var data = entry.value;
             double totalScore = double.tryParse(
-                    data['summary']?['totalScore']?.toString() ?? '0.0') ??
+                    data['summary']?['totalStore']?.toString() ?? '0.0') ??
                 0.0;
+            Color columnColor = _getColumnColor(index);
 
             return Container(
               width: 150,
               padding: const EdgeInsets.all(12),
               alignment: Alignment.centerLeft,
+              decoration: BoxDecoration(
+                color: columnColor.withOpacity(0.05),
+                border: Border(
+                  right: BorderSide(color: Colors.grey.shade300, width: 0.5),
+                ),
+              ),
               child: Text(
-                totalScore.toStringAsFixed(1),
+                data['summary']?['totalStores']?.toString() ?? '0',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: _getScoreColor(totalScore),
+                  fontSize: 12,
+                  color: columnColor.withOpacity(0.8),
                 ),
               ),
             );
@@ -1731,6 +1768,38 @@ class _ComparePageState extends State<ComparePage> {
         ),
       ),
     );
+    // 添加综合总分行
+    // rows.add(
+    //   Container(
+    //     height: 60,
+    //     decoration: BoxDecoration(
+    //       border: Border(
+    //         bottom: BorderSide(color: Colors.grey.shade300),
+    //       ),
+    //     ),
+    //     child: Row(
+    //       children: _comparisonData.map((data) {
+    //         double totalScore = double.tryParse(
+    //                 data['summary']?['totalScore']?.toString() ?? '0.0') ??
+    //             0.0;
+
+    //         return Container(
+    //           width: 150,
+    //           padding: const EdgeInsets.all(12),
+    //           alignment: Alignment.centerLeft,
+    //           child: Text(
+    //             totalScore.toStringAsFixed(1),
+    //             style: TextStyle(
+    //               fontWeight: FontWeight.bold,
+    //               fontSize: 14,
+    //               color: _getScoreColor(totalScore),
+    //             ),
+    //           ),
+    //         );
+    //       }).toList(),
+    //     ),
+    //   ),
+    // );
 
     // 为每个品牌创建行
     for (String brandName in allBrands.toList()..sort()) {
@@ -1743,29 +1812,39 @@ class _ComparePageState extends State<ComparePage> {
             ),
           ),
           child: Row(
-            children: _comparisonData.map((data) {
+            children: _comparisonData.asMap().entries.map((entry) {
+              int index = entry.key;
+              var data = entry.value;
               List<dynamic> brands = data['brands'] ?? [];
               var brandData = brands.firstWhere(
                 (b) =>
                     (b['brand']?['name'] ?? b['brand']?['code']) == brandName,
                 orElse: () => null,
               );
+              Color columnColor = _getColumnColor(index);
 
               return Container(
                 width: 150,
                 padding: const EdgeInsets.all(12),
                 alignment: Alignment.centerLeft,
+                decoration: BoxDecoration(
+                  color: columnColor.withOpacity(0.03),
+                  border: Border(
+                    right: BorderSide(color: Colors.grey.shade300, width: 0.5),
+                  ),
+                ),
                 child: brandData == null
-                    ? const Text('暂无门店', style: TextStyle(color: Colors.grey))
+                    ? Text('-', style: TextStyle(color: Colors.grey.shade400))
                     : Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             '${brandData['storeCount'] ?? 0}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              fontSize: 14,
+                              color: columnColor.withOpacity(0.9),
                             ),
                           ),
                           // const SizedBox(height: 2),
@@ -1861,7 +1940,7 @@ class _ComparePageState extends State<ComparePage> {
                   width: 150,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: const Text(
-                    '品牌/分值',
+                    '品牌',
                     textAlign: TextAlign.left,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
@@ -1870,12 +1949,16 @@ class _ComparePageState extends State<ComparePage> {
                   ),
                 ),
                 // 动态列表头
-                ..._comparisonData.map((data) {
+                ..._comparisonData.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  var data = entry.value;
                   String name = data['location']['name'] ?? '未知';
+                  Color columnColor = _getColumnColor(index);
                   return Container(
                     width: 150,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
+                      color: columnColor.withOpacity(0.1),
                       border: Border(
                         left: BorderSide(color: Colors.grey.shade300),
                       ),
@@ -1883,9 +1966,10 @@ class _ComparePageState extends State<ComparePage> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
+                        color: columnColor.withOpacity(0.8),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -1910,7 +1994,7 @@ class _ComparePageState extends State<ComparePage> {
                   ),
                   alignment: Alignment.centerLeft,
                   child: const Text(
-                    '汇总信息',
+                    '品牌数量',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -1918,13 +2002,17 @@ class _ComparePageState extends State<ComparePage> {
                     ),
                   ),
                 ),
-                ..._comparisonData.map((data) {
+                ..._comparisonData.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  var data = entry.value;
                   List<dynamic> brands = data['brands'] ?? [];
                   int brandCount = brands.length;
+                  Color columnColor = _getColumnColor(index);
                   return Container(
                     width: 150,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
+                      color: columnColor.withOpacity(0.1),
                       border: Border(
                         left: BorderSide(color: Colors.grey.shade300),
                         bottom: BorderSide(color: Colors.grey.shade300),
@@ -1932,10 +2020,11 @@ class _ComparePageState extends State<ComparePage> {
                     ),
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      '品牌数: $brandCount',
-                      style: const TextStyle(
+                      '总计: $brandCount',
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
+                        color: columnColor.withOpacity(0.8),
                       ),
                     ),
                   );
@@ -1967,15 +2056,19 @@ class _ComparePageState extends State<ComparePage> {
                     ),
                   ),
                 ),
-                ..._comparisonData.map((data) {
+                ..._comparisonData.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  var data = entry.value;
                   double totalScore = double.tryParse(
                           data['summary']?['totalScore']?.toString() ??
                               '0.0') ??
                       0.0;
+                  Color columnColor = _getColumnColor(index);
                   return Container(
                     width: 150,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
+                      color: columnColor.withOpacity(0.1),
                       border: Border(
                         left: BorderSide(color: Colors.grey.shade300),
                         bottom: BorderSide(color: Colors.grey.shade300),
@@ -2055,22 +2148,22 @@ class _ComparePageState extends State<ComparePage> {
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 2, horizontal: 4),
-                                  decoration: BoxDecoration(
-                                    color: _getBrandScoreColor(averageScore),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    averageScore.round().toString(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
+                                // Container(
+                                //   padding: const EdgeInsets.symmetric(
+                                //       vertical: 2, horizontal: 4),
+                                //   decoration: BoxDecoration(
+                                //     color: _getBrandScoreColor(averageScore),
+                                //     borderRadius: BorderRadius.circular(8),
+                                //   ),
+                                //   child: Text(
+                                //     averageScore.round().toString(),
+                                //     style: const TextStyle(
+                                //       color: Colors.white,
+                                //       fontSize: 9,
+                                //       fontWeight: FontWeight.bold,
+                                //     ),
+                                //   ),
+                                // ),
                               ],
                             )
                           : Text(
@@ -2082,7 +2175,9 @@ class _ComparePageState extends State<ComparePage> {
                             ),
                     ),
                   ),
-                  ..._comparisonData.map((data) {
+                  ..._comparisonData.asMap().entries.map((entry) {
+                    int index = entry.key;
+                    var data = entry.value;
                     List<dynamic> brands = data['brands'] ?? [];
                     var brandData = brands.firstWhere(
                       (b) =>
@@ -2090,10 +2185,12 @@ class _ComparePageState extends State<ComparePage> {
                           brandName,
                       orElse: () => null,
                     );
+                    Color columnColor = _getColumnColor(index);
                     return Container(
                       width: 150,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
+                        color: columnColor.withOpacity(0.1),
                         border: Border(
                           left: BorderSide(color: Colors.grey.shade300),
                           bottom: BorderSide(color: Colors.grey.shade300),
@@ -2101,17 +2198,19 @@ class _ComparePageState extends State<ComparePage> {
                       ),
                       alignment: Alignment.centerLeft,
                       child: brandData == null
-                          ? const Text('暂无门店',
-                              style: TextStyle(color: Colors.grey))
+                          ? Text('暂无门店',
+                              style: TextStyle(
+                                  color: columnColor.withOpacity(0.6)))
                           : Column(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   '${brandData['storeCount'] ?? 0}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
+                                    color: columnColor.withOpacity(0.8),
                                   ),
                                 ),
                                 // const SizedBox(height: 2),
@@ -2626,6 +2725,23 @@ class _SyncScrollTableState extends State<_SyncScrollTable> {
   late ScrollController _rightScrollController;
   bool _isSyncing = false;
 
+  // 为不同列分配颜色的方法
+  Color _getColumnColor(int index) {
+    List<Color> colors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.red,
+      Colors.teal,
+      Colors.indigo,
+      Colors.pink,
+      Colors.amber,
+      Colors.cyan,
+    ];
+    return colors[index % colors.length];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -2721,27 +2837,38 @@ class _SyncScrollTableState extends State<_SyncScrollTable> {
                   Container(
                     height: 56,
                     decoration: BoxDecoration(
-                      color: kHeaderBackgroundColor,
                       border: Border(
                         bottom: BorderSide(color: Colors.grey.shade300),
                       ),
                     ),
                     child: Row(
-                      children: widget.comparisonData
-                          .map((data) => Container(
-                                width: 150,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  data['location']['name'] ?? '未知',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ))
-                          .toList(),
+                      children:
+                          widget.comparisonData.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        var data = entry.value;
+                        // 为每列分配不同的颜色
+                        Color columnColor = _getColumnColor(index);
+                        return Container(
+                          width: 150,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          alignment: Alignment.centerLeft,
+                          decoration: BoxDecoration(
+                            color: columnColor.withOpacity(0.1),
+                            border: Border(
+                              right: BorderSide(
+                                  color: Colors.grey.shade300, width: 0.5),
+                            ),
+                          ),
+                          child: Text(
+                            data['location']['name'] ?? '未知',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: columnColor.withOpacity(0.8),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                   // 数据行
