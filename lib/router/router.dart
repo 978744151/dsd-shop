@@ -21,7 +21,7 @@ import '../pages/favorites_page.dart';
 import '../pages/follow_page.dart';
 import '../pages/notifications_page.dart';
 import '../pages/brand_center_page.dart';
-
+import '../pages/user_profile.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>(); // 添加这行
 
 final router = GoRouter(
@@ -174,6 +174,8 @@ final router = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginPage(),
+      
+      
     ),
     GoRoute(
       path: '/brand_center',

@@ -1,5 +1,5 @@
 name: nft_once
-description: A new nft_once.
+description: 懂商帝
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
@@ -38,6 +38,10 @@ dependencies:
   flutter_svg: ^1.1.6
   # image_picker: ^1.1.2
   hive: ^2.2.3 
+  url_launcher:
+     git:
+       url: https://gitee.com/openharmony-sig/flutter_packages.git
+       path: packages/url_launcher/url_launcher
   image_picker:
     git:
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
@@ -59,7 +63,12 @@ dependencies:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_image_gallery_saver.git
 
-
+# dependency_overrides:
+#   webview_flutter:
+#      git:
+#        url: "https://gitcode.com/openharmony-tpc/flutter_packages.git"
+#        path: "packages/webview_flutter/webview_flutter"
+       
 dev_dependencies:
   flutter_test:
     sdk: flutter

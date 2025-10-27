@@ -99,7 +99,7 @@ class _MessagePageState extends State<MessagePage>
 
   // 添加TabController
   late TabController _tabController;
-
+  bool isShow = false;
   // 记录每个标签页是否已经加载过数据
   final Set<String> _loadedTabs = <String>{};
 
@@ -113,7 +113,7 @@ class _MessagePageState extends State<MessagePage>
   @override
   void initState() {
     super.initState();
-
+    dictionaries();
     // 初始化TabController
     _tabController = TabController(
       length: 3,
@@ -164,6 +164,17 @@ class _MessagePageState extends State<MessagePage>
     }
   }
 
+  Future<void> dictionaries() async {
+    
+    final response = await HttpClient.get('admin/dictionaries?page=1&limit=20&type=brand_category');
+
+    if (response['success']) {
+      final categoryList = response['data']['dictionaries']?? [];
+      setState(() {
+       isShow = categoryList.any((e) => e['value'] == '13');
+      });
+    }
+  }
   Future<void> fetchBlogs() async {
     if (!mounted) return;
 
@@ -228,6 +239,7 @@ class _MessagePageState extends State<MessagePage>
       // 刷新时清空当前标签页的数据
       _tabBlogs[currentTab]!.clear();
     });
+    await dictionaries();
     await fetchBlogs();
   }
 
@@ -409,6 +421,7 @@ class _MessagePageState extends State<MessagePage>
                   ),
                 ],
               )),
+              if(isShow)
           Positioned(
             right: 10,
             bottom: 20,

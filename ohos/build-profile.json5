@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "C:\\Users\\ct\\.ohos\\config\\default_ohos_bQr58wlZim02CsRfCBtPii6oQjg1e7iGwI1wJteJjdk=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001BB0BB1472EA83DE69DC33C5C8E3CFC0FDBAE4DE616E483AEF3738DB89CDC55AEDEC7FE0A9A6D755",
-          "profile": "C:\\Users\\ct\\.ohos\\config\\default_ohos_bQr58wlZim02CsRfCBtPii6oQjg1e7iGwI1wJteJjdk=.p7b",
+          "storeFile": "D:/code/key/release_dcd.p12",
+          "storePassword": "0000001EE295E68F2CDBD7E06CF1C2C17999F534472501A92ED1441447A025B1FE0AE1EB2C37981C6BBE97410712",
+          "keyAlias": "release_dcd",
+          "keyPassword": "0000001E02487868B3A0AE53699B2DC626BAE13966F93460DC55CB5CC3824BC04E7982A282EB0F29112BF469E9DB",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\ct\\.ohos\\config\\default_ohos_bQr58wlZim02CsRfCBtPii6oQjg1e7iGwI1wJteJjdk=.p12",
-          "storePassword": "0000001BF7D27B9BBD4EBC8B502E90F615B530C5C2547FEF58CD1E075DE30EBDD8164E833B46646B0224B6"
+          "profile": "D:/code/csr/release_dcdRelease.p7b",
+          "certpath": "D:/code/csr/release_dcd.cer"
         }
       }
     ],

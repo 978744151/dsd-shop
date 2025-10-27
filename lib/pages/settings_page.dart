@@ -1,6 +1,8 @@
+import 'package:nft_once/pages/feedback_page.dart';
+import 'package:nft_once/pages/privacy_policy_page.dart';
+import 'package:nft_once/pages/user_agreement_page.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:nft_once/pages/feedback_page.dart';
 import 'dart:io';
 import '../utils/storage.dart';
 import 'dart:convert';
@@ -10,6 +12,7 @@ import '../utils/image_upload_util.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/event_bus.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -45,7 +48,8 @@ class _SettingsPageState extends State<SettingsPage> {
       if (userInfoJson != null) {
         setState(() {
           userInfo = json.decode(userInfoJson);
-          _nameController.text = userInfo['name'] ?? userInfo['username'] ?? '';
+          _nameController.text =
+              userInfo['username'] ?? userInfo['username'] ?? '';
           _emailController.text = userInfo['email'] ?? '';
         });
       }
@@ -97,7 +101,7 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       // 更新用户名和邮箱
       final updateData = {
-        'name': _nameController.text.trim(),
+        'username': _nameController.text.trim(),
       };
 
       if (_emailController.text.trim().isNotEmpty) {
@@ -105,11 +109,11 @@ class _SettingsPageState extends State<SettingsPage> {
       }
 
       final nameResponse =
-          await HttpClient.put('/auth/updateDetails', body: updateData);
+          await HttpClient.put('user/profile', body: updateData);
 
       if (nameResponse['success'] == true) {
         // 更新本地存储的用户信息
-        userInfo['name'] = _nameController.text.trim();
+        userInfo['username'] = _nameController.text.trim();
         if (_emailController.text.trim().isNotEmpty) {
           userInfo['email'] = _emailController.text.trim();
         }
@@ -121,6 +125,10 @@ class _SettingsPageState extends State<SettingsPage> {
         }
 
         ToastUtil.showSuccess('设置保存成功');
+
+        // 触发mine页面刷新事件，让mine页面调用_getToken更新用户信息
+        eventBus.fire(MinePageRefreshEvent());
+
         if (context.canPop()) {
           context.pop();
         } else {
@@ -420,8 +428,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   const SizedBox(height: 10),
                   // 头像部分
-                  _buildModernAvatarSection(),
-                  const SizedBox(height: 30),
+                  // _buildModernAvatarSection(),
+                  // const SizedBox(height: 30),
                   // 用户信息设置
                   _buildUserInfoSection(),
                   const SizedBox(height: 30),
@@ -654,21 +662,42 @@ class _SettingsPageState extends State<SettingsPage> {
               context.push('/history');
             },
           ),
+          // _buildModernSettingItem(
+          //   icon: Icons.notifications_outlined,
+          //   title: '通知设置',
+          //   subtitle: '管理推送通知偏好',
+          //   color: Colors.orange,
+          //   onTap: () {
+          //     // TODO: 实现通知设置
+          //   },
+          // ),
           _buildModernSettingItem(
-            icon: Icons.notifications_outlined,
-            title: '通知设置',
-            subtitle: '管理推送通知偏好',
-            color: Colors.orange,
+            icon: Icons.privacy_tip_outlined,
+            title: '隐私协议',
+            subtitle: '隐私协议',
+            color: Colors.green,
             onTap: () {
-              // TODO: 实现通知设置
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PrivacyPolicyPage(),
+                ),
+              );
+              // TODO: 实现隐私设置
             },
           ),
           _buildModernSettingItem(
             icon: Icons.privacy_tip_outlined,
-            title: '隐私设置',
-            subtitle: '保护您的个人信息',
+            title: '协议和声明',
+            subtitle: '用户协议和免责声明',
             color: Colors.green,
             onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserAgreementPage(),
+                ),
+              );
               // TODO: 实现隐私设置
             },
           ),
@@ -678,22 +707,23 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: '获取帮助或提供建议',
             color: Colors.blue,
             onTap: () {
+              // context.push('/feedback');
               Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
                 builder: (context) => FeedbackPage(),
               ));
               // TODO: 实现帮助与反馈
             },
           ),
-          _buildModernSettingItem(
-            icon: Icons.info_outline,
-            title: '关于我们',
-            subtitle: '了解应用信息',
-            color: Colors.purple,
-            onTap: () {
-              // TODO: 实现关于我们
-            },
-            isLast: true,
-          ),
+          // _buildModernSettingItem(
+          //   icon: Icons.info_outline,
+          //   title: '关于我们',
+          //   subtitle: '了解应用信息',
+          //   color: Colors.purple,
+          //   onTap: () {
+          //     // TODO: 实现关于我们
+          //   },
+          //   isLast: true,
+          // ),
         ],
       ),
     );
@@ -938,4 +968,5 @@ class _SettingsPageState extends State<SettingsPage> {
       ToastUtil.showError('退出登录失败: $e');
     }
   }
+
 }

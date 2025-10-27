@@ -2,7 +2,11 @@
   "string": [
     {
       "name": "app_name",
-      "value": "dsd"
+      "value": "懂商帝"
+    },
+    {
+      "name": "app_description",
+      "value": "懂商帝,您的商业小助手"
     }
   ]
 }

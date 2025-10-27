@@ -206,6 +206,23 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
     }
   }
 
+  /// 获取列颜色
+  Color _getColumnColor(int index) {
+    // 默认颜色列表
+    const List<Color> defaultColors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.red,
+      Colors.teal,
+      Colors.indigo,
+      Colors.pink,
+      Colors.amber,
+      Colors.cyan,
+    ];
+    return defaultColors[index % defaultColors.length];
+  }
 
   Color _getScoreColor(double score) {
     if (score >= 80) return Colors.green;
@@ -241,7 +258,7 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
     List<String> sortedBrands = allBrands.toList()..sort();
 
     // 计算表格宽度，确保有足够空间显示所有数据
-    double tableWidth = 150 + (_comparisonData.length * 155.0); // 进一步增加列宽和缓冲空间
+    double tableWidth = 154 + (_comparisonData.length * 150.0); // 进一步增加列宽和缓冲空间
 
     return Container(
       width: tableWidth,
@@ -269,7 +286,7 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
             decoration: BoxDecoration(
               color: kHeaderBackgroundColor,
               border: Border(
-                bottom: BorderSide(color: Colors.grey.shade300, width: 2),
+                bottom: BorderSide(color: Colors.grey.shade300,),
               ),
             ),
             child: Row(
@@ -279,7 +296,7 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
                   width: 150,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: const Text(
-                    '品牌/分值',
+                    '品牌/对象',
                     textAlign: TextAlign.left,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
@@ -287,13 +304,17 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
                     ),
                   ),
                 ),
-                // 动态列表头
-                ..._comparisonData.map((data) {
+          // 动态列表头
+                ..._comparisonData.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  var data = entry.value;
                   String name = data['location']['name'] ?? '未知';
+                  Color columnColor = _getColumnColor(index);
                   return Container(
                     width: 150,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
+                      color: columnColor.withOpacity(0.1),
                       border: Border(
                         left: BorderSide(color: Colors.grey.shade300),
                       ),
@@ -301,9 +322,10 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
+                        color: columnColor.withOpacity(0.8),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -336,33 +358,37 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
                     ),
                   ),
                 ),
-                ..._comparisonData.map((data) {
-                  List<dynamic> brands = data['brands'] ?? [];
-                  int brandCount = brands.length;
-                  return Container(
-                    width: 150,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(color: Colors.grey.shade300),
-                        bottom: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '品牌数: $brandCount',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  );
-                }).toList(),
+          ..._comparisonData.asMap().entries.map((entry) {
+            int index = entry.key;
+            var data = entry.value;
+            List<dynamic> brands = data['brands'] ?? [];
+            int brandCount = brands.length;
+            Color columnColor = _getColumnColor(index);
+            return Container(
+              width: 150,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: columnColor.withOpacity(0.1),
+                border: Border(
+                  left: BorderSide(color: Colors.grey.shade300),
+                  bottom: BorderSide(color: Colors.grey.shade300),
+                ),
+              ),
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '总计: $brandCount',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: columnColor.withOpacity(0.8),
+                ),
+              ),
+            );
+          }).toList(),
               ],
             ),
           ),
-
-          // 综合总分行
+          // 门店数量
           Container(
             height: 60,
             child: Row(
@@ -377,42 +403,95 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
                   ),
                   alignment: Alignment.centerLeft,
                   child: const Text(
-                    '综合总分',
+                    '门店数量',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
-                      color: Colors.green,
+                      color: Colors.orange,
                     ),
                   ),
                 ),
-                ..._comparisonData.map((data) {
-                  double totalScore = double.tryParse(
-                          data['summary']?['totalScore']?.toString() ??
-                              '0.0') ??
-                      0.0;
-                  return Container(
-                    width: 150,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(color: Colors.grey.shade300),
-                        bottom: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      totalScore.toStringAsFixed(1),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: _getScoreColor(totalScore),
-                      ),
-                    ),
-                  );
-                }).toList(),
+          ..._comparisonData.asMap().entries.map((entry) {
+            int index = entry.key;
+            var data = entry.value;
+                        String totalStores =
+                data['summary']?['totalStores']?.toString() ?? '0';
+            Color columnColor = _getColumnColor(index);
+            return Container(
+              width: 150,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: columnColor.withOpacity(0.1),
+                border: Border(
+                  left: BorderSide(color: Colors.grey.shade300),
+                  bottom: BorderSide(color: Colors.grey.shade300),
+                ),
+              ),
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '总计: $totalStores',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: columnColor.withOpacity(0.8),
+                ),
+              ),
+            );
+          }).toList(),
               ],
             ),
           ),
+          // 综合总分行
+          // Container(
+          //   height: 60,
+          //   child: Row(
+          //     children: [
+          //       Container(
+          //         width: 150,
+          //         padding: const EdgeInsets.all(16),
+          //         decoration: BoxDecoration(
+          //           border: Border(
+          //             bottom: BorderSide(color: Colors.grey.shade300),
+          //           ),
+          //         ),
+          //         alignment: Alignment.centerLeft,
+          //         child: const Text(
+          //           '综合总分',
+          //           style: TextStyle(
+          //             fontWeight: FontWeight.bold,
+          //             fontSize: 14,
+          //             color: Colors.green,
+          //           ),
+          //         ),
+          //       ),
+          //       ..._comparisonData.map((data) {
+          //         double totalScore = double.tryParse(
+          //                 data['summary']?['totalScore']?.toString() ??
+          //                     '0.0') ??
+          //             0.0;
+          //         return Container(
+          //           width: 150,
+          //           padding: const EdgeInsets.all(12),
+          //           decoration: BoxDecoration(
+          //             border: Border(
+          //               left: BorderSide(color: Colors.grey.shade300),
+          //               bottom: BorderSide(color: Colors.grey.shade300),
+          //             ),
+          //           ),
+          //           alignment: Alignment.centerLeft,
+          //           child: Text(
+          //             totalScore.toStringAsFixed(1),
+          //             style: TextStyle(
+          //               fontWeight: FontWeight.bold,
+          //               fontSize: 12,
+          //               color: _getScoreColor(totalScore),
+          //             ),
+          //           ),
+          //         );
+          //       }).toList(),
+          //     ],
+          //   ),
+          // ),
 
           // 品牌数据行
           ...sortedBrands.map((brandName) {
@@ -473,22 +552,22 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 2, horizontal: 4),
-                                  decoration: BoxDecoration(
-                                    color: _getBrandScoreColor(averageScore),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    averageScore.round().toString(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
+                                // Container(
+                                //   padding: const EdgeInsets.symmetric(
+                                //       vertical: 2, horizontal: 4),
+                                //   decoration: BoxDecoration(
+                                //     color: _getBrandScoreColor(averageScore),
+                                //     borderRadius: BorderRadius.circular(8),
+                                //   ),
+                                //   child: Text(
+                                //     averageScore.round().toString(),
+                                //     style: const TextStyle(
+                                //       color: Colors.white,
+                                //       fontSize: 9,
+                                //       fontWeight: FontWeight.bold,
+                                //     ),
+                                //   ),
+                                // ),
                               ],
                             )
                           : Text(
@@ -500,8 +579,11 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
                             ),
                     ),
                   ),
-                  ..._comparisonData.map((data) {
+                  ..._comparisonData.asMap().entries.map((entry) {
+                    int index = entry.key;
+                       var data = entry.value;
                     List<dynamic> brands = data['brands'] ?? [];
+                    Color columnColor = _getColumnColor(index);
                     var brandData = brands.firstWhere(
                       (b) =>
                           (b['brand']?['name'] ?? b['brand']?['code']) ==
@@ -512,6 +594,7 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
                       width: 150,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
+                        color: columnColor.withOpacity(0.1),
                         border: Border(
                           left: BorderSide(color: Colors.grey.shade300),
                           bottom: BorderSide(color: Colors.grey.shade300),
@@ -519,7 +602,7 @@ class _CompareDetailPageState extends State<CompareDetailPage> {
                       ),
                       alignment: Alignment.centerLeft,
                       child: brandData == null
-                          ? const Text('暂无门店',
+                          ? const Text('-',
                               style: TextStyle(color: Colors.grey))
                           : Column(
                               mainAxisSize: MainAxisSize.min,

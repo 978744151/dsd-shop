@@ -75,8 +75,8 @@ class _MallBrandPageState extends State<MallBrandPage> {
                               const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 4,
                             childAspectRatio: 0.8,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
                           ),
                           itemCount: brands.length,
                           itemBuilder: (context, index) {

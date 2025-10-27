@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nft_once/pages/blacklist_page.dart';
 import 'package:nft_once/pages/blog_detail_page.dart';
 import 'package:nft_once/pages/compare_detail_page.dart';
 import 'package:nft_once/pages/compare_page.dart';
@@ -529,7 +530,7 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                               _buildMainFunction(Icons.star_border, '收藏'),
                               _buildMainFunction(Icons.person_add, '关注'),
                               _buildMainFunction(Icons.people, '粉丝'),
-                              // _buildMainFunction(Icons.message, '消息',
+                              _buildMainFunction(Icons.block, '黑名单'),
                               // hasNotification: true),
                             ],
                           ),
@@ -1161,7 +1162,13 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
               builder: (context) => const FollowPage(),
             ),
           );
-        } else if (label == '粉丝') {
+        } else if (label == '黑名单') {
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (context) => const BlacklistPage(),
+            ),
+          );
+        }else if (label == '粉丝') {
           Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) => const FollowPage(),

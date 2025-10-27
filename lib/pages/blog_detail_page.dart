@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:convert'; // 添加这行
 import 'package:flutter/services.dart'; // 新增：用于剪贴板
+import 'package:nft_once/utils/toast_util.dart';
 
 import '../api/comment_api.dart';
 import 'package:intl/intl.dart'; // 添加这行
@@ -9,9 +10,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/http_client.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import '../utils/storage.dart'; // 添加导入
-// import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:fluttertoast/fluttertoast.dart'; // 替换为fluttertoast导入
-import '../utils/toast_util.dart';
+import 'user_profile_page.dart'; // 添加UserProfilePage导入
 
 class BlogDetailPage extends StatefulWidget {
   final String id; // 添加 id 参数
@@ -94,13 +94,16 @@ class _BlogDetailPageState extends State<BlogDetailPage>
   final Map<String, GlobalKey> _topCommentKeys = {};
   bool _didScrollToComment = false;
   bool _ignoreNextTap = false; // 新增：长按后屏蔽下一次点击，避免触发输入框
+  bool isShow = false;
   Offset _startPosition = Offset.zero; // 添加滑动开始位置变量
   bool _isNavigating = false; // 添加导航状态标志，防止重复触发
   int _currentImageIndex = 0; // 添加当前图片索引变量
-
+  Set<String> _dislikedWords = {}; // 新增：不喜欢词集合
   @override
   void initState() {
     super.initState();
+    dictionaries();
+
     _commentFocusNode.addListener(_handleFocusChange);
 
     // 初始化动画控制器
@@ -115,33 +118,26 @@ class _BlogDetailPageState extends State<BlogDetailPage>
       parent: _favoriteAnimationController,
       curve: Curves.elasticOut,
     ));
-
     fetchBlogDetail();
     fetchComments();
     fetchHistory();
     checkFavoriteStatus(); // 检查收藏状态
+    _loadDislikedWords(); // 加载不喜欢词
+    
   }
 
-  String _timeAgo(String dateString) {
-    try {
-      final date = DateTime.parse(dateString);
-      final now = DateTime.now();
-      final difference = now.difference(date);
+  
+  Future<void> dictionaries() async {
+    
+    final response = await HttpClient.get('admin/dictionaries?page=1&limit=20&type=brand_category');
 
-      if (difference.inDays > 0) {
-        return '${difference.inDays}天前';
-      } else if (difference.inHours > 0) {
-        return '${difference.inHours}小时前';
-      } else if (difference.inMinutes > 0) {
-        return '${difference.inMinutes}分钟前';
-      } else {
-        return '刚刚';
-      }
-    } catch (e) {
-      return dateString;
+    if (response['success']) {
+      final categoryList = response['data']['dictionaries']?? [];
+      setState(() {
+       isShow = categoryList.any((e) => e['value'] == '13');
+      });
     }
   }
-
   Future<void> getToken(String token) async {
     try {
       final userInfoJson = await Storage.getString('userInfo');
@@ -225,6 +221,162 @@ class _BlogDetailPageState extends State<BlogDetailPage>
   }
 
 // 添加获取关注信息的方法
+  // 新增：不喜欢词工具方法
+  Future<void> _loadDislikedWords() async {
+    try {
+      final Map<String, dynamic>? data =
+          await Storage.getJson('disliked_words');
+      final List<dynamic> words = (data != null ? (data['words'] ?? []) : []);
+      setState(() {
+        _dislikedWords = words.map((e) => e.toString()).toSet();
+      });
+    } catch (e) {}
+  }
+
+  Future<void> _saveDislikedWords() async {
+    try {
+      await Storage.setJson('disliked_words', {
+        'words': _dislikedWords.toList(),
+      });
+    } catch (e) {}
+  }
+
+  String _maskDislikedWords(String text) {
+    var result = text;
+    for (final w in _dislikedWords) {
+      if (w.trim().isEmpty) continue;
+      final pattern = RegExp(RegExp.escape(w), caseSensitive: false);
+      result = result.replaceAll(pattern, '***');
+    }
+    return result;
+  }
+
+  Future<void> _showDislikeBottomSheet(BuildContext context,
+      {String? initialText}) async {
+    final TextEditingController controller = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bCtx) {
+        return Container(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(bCtx).viewInsets.bottom),
+          child: Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const Text(
+                  '不喜欢的词',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '输入你想隐藏的词或短语，多个用空格分隔',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    hintText: (initialText == null || initialText.isEmpty)
+                        ? '例如：广告 违禁词'
+                        : '从评论中挑选要隐藏的词：${initialText.length > 24 ? initialText.substring(0, 24) + '...' : initialText}',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: Colors.grey[300] ?? Colors.grey),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                  ),
+                  minLines: 1,
+                  maxLines: 4,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 44,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.of(bCtx).pop();
+                          },
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.grey[100],
+                            foregroundColor: Colors.black54,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('取消'),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 44,
+                        child: TextButton(
+                          onPressed: () async {
+                            final input = controller.text.trim();
+                            if (input.isEmpty) {
+                              ToastUtil.showPrimary('请输入要隐藏的词');
+                              return;
+                            }
+                            final added = input
+                                .split(RegExp(r"[\\s,]+"))
+                                .where((e) => e.trim().isNotEmpty)
+                                .map((e) => e.trim());
+                            setState(() {
+                              _dislikedWords.addAll(added);
+                            });
+                            await _saveDislikedWords();
+                            ToastUtil.showPrimary('已更新不喜欢词');
+                            if (Navigator.of(bCtx).canPop()) {
+                              Navigator.of(bCtx).pop();
+                            }
+                          },
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('确定隐藏'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> fetchFollowInfo(id) async {
     if (!mounted) return;
     try {
@@ -356,6 +508,26 @@ class _BlogDetailPageState extends State<BlogDetailPage>
     } catch (e) {
       if (!mounted) return;
       // Handle error if needed
+    }
+  }
+
+  String _timeAgo(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inDays > 0) {
+        return '${difference.inDays}天前';
+      } else if (difference.inHours > 0) {
+        return '${difference.inHours}小时前';
+      } else if (difference.inMinutes > 0) {
+        return '${difference.inMinutes}分钟前';
+      } else {
+        return '刚刚';
+      }
+    } catch (e) {
+      return dateString;
     }
   }
 
@@ -580,7 +752,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                   border: Border.all(
                                     color: selectedType == typeId
                                         ? Colors.red
-                                        : Colors.grey[300]!,
+                                        : Colors.grey[300] ?? Colors.grey,
                                     width: 1,
                                   ),
                                   borderRadius: BorderRadius.circular(12),
@@ -752,33 +924,33 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                   // 操作按钮
                   Row(
                     children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: TextButton.icon(
-                            onPressed: () async {
-                              Navigator.of(ctx).pop();
-                              await Clipboard.setData(ClipboardData(
-                                  text:
-                                      'https://example.com/blog/${widget.id}'));
-                              ToastUtil.showPrimary('链接已复制');
-                            },
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.grey[200],
-                              foregroundColor: Colors.black87,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            icon: const Icon(Icons.share),
-                            label: const Text(
-                              '分享链接',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
+                      // Expanded(
+                      //   child: SizedBox(
+                      //     height: 48,
+                      //     child: TextButton.icon(
+                      //       onPressed: () async {
+                      //         Navigator.of(ctx).pop();
+                      //         await Clipboard.setData(ClipboardData(
+                      //             text:
+                      //                 'https://example.com/blog/${widget.id}'));
+                      //         ToastUtil.showPrimary('链接已复制');
+                      //       },
+                      //       style: TextButton.styleFrom(
+                      //         backgroundColor: Colors.grey[200],
+                      //         foregroundColor: Colors.black87,
+                      //         shape: RoundedRectangleBorder(
+                      //           borderRadius: BorderRadius.circular(12),
+                      //         ),
+                      //       ),
+                      //       icon: const Icon(Icons.share),
+                      //       label: const Text(
+                      //         '分享链接',
+                      //         style: TextStyle(fontWeight: FontWeight.w600),
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
+                      // const SizedBox(width: 12),
                       Expanded(
                         child: SizedBox(
                           height: 48,
@@ -802,6 +974,361 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                           ),
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      // 如果是自己的博客显示删除按钮，否则显示拉黑按钮
+                      if (userInfo['_id'] == blogInfo.user?['_id'])
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: TextButton.icon(
+                              onPressed: () async {
+                                Navigator.of(ctx).pop();
+                                await showModalBottomSheet<void>(
+                                  context: context,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (bCtx) {
+                                    return Align(
+                                      alignment: Alignment.bottomCenter,
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: Container(
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                const BorderRadius.only(
+                                              topLeft: Radius.circular(20),
+                                              topRight: Radius.circular(20),
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withOpacity(0.1),
+                                                blurRadius: 20,
+                                                offset: const Offset(0, -8),
+                                              ),
+                                            ],
+                                          ),
+                                          padding: const EdgeInsets.all(20),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Center(
+                                                child: Container(
+                                                  width: 40,
+                                                  height: 4,
+                                                  margin: const EdgeInsets.only(
+                                                      bottom: 16),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[300],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            2),
+                                                  ),
+                                                ),
+                                              ),
+                                              const Text(
+                                                '确认删除',
+                                                style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              const Text(
+                                                '删除后无法恢复，是否确认删除这篇博客？',
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey),
+                                              ),
+                                              const SizedBox(height: 20),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: SizedBox(
+                                                      height: 44,
+                                                      child: TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.of(bCtx)
+                                                                .pop(),
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              Colors.grey[100],
+                                                          foregroundColor:
+                                                              Colors.black54,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                          ),
+                                                        ),
+                                                        child: const Text('取消'),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: SizedBox(
+                                                      height: 44,
+                                                      child: TextButton(
+                                                        onPressed: () async {
+                                                          try {
+                                                            final resp = await HttpClient
+                                                                .delete(NftApi
+                                                                    .deleteBlog(
+                                                                        widget
+                                                                            .id));
+                                                            if ((resp is Map &&
+                                                                (resp['success'] ==
+                                                                        true ||
+                                                                    resp['code'] ==
+                                                                        200))) {
+                                                              ToastUtil.showPrimary(
+                                                                          '博客已删除');
+                                                              Navigator.of(bCtx)
+                                                                  .pop();
+                                                              Navigator.of(
+                                                                      context)
+                                                                  .pop();
+                                                            } else {
+                                                              ToastUtil.showPrimary(
+                                                                          '删除失败，请稍后重试');
+                                                            }
+                                                          } catch (e) {
+                                                            ToastUtil.showPrimary(
+                                                              
+                                                                    '删除失败，请稍后重试');
+                                                          }
+                                                        },
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              Colors.red,
+                                                          foregroundColor:
+                                                              Colors.white,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                          ),
+                                                        ),
+                                                        child:
+                                                            const Text('确认删除'),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.delete),
+                              label: const Text(
+                                '删除',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: TextButton.icon(
+                              onPressed: () async {
+                                Navigator.of(ctx).pop();
+                                await showModalBottomSheet<void>(
+                                  context: context,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (bCtx) {
+                                    return Align(
+                                      alignment: Alignment.bottomCenter,
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: Container(
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                const BorderRadius.only(
+                                              topLeft: Radius.circular(20),
+                                              topRight: Radius.circular(20),
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withOpacity(0.1),
+                                                blurRadius: 20,
+                                                offset: const Offset(0, -8),
+                                              ),
+                                            ],
+                                          ),
+                                          padding: const EdgeInsets.all(20),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Center(
+                                                child: Container(
+                                                  width: 40,
+                                                  height: 4,
+                                                  margin: const EdgeInsets.only(
+                                                      bottom: 16),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[300],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            2),
+                                                  ),
+                                                ),
+                                              ),
+                                              const Text(
+                                                '确认拉黑',
+                                                style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              const Text(
+                                                '拉黑后对方将无法和你互动，是否确认？',
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey),
+                                              ),
+                                              const SizedBox(height: 20),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: SizedBox(
+                                                      height: 44,
+                                                      child: TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.of(bCtx)
+                                                                .pop(),
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              Colors.grey[100],
+                                                          foregroundColor:
+                                                              Colors.black54,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                          ),
+                                                        ),
+                                                        child: const Text('取消'),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: SizedBox(
+                                                      height: 44,
+                                                      child: TextButton(
+                                                        onPressed: () async {
+                                                          try {
+                                                            final resp =
+                                                                await HttpClient
+                                                                    .post(
+                                                                        'blacklist/${blogInfo?.user?['_id']}',
+                                                                        body: {
+                                                                  'id': blogInfo
+                                                                          ?.user?[
+                                                                      '_id'],
+                                                                });
+                                                            if ((resp is Map &&
+                                                                (resp['success'] ==
+                                                                        true ||
+                                                                    resp['code'] ==
+                                                                        200))) {
+                                                              ToastUtil.showPrimary(
+                                                                          '已拉黑该用户');
+                                                            } else {
+                                                              ToastUtil.showPrimary(
+                                                                      resp[
+                                                                          'message']);
+                                                            }
+                                                          } catch (e) {
+                                                            // ToastUtil.showPrimary(
+                                                            //     msg:
+                                                            //         '拉黑失败，请稍后重试');
+                                                          } finally {
+                                                            if (Navigator.of(
+                                                                    bCtx)
+                                                                .canPop()) {
+                                                              Navigator.of(bCtx)
+                                                                  .pop();
+                                                            }
+                                                          }
+                                                        },
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              Colors.orange,
+                                                          foregroundColor:
+                                                              Colors.white,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                          ),
+                                                        ),
+                                                        child:
+                                                            const Text('确认拉黑'),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.block),
+                              label: const Text(
+                                '拉黑',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -882,17 +1409,31 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                   Expanded(
                     child: Row(
                       children: [
-                        SvgPicture.network(
-                          "https://api.dicebear.com/9.x/big-ears/svg",
-                          height: 36,
-                          width: 36,
-                          placeholderBuilder: (BuildContext context) =>
-                              const Icon(
-                            Icons.person,
-                            size: 36,
-                            color: Color(0xFF1890FF),
+                        if (blogInfo != null && blogInfo.user != null)
+                          GestureDetector(
+                            onTap: () {
+                              if (blogInfo.user != null) {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => UserProfilePage(
+                                      userId: blogInfo.user!['_id'],
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            child: SvgPicture.network(
+                              blogInfo.user?['avatar'],
+                              height: 36,
+                              width: 36,
+                              placeholderBuilder: (BuildContext context) =>
+                                  const Icon(
+                                Icons.person,
+                                size: 36,
+                                color: Color(0xFF1890FF),
+                              ),
+                            ),
                           ),
-                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -909,100 +1450,34 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                         const SizedBox(width: 8),
                         // 关注按钮
                         if (blogInfo.user?['_id'] != userInfo['_id'])
-                          TextButton(
+                              TextButton(
                             onPressed: () async {
                               print(isFollowing);
                               if (isFollowing == true) {
-                                    final result = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Icon(
-                Icons.person_remove,
-                color: Colors.orange,
-                size: 40,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                '取消关注',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '确定要取消关注该用户吗？',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: Colors.grey[300]!),
-                          ),
-                        ),
-                        child: const Text('取消'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.of(context).pop(true),
-                        style: TextButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text('确定取消'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
-    );
+                              final result = await showDialog<int>(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      title: const Text('取消关注'),
+                                      content: const Text('不再关注该作者？'),
+                                      actions: <Widget>[
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(null),
+                                          child: const Text('取消'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(1),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.red,
+                                          ),
+                                          child: const Text('不再关注'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
 
-                                if (result == true) {
+                                if (result == 1) {
                                   try {
                                     final response = await HttpClient.post(
                                       'follow/unfollow',
@@ -1136,7 +1611,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                           image: DecorationImage(
                                             image: NetworkImage(
                                                 blogInfo.images[index]),
-                                            fit: BoxFit.contain,
+                                            fit: BoxFit.cover,
                                           ),
                                         ),
                                       );
@@ -1185,6 +1660,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                             ),
                             const SizedBox(height: 16),
                           ],
+                       
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 15,
@@ -1257,6 +1733,8 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                 ),
                                 const SizedBox(height: 12),
                                 // 添加评论输入提示框
+                                  if (isShow)
+
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
@@ -1275,14 +1753,36 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                   ),
                                   child: Row(
                                     children: [
-                                      SvgPicture.network(
-                                        "https://api.dicebear.com/9.x/big-ears/svg",
-                                        height: 30,
-                                        width: 30,
-                                        placeholderBuilder:
-                                            (BuildContext context) =>
-                                                const Icon(Icons.person),
-                                      ),
+                                      if (blogInfo != null &&
+                                          blogInfo.user != null)
+                                        GestureDetector(
+                                          onTap: () {
+                                            if (blogInfo.user?['_id'] != null) {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      UserProfilePage(
+                                                    userId:
+                                                        blogInfo.user!['_id'],
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                          child: SvgPicture.network(
+                                            blogInfo.user?['avatar'],
+                                            height: 36,
+                                            width: 36,
+                                            placeholderBuilder:
+                                                (BuildContext context) =>
+                                                    const Icon(
+                                              Icons.person,
+                                              size: 36,
+                                              color: Color(0xFF1890FF),
+                                            ),
+                                          ),
+                                        ),
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: GestureDetector(
@@ -1311,7 +1811,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                             ),
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 12, vertical: 4),
-                                            child: Row(
+                                            child: const Row(
                                               children: [
                                                 Text(
                                                   '说点什么吧...',
@@ -1388,6 +1888,8 @@ class _BlogDetailPageState extends State<BlogDetailPage>
           ),
 
           // 输入框固定在底部，始终保持在最顶层
+                                  if (isShow)
+
           Positioned(
             left: 0,
             right: 0,
@@ -1696,111 +2198,164 @@ class CommentItem extends StatelessWidget {
                             child: TextButton.icon(
                               onPressed: () async {
                                 Navigator.of(ctx).pop();
-                                     final confirmResult = await showModalBottomSheet<bool>(
+                                await showModalBottomSheet<void>(
                                   context: context,
                                   backgroundColor: Colors.transparent,
-                                  builder: (BuildContext context) {
-                                    return Container(
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(20),
-                                          topRight: Radius.circular(20),
+                                  builder: (bCtx) {
+                                    return Align(
+                                      alignment: Alignment.bottomCenter,
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: Container(
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                const BorderRadius.only(
+                                              topLeft: Radius.circular(20),
+                                              topRight: Radius.circular(20),
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withOpacity(0.1),
+                                                blurRadius: 20,
+                                                offset: const Offset(0, -8),
+                                              ),
+                                            ],
+                                          ),
+                                          padding: const EdgeInsets.all(20),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Center(
+                                                child: Container(
+                                                  width: 40,
+                                                  height: 4,
+                                                  margin: const EdgeInsets.only(
+                                                      bottom: 16),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[300],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            2),
+                                                  ),
+                                                ),
+                                              ),
+                                              const Text(
+                                                '确认删除',
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              const Text(
+                                                '删除后不可恢复，确定要删除这条评论吗？',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 20),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: SizedBox(
+                                                      height: 44,
+                                                      child: TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.of(bCtx)
+                                                                .pop(),
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              Colors.grey[100],
+                                                          foregroundColor:
+                                                              Colors.black54,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                          ),
+                                                        ),
+                                                        child: const Text('取消'),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: SizedBox(
+                                                      height: 44,
+                                                      child: TextButton(
+                                                        onPressed: () async {
+                                                          try {
+                                                            final resp =
+                                                                await HttpClient
+                                                                    .delete(
+                                                                        'comment/delete/${comment.id}');
+                                                            if ((resp is Map &&
+                                                                (resp['success'] ==
+                                                                        true ||
+                                                                    resp['code'] ==
+                                                                        200))) {
+                                                              final state = context
+                                                                  .findAncestorStateOfType<
+                                                                      _BlogDetailPageState>();
+                                                              state
+                                                                  ?.fetchComments();
+                                                              ToastUtil.showPrimary(
+                                                                
+                                                                          '已删除评论');
+                                                            } else {
+                                                              ToastUtil.showPrimary(
+                                                                      resp[
+                                                                          'message']);
+                                                            }
+                                                          } catch (e) {
+                                                            // ToastUtil.showPrimary(
+                                                            //     msg:
+                                                            //         '删除失败，请稍后重试');
+                                                          } finally {
+                                                            if (Navigator.of(
+                                                                    bCtx)
+                                                                .canPop()) {
+                                                              Navigator.of(bCtx)
+                                                                  .pop();
+                                                            }
+                                                          }
+                                                        },
+                                                        style: TextButton
+                                                            .styleFrom(
+                                                          backgroundColor:
+                                                              Colors.red,
+                                                          foregroundColor:
+                                                              Colors.white,
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                          ),
+                                                        ),
+                                                        child: const Text('删除'),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            margin: const EdgeInsets.only(top: 8),
-                                            width: 40,
-                                            height: 4,
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey[300],
-                                              borderRadius: BorderRadius.circular(2),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 20),
-                                          const Icon(
-                                            Icons.delete_forever,
-                                            color: Colors.red,
-                                            size: 40,
-                                          ),
-                                          const SizedBox(height: 16),
-                                          const Text(
-                                            '删除评论',
-                                            style: TextStyle(
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '确定要删除这条评论吗？',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                          const SizedBox(height: 24),
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                                            child: Row(
-                                              children: [
-                                                Expanded(
-                                                  child: TextButton(
-                                                    onPressed: () => Navigator.of(context).pop(false),
-                                                    style: TextButton.styleFrom(
-                                                      padding: const EdgeInsets.symmetric(vertical: 15),
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(12),
-                                                        side: BorderSide(color: Colors.grey[300]!),
-                                                      ),
-                                                    ),
-                                                    child: const Text('取消'),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: TextButton(
-                                                    onPressed: () => Navigator.of(context).pop(true),
-                                                    style: TextButton.styleFrom(
-                                                      backgroundColor: Colors.red,
-                                                      foregroundColor: Colors.white,
-                                                      padding: const EdgeInsets.symmetric(vertical: 15),
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(12),
-                                                      ),
-                                                    ),
-                                                    child: const Text('确定删除'),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(height: 20),
-                                        ],
                                       ),
                                     );
                                   },
                                 );
-
-                                if (confirmResult == true) {
-                                  try {
-                                    final resp = await HttpClient.delete(
-                                        'comment/delete/${comment.id}');
-                                        print('comment/delete/${comment.id}');
-                                    if ((resp is Map &&
-                                        (resp['success'] == true ||
-                                            resp['code'] == 200))) {
-                                      final state =
-                                          context.findAncestorStateOfType<
-                                              _BlogDetailPageState>();
-                                      state?.fetchComments();
-                                      ToastUtil.showPrimary('已删除评论');
-                                    }
-                                  } catch (e) {}
-                                }
                               },
                               style: TextButton.styleFrom(
                                 backgroundColor: Colors.red,
@@ -1817,7 +2372,36 @@ class CommentItem extends StatelessWidget {
                             ),
                           ),
                         )
-                      else
+                      else ...[
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: TextButton.icon(
+                              onPressed: () async {
+                                Navigator.of(ctx).pop();
+                                final st = context.findAncestorStateOfType<
+                                    _BlogDetailPageState>();
+                                if (st != null) {
+                                  await st._showDislikeBottomSheet(context,
+                                      initialText: comment.content ?? '');
+                                }
+                              },
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.visibility_off),
+                              label: const Text(
+                                '不喜欢',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: SizedBox(
                             height: 48,
@@ -1840,6 +2424,7 @@ class CommentItem extends StatelessWidget {
                             ),
                           ),
                         ),
+                      ]
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -1990,7 +2575,7 @@ class CommentItem extends StatelessWidget {
                                   border: Border.all(
                                     color: selectedType == typeId
                                         ? Colors.red
-                                        : Colors.grey[300]!,
+                                        : Colors.grey[300] ?? Colors.grey,
                                     width: 1,
                                   ),
                                   borderRadius: BorderRadius.circular(12),
@@ -2113,7 +2698,7 @@ class CommentItem extends StatelessWidget {
         },
       );
     } catch (e) {
-        ToastUtil.showPrimary('获取举报类型失败');
+      ToastUtil.showPrimary('获取举报类型失败');
     }
   }
 
@@ -2212,14 +2797,28 @@ class CommentItem extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SvgPicture.network(
-                  comment.avatar,
-                  height: comment.isReply ? 30 : 38, // 根据是否为回复设置不同高度
-                  width: comment.isReply ? 30 : 38, // 根据是否为回复设置不同宽度
-                  placeholderBuilder: (BuildContext context) => Icon(
-                    Icons.person,
-                    size: comment.isReply ? 30 : 38, // 占位图标也相应调整大小
-                    color: const Color(0xFF1890FF),
+                GestureDetector(
+                  onTap: () {
+                    if (comment.user?['_id'] != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserProfilePage(
+                            userId: comment.user!['_id'],
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: SvgPicture.network(
+                    comment.avatar,
+                    height: comment.isReply ? 30 : 38, // 根据是否为回复设置不同高度
+                    width: comment.isReply ? 30 : 38, // 根据是否为回复设置不同宽度
+                    placeholderBuilder: (BuildContext context) => Icon(
+                      Icons.person,
+                      size: comment.isReply ? 30 : 38, // 占位图标也相应调整大小
+                      color: const Color(0xFF1890FF),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -2237,43 +2836,47 @@ class CommentItem extends StatelessWidget {
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const SizedBox(width: 10),
-
-                          const Spacer(),
-
                         ],
                       ),
+                      const SizedBox(height: 6),
+
                       //如果在第一层
-                      if (comment.parentId == '')...[
+                      if (comment.parentId == '')
                         Row(
                           children: [
-                             Expanded(
-                              
+                            Flexible(
                               child: RichText(
                                 text: TextSpan(
-                                      text: comment.content,
+                                  children: [
+                                    TextSpan(
+                                      text: (context
+                                              .findAncestorStateOfType<
+                                                  _BlogDetailPageState>()
+                                              ?._maskDislikedWords(
+                                                  comment.content ?? '') ??
+                                          (comment.content ?? '')),
                                       style: const TextStyle(
                                         color: Color(0xFF333333),
                                         fontSize: 14,
-
                                       ),
                                     ),
-                               
+                                  ],
+                                ),
+                                softWrap: true,
+                                overflow: TextOverflow.visible,
                               ),
                             ),
-                          ]
-                           
-                        )
-                        
-                      ],
-                          
-                   
+                            const SizedBox(width: 10),
+                          ],
+                        ),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // &&
+                          //     comment.toUserName !=
+                          //         parentComment?.user?['name']
                           if (comment.toUserName.isNotEmpty) ...[
-                            Expanded(
-                              
+                            Flexible(
                               child: RichText(
                                 text: TextSpan(
                                   children: [
@@ -2282,30 +2885,42 @@ class CommentItem extends StatelessWidget {
                                         text: '回复 ${comment.toUserName}: ',
                                         style: TextStyle(
                                           color: Colors.grey[600],
-                                          fontSize: 14,
+                                          fontSize: 13,
                                         ),
                                       ),
                                     TextSpan(
-                                      text: comment.content,
+                                      text: (context
+                                              .findAncestorStateOfType<
+                                                  _BlogDetailPageState>()
+                                              ?._maskDislikedWords(
+                                                  comment.content ?? '') ??
+                                          (comment.content ?? '')),
                                       style: const TextStyle(
                                         color: Color(0xFF333333),
-                                        fontSize: 14,
-
+                                        fontSize: 13,
                                       ),
                                     ),
                                   ],
                                 ),
-                               
+                                softWrap: true,
+                                overflow: TextOverflow.visible,
                               ),
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 10),
                           ],
-                        
+                          // Expanded(
+                          //   child: Text(
+                          //     ,
+                          //     style: const TextStyle(fontSize: 14),
+                          //   ),
+                          // ),
                         ],
                       ),
+                      const SizedBox(height: 6),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start, //
                         children: [
-                             Text(
+                          Text(
                             comment.time,
                             style: TextStyle(
                               color: Colors.grey[600],
@@ -2353,7 +2968,6 @@ class CommentItem extends StatelessWidget {
                           ),
                         ],
                       )
-                        
                       // const SizedBox(height: 2),
                     ],
                   ),
