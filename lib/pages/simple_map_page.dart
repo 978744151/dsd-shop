@@ -364,7 +364,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
       });
 
       // 检查是否为直辖市
-      final municipalities = ['北京', '上海', '天津', '重庆'];
+      final municipalities = ['北京市', '上海市', '天津市', '重庆市'];
       final isMunicipality = municipalities.contains(cityName);
 
       Map<String, dynamic> params = {
@@ -920,7 +920,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
 
                     _drillDownToProvince(name);
                   } else {
-                    _showStoreBottomSheet(province['adcode'], province['name']);
+                    _showStoreBottomSheet(province['id'], province['name']);
                   }
                 },
                 child: Padding(
