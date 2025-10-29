@@ -192,41 +192,41 @@ class _UserProfilePageState extends State<UserProfilePage>
                     onPressed: () => context.pop(),
                   ),
                   actions: [
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert, color: Colors.black),
-                      onSelected: (value) {
-                        switch (value) {
-                          case 'block':
-                            _showBlockDialog();
-                            break;
-                          case 'report':
-                            // 举报功能
-                            break;
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'block',
-                          child: Row(
-                            children: [
-                              Icon(Icons.block, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('拉黑'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'report',
-                          child: Row(
-                            children: [
-                              Icon(Icons.report, color: Colors.orange),
-                              SizedBox(width: 8),
-                              Text('举报'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                    // PopupMenuButton<String>(
+                    //   icon: const Icon(Icons.more_vert, color: Colors.black),
+                    //   onSelected: (value) {
+                    //     switch (value) {
+                    //       case 'block':
+                    //         _showBlockDialog();
+                    //         break;
+                    //       case 'report':
+                    //         // 举报功能
+                    //         break;
+                    //     }
+                    //   },
+                    //   itemBuilder: (context) => [
+                    //     const PopupMenuItem(
+                    //       value: 'block',
+                    //       child: Row(
+                    //         children: [
+                    //           Icon(Icons.block, color: Colors.red),
+                    //           SizedBox(width: 8),
+                    //           Text('拉黑'),
+                    //         ],
+                    //       ),
+                    //     ),
+                    //     const PopupMenuItem(
+                    //       value: 'report',
+                    //       child: Row(
+                    //         children: [
+                    //           Icon(Icons.report, color: Colors.orange),
+                    //           SizedBox(width: 8),
+                    //           Text('举报'),
+                    //         ],
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
                   ],
                   title: AnimatedOpacity(
                     opacity: _showTitle ? 1.0 : 0.0,

@@ -1462,7 +1462,7 @@ class _ComparePageState extends State<ComparePage> {
     // 添加汇总信息行
     rows.add(
       Container(
-        height: 60,
+        height: 50,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border(
@@ -1484,7 +1484,7 @@ class _ComparePageState extends State<ComparePage> {
     // 门店数量
     rows.add(
       Container(
-        height: 60,
+        height: 50,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border(
@@ -1506,7 +1506,7 @@ class _ComparePageState extends State<ComparePage> {
     // // 添加综合总分行
     // rows.add(
     //   Container(
-    //     height: 60,
+    //     height: 50,
     //     padding: const EdgeInsets.all(12),
     //     decoration: BoxDecoration(
     //       border: Border(
@@ -1553,7 +1553,7 @@ class _ComparePageState extends State<ComparePage> {
 
       rows.add(
         Container(
-          height: 60,
+          height: 50,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             border: Border(
@@ -1631,7 +1631,7 @@ class _ComparePageState extends State<ComparePage> {
     // 添加汇总信息行
     rows.add(
       Container(
-        height: 60,
+        height: 50,
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(color: Colors.grey.shade300),
@@ -1669,7 +1669,7 @@ class _ComparePageState extends State<ComparePage> {
 
     rows.add(
       Container(
-        height: 60,
+        height: 50,
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(color: Colors.grey.shade300),
@@ -1710,7 +1710,7 @@ class _ComparePageState extends State<ComparePage> {
     // 添加综合总分行
     // rows.add(
     //   Container(
-    //     height: 60,
+    //     height: 50,
     //     decoration: BoxDecoration(
     //       border: Border(
     //         bottom: BorderSide(color: Colors.grey.shade300),
@@ -1744,7 +1744,7 @@ class _ComparePageState extends State<ComparePage> {
     for (String brandName in allBrands.toList()..sort()) {
       rows.add(
         Container(
-          height: 60,
+          height: 50,
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(color: Colors.grey.shade300),
@@ -1814,7 +1814,7 @@ class _ComparePageState extends State<ComparePage> {
   }
   Color _getScoreColor(double score) {
     if (score >= 80) return Colors.green;
-    if (score >= 60) return Colors.orange;
+    if (score >= 50) return Colors.orange;
     return Colors.red;
   }
 
@@ -1925,7 +1925,7 @@ class _ComparePageState extends State<ComparePage> {
 
           // 汇总信息行
           Container(
-            height: 60,
+            height: 50,
             child: Row(
               children: [
                 Container(
@@ -1979,7 +1979,7 @@ class _ComparePageState extends State<ComparePage> {
 
           // 综合总分行
           // Container(
-          //   height: 60,
+          //   height: 50,
           //   child: Row(
           //     children: [
           //       Container(

@@ -1671,13 +1671,17 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      blogInfo.title,
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                                       Expanded(
+                                         child: Text(
+                                                                               blogInfo.title,
+                                                                               style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                                                               ),
+                                                                               softWrap: true, // 允许自动换行
+                                                                               overflow: TextOverflow.visible, // 超出部分直接显示
+                                                                             ),
+                                       ),
                                   ],
                                 ),
                                 const SizedBox(height: 16),

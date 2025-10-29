@@ -157,14 +157,14 @@ class _SimpleMapPageState extends State<SimpleMapPage>
           // provinces = provincesData;
           provinces = provincesData.map((province) {
             final fullName = province['name'] as String;
-            final shortName = _fullNameToShortName[fullName] ?? fullName;
+            final shortName =  fullName;
             return {
               'name': shortName, // 使用简称
               'value': province['storeCount'] ?? 0,
               'fullName': fullName, // 保留全称用于显示
               'shopCount': province['shopCount'] ?? 0,
               'brandCount': province['brandCount'] ?? 0,
-              'id': province['_id'],
+              'adcode': province['_id'],
             };
           }).toList()
             ..sort((b, a) => (a['value'] as int).compareTo(b['value'] as int));
@@ -262,13 +262,14 @@ class _SimpleMapPageState extends State<SimpleMapPage>
             for (final f in (parsed['features'] as List)) {
               final props = (f is Map) ? f['properties'] : null;
               final name = (props is Map) ? props['name']?.toString() : null;
-              final id = (props is Map) ? props['id']?.toString() : null;
-              if (name != null && id != null) {
-                _provinceNameToId[name] = id;
+              final adcode = (props is Map) ? props['adcode']?.toString() : null;
+              if (name != null && adcode != null) {
+                _provinceNameToId[name] = adcode;
               }
             }
           }
         } catch (_) {}
+        print(parsed);
       });
     } catch (e) {
       // 读取失败时置为空对象，避免JS执行报错
@@ -282,6 +283,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
   }
 
   Future<void> _drillDownToProvince(String provinceName) async {
+    print('provinceName: $provinceName');
     // 规范化：得到拼音 key
     // 通过拼音获取 id（或从全国 features 构建的 name->id）
     await fetchCity();
@@ -571,7 +573,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                       if (!_isProvince) {
                         // 点击省份
                         final provinceName = m['name']?.toString() ?? '';
-                        final provinceDataId = m['data']['id'];
+                        final provinceDataId = m['data']['adcode'];
 
                         // 检查是否为直辖市
                         final municipalities = ['北京', '上海', '天津', '重庆'];
@@ -587,7 +589,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                         }
                       } else {
                         // 点击市区，显示门店列表底部弹框
-                        final cityId = m['data']['id'];
+                        final cityId = m['data']['adcode'];
                         final cityName = m['name']?.toString() ?? '';
                         _showStoreBottomSheet(cityId, cityName);
                       }
@@ -913,12 +915,12 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                 onTap: () {
                   if (!_isProvince) {
                     setState(() {
-                      provinceId = province['id'];
+                      provinceId = province['adcode'];
                     });
 
                     _drillDownToProvince(name);
                   } else {
-                    _showStoreBottomSheet(province['id'], province['name']);
+                    _showStoreBottomSheet(province['adcode'], province['name']);
                   }
                 },
                 child: Padding(
