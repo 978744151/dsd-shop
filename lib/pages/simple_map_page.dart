@@ -32,40 +32,40 @@ class _SimpleMapPageState extends State<SimpleMapPage>
 
   // 中文名 -> 标准拼音（小写、无分隔符）
   static const Map<String, String> _nameToPinyin = {
-    '北京': 'beijing',
-    '天津': 'tianjin',
-    '河北': 'hebei',
-    '山西': 'shanxi',
-    '内蒙古': 'neimenggu',
-    '辽宁': 'liaoning',
-    '吉林': 'jilin',
-    '黑龙江': 'heilongjiang',
-    '上海': 'shanghai',
-    '江苏': 'jiangsu',
-    '浙江': 'zhejiang',
-    '安徽': 'anhui',
-    '福建': 'fujian',
-    '江西': 'jiangxi',
-    '山东': 'shandong',
-    '河南': 'henan',
-    '湖北': 'hubei',
-    '湖南': 'hunan',
-    '重庆': 'chongqing',
-    '四川': 'sichuan',
-    '贵州': 'guizhou',
-    '云南': 'yunnan',
-    '西藏': 'xizang',
-    '陕西': 'shaanxi',
-    '甘肃': 'gansu',
-    '青海': 'qinghai',
-    '宁夏': 'ningxia',
-    '新疆': 'xinjiang',
-    '广东': 'guangdong',
-    '广西': 'guangxi',
-    '海南': 'hainan',
-    '香港': 'xianggang',
-    '澳门': 'aomen',
-    '台湾': 'taiwan',
+    '北京市': 'beijing',
+    '天津市': 'tianjin',
+    '河北省': 'hebei',
+    '山西省': 'shanxi',
+    '内蒙古自治区': 'neimenggu',
+    '辽宁省': 'liaoning',
+    '吉林省': 'jilin',
+    '黑龙江省': 'heilongjiang',
+    '上海市': 'shanghai',
+    '江苏省': 'jiangsu',
+    '浙江省': 'zhejiang',
+    '安徽省': 'anhui',
+    '福建省': 'fujian',
+    '江西省': 'jiangxi',
+    '山东省': 'shandong',
+    '河南省': 'henan',
+    '湖北省': 'hubei',
+    '湖南省': 'hunan',
+    '重庆省': 'chongqing',
+    '四川省': 'sichuan',
+    '贵州省': 'guizhou',
+    '云南省': 'yunnan',
+    '西藏省': 'xizang',
+    '陕西省': 'shaanxi',
+    '甘肃省': 'gansu',
+    '青海省': 'qinghai',
+    '宁夏省': 'ningxia',
+    '新疆省': 'xinjiang',
+    '广东省': 'guangdong',
+    '广西省': 'guangxi',
+    '海南省': 'hainan',
+    '香港特别行政区': 'xianggang',
+    '澳门特别行政区': 'aomen',
+    '台湾省': 'taiwan',
   };
 
   // 拼音 -> 行政区划代码 id（全部小写、去除空格/连字符）
@@ -589,7 +589,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                         }
                       } else {
                         // 点击市区，显示门店列表底部弹框
-                        final cityId = m['data']['adcode'];
+                        final cityId = m['data']['id'];
                         final cityName = m['name']?.toString() ?? '';
                         _showStoreBottomSheet(cityId, cityName);
                       }
