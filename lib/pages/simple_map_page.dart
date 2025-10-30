@@ -5,6 +5,8 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_echarts/flutter_echarts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:business_savvy/pages/mall_brand_page.dart';
+import 'package:business_savvy/pages/feedback_page.dart';
+import 'package:business_savvy/pages/mall_brand_page.dart';
 import '../api/brand.dart';
 import '../utils/http_client.dart';
 import '../models/province.dart';
@@ -30,40 +32,40 @@ class _SimpleMapPageState extends State<SimpleMapPage>
 
   // 中文名 -> 标准拼音（小写、无分隔符）
   static const Map<String, String> _nameToPinyin = {
-    '北京': 'beijing',
-    '天津': 'tianjin',
-    '河北': 'hebei',
-    '山西': 'shanxi',
-    '内蒙古': 'neimenggu',
-    '辽宁': 'liaoning',
-    '吉林': 'jilin',
-    '黑龙江': 'heilongjiang',
-    '上海': 'shanghai',
-    '江苏': 'jiangsu',
-    '浙江': 'zhejiang',
-    '安徽': 'anhui',
-    '福建': 'fujian',
-    '江西': 'jiangxi',
-    '山东': 'shandong',
-    '河南': 'henan',
-    '湖北': 'hubei',
-    '湖南': 'hunan',
-    '重庆': 'chongqing',
-    '四川': 'sichuan',
-    '贵州': 'guizhou',
-    '云南': 'yunnan',
-    '西藏': 'xizang',
-    '陕西': 'shaanxi',
-    '甘肃': 'gansu',
-    '青海': 'qinghai',
-    '宁夏': 'ningxia',
-    '新疆': 'xinjiang',
-    '广东': 'guangdong',
-    '广西': 'guangxi',
-    '海南': 'hainan',
-    '香港': 'xianggang',
-    '澳门': 'aomen',
-    '台湾': 'taiwan',
+    '北京市': 'beijing',
+    '天津市': 'tianjin',
+    '河北省': 'hebei',
+    '山西省': 'shanxi',
+    '内蒙古自治区': 'neimenggu',
+    '辽宁省': 'liaoning',
+    '吉林省': 'jilin',
+    '黑龙江省': 'heilongjiang',
+    '上海市': 'shanghai',
+    '江苏省': 'jiangsu',
+    '浙江省': 'zhejiang',
+    '安徽省': 'anhui',
+    '福建省': 'fujian',
+    '江西省': 'jiangxi',
+    '山东省': 'shandong',
+    '河南省': 'henan',
+    '湖北省': 'hubei',
+    '湖南省': 'hunan',
+    '重庆省': 'chongqing',
+    '四川省': 'sichuan',
+    '贵州省': 'guizhou',
+    '云南省': 'yunnan',
+    '西藏自治区': 'xizang',
+    '陕西省': 'shaanxi',
+    '甘肃省': 'gansu',
+    '青海省': 'qinghai',
+    '宁夏省': 'ningxia',
+    '新疆维吾尔自治区': 'xinjiang',
+    '广东省': 'guangdong',
+    '广西省': 'guangxi',
+    '海南省': 'hainan',
+    '香港特别行政区': 'xianggang',
+    '澳门特别行政区': 'aomen',
+    '台湾省': 'taiwan',
   };
 
   // 拼音 -> 行政区划代码 id（全部小写、去除空格/连字符）
@@ -153,18 +155,41 @@ class _SimpleMapPageState extends State<SimpleMapPage>
         setState(() {
           // 处理 provinces 数据，例如保存到状态变量中
           // provinces = provincesData;
-          provinces = provincesData.map((province) {
+          final processedProvinces = provincesData.map((province) {
             final fullName = province['name'] as String;
-            final shortName = _fullNameToShortName[fullName] ?? fullName;
+            final shortName = fullName;
             return {
               'name': shortName, // 使用简称
               'value': province['storeCount'] ?? 0,
-              'fullName': fullName, // 保留全称用于显示
+              'fullName': fullName ?? '', // 保留全称用于显示
               'shopCount': province['shopCount'] ?? 0,
               'brandCount': province['brandCount'] ?? 0,
-              'id': province['_id'],
+              'adcode': province['_id'],
             };
-          }).toList()
+          }).toList();
+
+          // 为地图中存在但API数据中不存在的特殊区域添加默认值，避免显示 NaN
+          final specialAreas = [
+            {
+              'name': '南海',
+              'value': 0,
+              'fullName': '南海',
+              'shopCount': 0,
+              'brandCount': 0,
+              'adcode': '100000_JD',
+            },
+          ];
+
+          // 检查是否已存在这些区域的数据，如果不存在则添加默认值
+          for (var area in specialAreas) {
+            final exists =
+                processedProvinces.any((item) => item['name'] == area['name']);
+            if (!exists) {
+              processedProvinces.add(area);
+            }
+          }
+
+          provinces = processedProvinces
             ..sort((b, a) => (a['value'] as int).compareTo(b['value'] as int));
           isLoading = false;
         });
@@ -206,7 +231,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
           _cityData = cityData.map((city) {
             return {
               'name': city['name'], // 使用简称
-              'value': city['storeCount'] ?? 0,
+              'value': city['storeCount'] ?? 0, // 修复：使用整数 0 而不是字符串 '0'
               'shopCount': city['shopCount'] ?? 0,
               'brandCount': city['brandCount'] ?? 0,
               'id': city['_id'],
@@ -260,13 +285,15 @@ class _SimpleMapPageState extends State<SimpleMapPage>
             for (final f in (parsed['features'] as List)) {
               final props = (f is Map) ? f['properties'] : null;
               final name = (props is Map) ? props['name']?.toString() : null;
-              final id = (props is Map) ? props['id']?.toString() : null;
-              if (name != null && id != null) {
-                _provinceNameToId[name] = id;
+              final adcode =
+                  (props is Map) ? props['adcode']?.toString() : null;
+              if (name != null && adcode != null) {
+                _provinceNameToId[name] = adcode;
               }
             }
           }
         } catch (_) {}
+        print(parsed);
       });
     } catch (e) {
       // 读取失败时置为空对象，避免JS执行报错
@@ -280,6 +307,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
   }
 
   Future<void> _drillDownToProvince(String provinceName) async {
+    print('provinceName: $provinceName');
     // 规范化：得到拼音 key
     // 通过拼音获取 id（或从全国 features 构建的 name->id）
     await fetchCity();
@@ -360,7 +388,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
       });
 
       // 检查是否为直辖市
-      final municipalities = ['北京', '上海', '天津', '重庆'];
+      final municipalities = ['北京市', '上海市', '天津市', '重庆市'];
       final isMunicipality = municipalities.contains(cityName);
 
       Map<String, dynamic> params = {
@@ -569,10 +597,10 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                       if (!_isProvince) {
                         // 点击省份
                         final provinceName = m['name']?.toString() ?? '';
-                        final provinceDataId = m['data']['id'];
+                        final provinceDataId = m['data']['adcode'];
 
                         // 检查是否为直辖市
-                        final municipalities = ['北京', '上海', '天津', '重庆'];
+                        final municipalities = ['北京市', '上海市', '天津市', '重庆市'];
                         if (municipalities.contains(provinceName)) {
                           // 直辖市直接显示门店列表，使用省份ID作为城市ID
                           _showStoreBottomSheet(provinceDataId, provinceName);
@@ -911,7 +939,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                 onTap: () {
                   if (!_isProvince) {
                     setState(() {
-                      provinceId = province['id'];
+                      provinceId = province['adcode'];
                     });
 
                     _drillDownToProvince(name);

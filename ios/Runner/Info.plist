@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Nft Once</string>
+	<string>懂商帝</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -49,6 +49,13 @@
 	<string>需要保存图片到相册</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>需要访问相册以保存图片</string>
+	<!-- 位置权限描述 -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>需要获取您的位置信息以提供更好的服务和推荐附近的商店</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>需要获取您的位置信息以提供更好的服务和推荐附近的商店</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>需要获取您的位置信息以提供更好的服务和推荐附近的商店</string>
 	<!-- 如果使用 WebView 添加这个 -->
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>

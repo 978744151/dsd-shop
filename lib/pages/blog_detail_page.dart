@@ -1654,11 +1654,15 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      blogInfo.title,
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
+                                    Expanded(
+                                      child: Text(
+                                        blogInfo.title,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        softWrap: true,
+                                        overflow: TextOverflow.visible,
                                       ),
                                     ),
                                   ],

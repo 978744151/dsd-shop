@@ -5,6 +5,8 @@ import '../api/brand.dart';
 import '../utils/http_client.dart';
 import '../utils/toast_util.dart';
 import '../models/province.dart';
+import '../models/city.dart';
+import '../utils/storage.dart';
 import '../widgets/custom_refresh_widget.dart';
 
 class MallDetailPage extends StatefulWidget {
@@ -18,7 +20,7 @@ class _MallDetailPageState extends State<MallDetailPage> {
   List<MallData> mallList = [];
   bool isLoading = false;
   int currentPage = 1;
-  final int pageSize = 10;
+  final int pageSize = 99;
   bool hasMore = true;
   final ScrollController _scrollController = ScrollController();
 
@@ -31,6 +33,10 @@ class _MallDetailPageState extends State<MallDetailPage> {
   String selectedCityName = '全部城市';
   bool isLoadingProvinces = false;
   bool isLoadingCities = false;
+
+  // 缓存相关变量
+  ProvinceModel? cachedProvince;
+  CityModel? cachedCity;
 
   // 添加全称到简称的映射
   static const Map<String, String> _fullNameToShortName = {
@@ -74,7 +80,8 @@ class _MallDetailPageState extends State<MallDetailPage> {
   void initState() {
     super.initState();
     fetchProvinces();
-    fetchMall();
+    loadCachedProvinceCity(); // 先加载缓存数据
+    fetchMall(); // 然后获取商城数据（会使用缓存的省市信息）
     _scrollController.addListener(_onScroll);
   }
 
@@ -82,6 +89,37 @@ class _MallDetailPageState extends State<MallDetailPage> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // 加载缓存的省市信息
+  Future<void> loadCachedProvinceCity() async {
+    try {
+      final cachedProvinceName = await Storage.getString('selected_province');
+      final cachedCityName = await Storage.getString('selected_city');
+
+      if (cachedProvinceName != null && cachedCityName != null) {
+        final provinceMap = await Storage.getJson('selected_province_data');
+        final cityMap = await Storage.getJson('selected_city_data');
+
+        if (provinceMap != null && cityMap != null) {
+          setState(() {
+            // cachedProvince = ProvinceModel.fromJson(provinceMap);
+            // cachedCity = CityModel.fromJson(cityMap);
+
+            // // 设置选中的省市ID和名称
+            // selectedProvinceId = cachedProvince!.code;
+            // selectedCityId = cachedCity!.code;
+            // selectedProvinceName = cachedProvince!.name;
+            // selectedCityName = cachedCity!.name;
+          });
+
+          print('已加载缓存位置：${cachedProvince!.name} ${cachedCity!.name}');
+        }
+      }
+    } catch (e) {
+      print('加载缓存省市信息失败: $e');
+      // 缓存加载失败，忽略错误，使用默认值
+    }
   }
 
   void _onScroll() {
@@ -172,7 +210,8 @@ class _MallDetailPageState extends State<MallDetailPage> {
     }
   }
 
-  Future<void> fetchMall() async {
+  Future<void> fetchMall(
+      {bool useCache = true, bool fallbackToAll = true}) async {
     if (isLoading) return;
 
     setState(() {
@@ -181,18 +220,41 @@ class _MallDetailPageState extends State<MallDetailPage> {
 
     try {
       Map<String, dynamic> params = {};
-      if (selectedProvinceId != null) {
-        params['provinceId'] = selectedProvinceId;
+
+      // 如果启用缓存且当前没有选择省市，则使用缓存的数据
+      if (useCache && selectedProvinceId == null && selectedCityId == null) {
+        if (cachedProvince != null) {
+          params['provinceId'] = cachedProvince!.code;
+        }
+        if (cachedCity != null) {
+          params['cityId'] = cachedCity!.code;
+        }
+      } else {
+        // 使用当前选择的省市
+        if (selectedProvinceId != null) {
+          params['provinceId'] = selectedProvinceId;
+        }
+        if (selectedCityId != null) {
+          params['cityId'] = selectedCityId;
+        }
       }
-      if (selectedCityId != null) {
-        params['cityId'] = selectedCityId;
-      }
+
+      params['limit'] = 999;
 
       final response = await HttpClient.get(brandApi.getMalls, params: params);
       if (response['success'] == true) {
         final List<dynamic> data = response['data']['malls'] ?? [];
         final List<MallData> newMalls =
             data.map((item) => MallData.fromJson(item)).toList();
+
+        // 如果筛选结果为空且启用回退，则查询全部数据
+        if (newMalls.isEmpty &&
+            fallbackToAll &&
+            params.containsKey('provinceId')) {
+          print('筛选结果为空，回退到查询全部商城数据');
+          await fetchMall(useCache: false, fallbackToAll: false);
+          return;
+        }
 
         setState(() {
           if (currentPage == 1) {
@@ -219,13 +281,13 @@ class _MallDetailPageState extends State<MallDetailPage> {
 
   Future<void> _loadMore() async {
     currentPage++;
-    await fetchMall();
+    await fetchMall(useCache: false); // 加载更多时不使用缓存，使用当前筛选条件
   }
 
   Future<void> _onRefresh() async {
     currentPage = 1;
     hasMore = true;
-    await fetchMall();
+    await fetchMall(useCache: false); // 刷新时不使用缓存，使用当前筛选条件
   }
 
   @override
@@ -547,12 +609,15 @@ class _MallDetailPageState extends State<MallDetailPage> {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const Spacer(),

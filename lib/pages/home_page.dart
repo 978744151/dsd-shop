@@ -5,6 +5,11 @@ import '../api/brand.dart';
 import '../utils/http_client.dart';
 import '../models/brand.dart';
 import '../models/mall.dart';
+import '../models/address.dart';
+import '../models/province.dart';
+import '../models/city.dart';
+import '../utils/location_helper.dart';
+import '../utils/storage.dart';
 import '../widgets/custom_refresh_widget.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:business_savvy/pages/message_page.dart';
@@ -34,12 +39,26 @@ class _HomePageState extends State<HomePage> {
   final ScrollController _recommendScrollController = ScrollController();
   late StreamSubscription _refreshSubscription; // 添加刷新事件订阅
 
+  // 地址相关状态
+  List<AddressModel> addressList = [];
+  AddressModel? defaultAddress;
+  bool isLoadingAddress = false;
+
+  // 省市选择相关状态
+  List<ProvinceModel> provinceList = [];
+  List<CityModel> cityList = [];
+  ProvinceModel? selectedProvince;
+  CityModel? selectedCity;
+  bool isLoadingProvinces = false;
+  bool isLoadingCities = false;
+
   @override
   void initState() {
     super.initState();
     fetchBrand();
-    fetchMall();
     fetchRecommendBlogs();
+    fetchDefaultAddress(); // 获取默认地址
+    loadCachedProvinceCity(); // 加载缓存的省市信息
     _recommendScrollController.addListener(_onRecommendScroll);
 
     // 监听首页刷新事件
@@ -56,7 +75,7 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  Future<void> fetchMall() async {
+  Future<void> fetchMall({String? provinceId, String? cityId}) async {
     if (!mounted) return;
 
     setState(() {
@@ -64,11 +83,28 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final response = await HttpClient.get(brandApi.getMalls);
+      // 构建请求参数
+      Map<String, dynamic> params = {};
+      if (provinceId != null) {
+        params['provinceId'] = provinceId;
+      }
+      if (cityId != null) {
+        params['cityId'] = cityId;
+      }
+
+      final response = await HttpClient.get(brandApi.getMalls, params: params);
 
       if (!mounted) return;
       if (response['success']) {
         final List<dynamic> mallData = response['data']['malls'] ?? [];
+
+        // 如果筛选后的列表为空，且有筛选条件，则获取全部商城列表
+        // if (mallData.isEmpty) {
+        //   // 递归调用获取全部商城列表
+        //   await fetchMall();
+        //   return;
+        // }
+
         setState(() {
           mallList = mallData.map((item) => MallData.fromJson(item)).toList();
           isLoading = false;
@@ -194,13 +230,683 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // 加载缓存的省市信息
+  Future<void> loadCachedProvinceCity() async {
+    try {
+      final cachedProvince = await Storage.getString('selected_province');
+      final cachedCity = await Storage.getString('selected_city');
+
+      if (cachedProvince != null && cachedCity != null) {
+        final provinceMap = await Storage.getJson('selected_province_data');
+        final cityMap = await Storage.getJson('selected_city_data');
+
+        if (provinceMap != null && cityMap != null) {
+          setState(() {
+            selectedProvince = ProvinceModel.fromJson(provinceMap);
+            selectedCity = CityModel.fromJson(cityMap);
+
+            // 根据缓存的省市信息创建默认地址
+            if (defaultAddress == null) {
+              defaultAddress = AddressModel(
+                id: 'cached_location',
+                name: '选择的位置',
+                province: selectedProvince!.name,
+                city: selectedCity!.name,
+                district: '',
+                detail: '',
+                phone: '',
+                isDefault: false,
+                provinceId: selectedProvince!.id,
+                cityId: selectedCity!.id,
+              );
+            }
+          });
+          print('已选择位置：${selectedProvince!.code} ${selectedCity!.id}');
+          // 根据缓存的省市信息获取商城数据
+          await fetchMall(
+            provinceId: selectedProvince!.code,
+            cityId: selectedCity!.code,
+          );
+        }
+      }
+    } catch (e) {
+      // 缓存加载失败，忽略错误
+    }
+  }
+
+  // 获取省份列表
+  Future<void> fetchProvinces() async {
+    setState(() {
+      isLoadingProvinces = true;
+    });
+
+    try {
+      final response = await HttpClient.get(brandApi.getProvinces);
+      if (!mounted) return;
+
+      if (response['success']) {
+        final List<dynamic> provinceData = response['data']['provinces'] ?? [];
+        setState(() {
+          provinceList =
+              provinceData.map((item) => ProvinceModel.fromJson(item)).toList();
+          isLoadingProvinces = false;
+        });
+      } else {
+        setState(() {
+          isLoadingProvinces = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isLoadingProvinces = false;
+      });
+    }
+  }
+
+  // 获取城市列表
+  Future<void> fetchCities(String provinceId) async {
+    print(provinceId);
+    setState(() {
+      isLoadingCities = true;
+      cityList = [];
+      selectedCity = null;
+    });
+
+    try {
+      final response =
+          await HttpClient.get('${brandApi.getCities}?provinceId=$provinceId');
+      if (!mounted) return;
+
+      if (response['success']) {
+        final List<dynamic> cityData = response['data']['cities'] ?? [];
+        setState(() {
+          cityList = cityData.map((item) => CityModel.fromJson(item)).toList();
+          isLoadingCities = false;
+        });
+      } else {
+        setState(() {
+          isLoadingCities = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isLoadingCities = false;
+      });
+    }
+  }
+
+  // 保存选择的省市到缓存
+  Future<void> saveCachedProvinceCity() async {
+    if (selectedProvince != null && selectedCity != null) {
+      await Storage.setString('selected_province', selectedProvince!.name);
+      await Storage.setString('selected_city', selectedCity!.name);
+      await Storage.setJson(
+          'selected_province_data', selectedProvince!.toJson());
+      await Storage.setJson('selected_city_data', selectedCity!.toJson());
+    }
+  }
+
+  Future<void> fetchDefaultAddress() async {
+    if (!mounted) return;
+
+    setState(() {
+      isLoadingAddress = true;
+    });
+
+    try {
+      await _tryGetCurrentLocation();
+      // final response = await HttpClient.get(brandApi.getDefaultAddress);
+      // if (!mounted) return;
+
+      // if (response['success']) {
+      //   final addressData = response['data'];
+      //   if (addressData != null) {
+      //     setState(() {
+      //       defaultAddress = AddressModel.fromJson(addressData);
+      //       isLoadingAddress = false;
+      //     });
+      //   } else {
+      //     // 如果没有默认地址，尝试获取当前位置
+
+      //   }
+      // } else {
+      //   // API调用失败，尝试获取当前位置
+      //   await _tryGetCurrentLocation();
+      // }
+    } catch (e) {
+      if (!mounted) return;
+      // 发生异常，尝试获取当前位置
+      await _tryGetCurrentLocation();
+    }
+  }
+
+  // 尝试获取当前位置
+  Future<void> _tryGetCurrentLocation() async {
+    try {
+      AddressModel? currentAddressModel =
+          await LocationHelper.getCurrentDetailedAddress();
+      if (!mounted) return;
+      await fetchMall(
+          provinceId: currentAddressModel?.province,
+          cityId: currentAddressModel?.city);
+
+      if (currentAddressModel != null) {
+        setState(() {
+          defaultAddress = currentAddressModel;
+          isLoadingAddress = false;
+        });
+      } else {
+        setState(() {
+          defaultAddress = null;
+          isLoadingAddress = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        defaultAddress = null;
+        isLoadingAddress = false;
+      });
+    }
+  }
+
+  // 获取地址列表
+  Future<void> fetchAddressList() async {
+    if (!mounted) return;
+
+    try {
+      final response = await HttpClient.get(brandApi.getAddressList);
+      if (!mounted) return;
+
+      if (response['success']) {
+        final List<dynamic> addressData = response['data'] ?? [];
+        setState(() {
+          addressList =
+              addressData.map((item) => AddressModel.fromJson(item)).toList();
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      // 处理错误
+    }
+  }
+
+  // 获取城市列表（用于弹窗）
+  Future<void> _fetchCitiesForModal(
+      String provinceId, void Function(void Function()) setModalState) async {
+    try {
+      final response =
+          await HttpClient.get('${brandApi.getCities}?provinceId=$provinceId');
+      if (response['success'] && response['data'] != null) {
+        final cityData = response['data']['cities'] as List<dynamic>;
+        setModalState(() {
+          cityList = cityData.map((item) => CityModel.fromJson(item)).toList();
+          isLoadingCities = false;
+        });
+        setState(() {
+          cityList = cityData.map((item) => CityModel.fromJson(item)).toList();
+          isLoadingCities = false;
+        });
+      } else {
+        setModalState(() {
+          cityList = [];
+          isLoadingCities = false;
+        });
+        setState(() {
+          cityList = [];
+          isLoadingCities = false;
+        });
+      }
+    } catch (e) {
+      print('获取城市列表失败: $e');
+      setModalState(() {
+        cityList = [];
+        isLoadingCities = false;
+      });
+      setState(() {
+        cityList = [];
+        isLoadingCities = false;
+      });
+    }
+  }
+
+  // 显示省市选择弹窗
+  void _showProvinceCitySelector() async {
+    await fetchProvinces();
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  border: Border(
+                      bottom: BorderSide(color: Colors.grey, width: 0.5)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      '选择省市',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    // 省份列表
+                    Expanded(
+                      flex: 1,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          border: Border(
+                              right:
+                                  BorderSide(color: Colors.grey, width: 0.5)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Text(
+                                '省份',
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                            Expanded(
+                              child: isLoadingProvinces
+                                  ? const Center(
+                                      child: CircularProgressIndicator())
+                                  : ListView.builder(
+                                      itemCount: provinceList.length,
+                                      itemBuilder: (context, index) {
+                                        final province = provinceList[index];
+                                        final isSelected =
+                                            selectedProvince?.id == province.id;
+
+                                        return ListTile(
+                                          title: Text(
+                                            province.name,
+                                            style: TextStyle(
+                                              color: isSelected
+                                                  ? Colors.blue
+                                                  : Colors.black87,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.w600
+                                                  : FontWeight.normal,
+                                            ),
+                                          ),
+                                          selected: isSelected,
+                                          selectedTileColor:
+                                              Colors.blue.withOpacity(0.1),
+                                          onTap: () async {
+                                            setModalState(() {
+                                              selectedProvince = province;
+                                              selectedCity = null;
+                                              isLoadingCities = true;
+                                              cityList = [];
+                                            });
+                                            setState(() {
+                                              selectedProvince = province;
+                                              selectedCity = null;
+                                            });
+
+                                            // 获取城市列表
+                                            await _fetchCitiesForModal(
+                                                province.id, setModalState);
+                                          },
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // 城市列表
+                    Expanded(
+                      flex: 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              '城市',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          Expanded(
+                            child: selectedProvince == null
+                                ? const Center(
+                                    child: Text(
+                                      '请先选择省份',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  )
+                                : isLoadingCities
+                                    ? const Center(
+                                        child: CircularProgressIndicator())
+                                    : cityList.isEmpty
+                                        ? const Center(
+                                            child: Text(
+                                              '暂无城市数据',
+                                              style:
+                                                  TextStyle(color: Colors.grey),
+                                            ),
+                                          )
+                                        : ListView.builder(
+                                            itemCount: cityList.length,
+                                            itemBuilder: (context, index) {
+                                              final city = cityList[index];
+                                              final isSelected =
+                                                  selectedCity?.id == city.id;
+
+                                              return ListTile(
+                                                title: Text(
+                                                  city.name,
+                                                  style: TextStyle(
+                                                    color: isSelected
+                                                        ? Colors.blue
+                                                        : Colors.black87,
+                                                    fontWeight: isSelected
+                                                        ? FontWeight.w600
+                                                        : FontWeight.normal,
+                                                  ),
+                                                ),
+                                                selected: isSelected,
+                                                selectedTileColor: Colors.blue
+                                                    .withOpacity(0.1),
+                                                onTap: () async {
+                                                  setModalState(() {
+                                                    selectedCity = city;
+                                                  });
+                                                  setState(() {
+                                                    selectedCity = city;
+                                                    // 更新默认地址
+                                                    defaultAddress =
+                                                        AddressModel(
+                                                      id: 'selected_location',
+                                                      name: '选择的位置',
+                                                      province:
+                                                          selectedProvince!
+                                                              .name,
+                                                      city: selectedCity!.name,
+                                                      district: '',
+                                                      detail: '',
+                                                      phone: '',
+                                                      isDefault: false,
+                                                      provinceId:
+                                                          selectedProvince!.id,
+                                                      cityId: selectedCity!.id,
+                                                    );
+                                                  });
+
+                                                  // 保存到缓存
+                                                  saveCachedProvinceCity();
+
+                                                  // 关闭弹窗
+                                                  Navigator.pop(context);
+
+                                                  // 重新获取商城数据
+                                                  await fetchMall(
+                                                    provinceId:
+                                                        selectedProvince!.id,
+                                                    cityId: selectedCity!.id,
+                                                  );
+                                                },
+                                              );
+                                            },
+                                          ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddressSelector() async {
+    await fetchAddressList();
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                border:
+                    Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '选择地址',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: _getCurrentLocationAddress,
+                        icon: const Icon(Icons.my_location, size: 18),
+                        label: const Text('定位'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: addressList.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.location_off,
+                              size: 64, color: Colors.grey),
+                          const SizedBox(height: 16),
+                          const Text('暂无地址',
+                              style: TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _getCurrentLocationAddress,
+                            icon: const Icon(Icons.my_location),
+                            label: const Text('获取当前位置'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: addressList.length +
+                          1, // +1 for current location option
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          // 当前位置选项
+                          return ListTile(
+                            leading: const Icon(Icons.my_location,
+                                color: Colors.blue),
+                            title: const Text('使用当前位置'),
+                            subtitle: const Text('点击获取您的当前位置'),
+                            onTap: _getCurrentLocationAddress,
+                          );
+                        }
+
+                        final address = addressList[index - 1];
+                        return ListTile(
+                          leading: Icon(
+                            address.isDefault
+                                ? Icons.location_on
+                                : Icons.location_on_outlined,
+                            color:
+                                address.isDefault ? Colors.blue : Colors.grey,
+                          ),
+                          title: Text(address.name),
+                          subtitle: Text(address.shortAddress),
+                          trailing: address.isDefault
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    '默认',
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 12),
+                                  ),
+                                )
+                              : null,
+                          onTap: () {
+                            setState(() {
+                              defaultAddress = address;
+                            });
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 获取当前位置地址
+  void _getCurrentLocationAddress() async {
+    Navigator.pop(context); // 关闭弹窗
+
+    setState(() {
+      isLoadingAddress = true;
+    });
+
+    try {
+      // 检查并请求位置权限
+      bool hasPermission =
+          await LocationHelper.checkAndRequestLocationPermission();
+
+      if (!hasPermission) {
+        if (!mounted) return;
+        setState(() {
+          isLoadingAddress = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('需要位置权限才能获取当前地址，请在设置中开启位置权限'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // 获取当前位置地址
+      String? currentAddress = await LocationHelper.getCurrentAddress();
+
+      if (!mounted) return;
+
+      if (currentAddress != null) {
+        // 获取详细地址信息
+        AddressModel? detailedAddress =
+            await LocationHelper.getCurrentDetailedAddress();
+
+        if (detailedAddress != null) {
+          setState(() {
+            defaultAddress = detailedAddress;
+            isLoadingAddress = false;
+          });
+
+          // ScaffoldMessenger.of(context).showSnackBar(
+          //   SnackBar(
+          //     content: Text('已获取当前位置：${detailedAddress.displayAddress}'),
+          //     duration: const Duration(seconds: 2),
+          //   ),
+          // );
+        } else {
+          setState(() {
+            isLoadingAddress = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('获取当前位置失败，请检查网络连接或稍后重试'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isLoadingAddress = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('获取位置时发生错误：${e.toString()}'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   // 刷新首页的方法
   Future<void> _refreshHomePage() async {
     setState(() {
       recommendPage = 1;
     });
     await fetchBrand();
-    await fetchMall();
+    // await fetchMall();
     await fetchRecommendBlogs();
 
     // 刷新完成后，将滚动位置重置到顶部
@@ -240,8 +946,8 @@ class _HomePageState extends State<HomePage> {
               setState(() {
                 recommendPage = 1;
               });
-              await fetchBrand();
-              await fetchMall();
+              // await fetchBrand();
+              // await fetchMall();
               await fetchRecommendBlogs();
 
               // 刷新完成后，将滚动位置重置到顶部
@@ -360,6 +1066,7 @@ class _HomePageState extends State<HomePage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // 搜索图标和搜索文本
           const Icon(Icons.search, color: Colors.grey),
           const SizedBox(width: 12),
           Expanded(
@@ -371,6 +1078,53 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.grey,
                   fontSize: 16,
                 ),
+              ),
+            ),
+          ),
+          // 地址选择区域
+          GestureDetector(
+            onTap: _showProvinceCitySelector,
+            child: Container(
+              decoration: BoxDecoration(
+                // color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(20),
+                // border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 16,
+                    color: defaultAddress != null ? Colors.blue : Colors.grey,
+                  ),
+                  const SizedBox(width: 4),
+                  if (isLoadingAddress)
+                    const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Text(
+                      defaultAddress?.displayAddress ?? '选择地址',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: defaultAddress != null
+                            ? Colors.black87
+                            : Colors.grey,
+                        fontWeight: defaultAddress != null
+                            ? FontWeight.w500
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
+                ],
               ),
             ),
           ),
@@ -624,16 +1378,52 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           const Spacer(),
+                          // ElevatedButton.icon(
+                          //   onPressed: () {
+                          //     // 取出当前商场的所有品牌的 brandId（过滤空值），作为预选项
+
+                          //     // 只要有一个品牌就带入预选并自动打开选择弹窗
+                          //     final query =
+                          //         'mallId=${mall.id}&open=true&mallName=${mall.name}';
+                          //     print(query);
+                          //     context.go('/compare?$query');
+                          //   },
+                          //   icon: const Icon(Icons.compare_arrows, size: 16),
+                          //   label: const Text('去对比'),
+                          //   style: ElevatedButton.styleFrom(
+                          //     backgroundColor: Colors.transparent,
+                          //     foregroundColor: Colors.black87,
+                          //     elevation: 0,
+                          //     shadowColor: Colors.transparent,
+                          //     padding: const EdgeInsets.symmetric(
+                          //         horizontal: 8, vertical: 2),
+                          //     minimumSize: const Size(0, 28),
+                          //     shape: RoundedRectangleBorder(
+                          //       borderRadius: BorderRadius.circular(15),
+                          //     ),
+                          //   ),
+                          // ),
                           Icon(
-                            Icons.location_on,
+                            Icons.compare_arrows,
                             size: 16,
                             color: Colors.grey[600],
                           ),
-                          Text(
-                            '${mall.province.name} ${mall.city.name}',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 12,
+                          GestureDetector(
+                            onTap: () {
+                              // 取出当前商场的所有品牌的 brandId（过滤空值），作为预选项
+
+                              // 只要有一个品牌就带入预选并自动打开选择弹窗
+                              final query =
+                                  'mallId=${mall.id}&open=true&mallName=${mall.name}';
+                              print(query);
+                              context.go('/compare?$query');
+                            },
+                            child: Text(
+                              '去对比',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ],
@@ -642,7 +1432,7 @@ class _HomePageState extends State<HomePage> {
                       Text(
                         mall.name,
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),

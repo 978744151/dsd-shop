@@ -9,4 +9,9 @@ class brandApi {
   static const String getCities = 'map/cities';
   static const String getComparisonReports = 'map/comparison/reports';
   static String getComparisonReportsDetail(id) => 'map/comparison/reports/$id';
+
+  // 地址相关API
+  static const String getAddressList = 'user/addresses';
+  static const String getDefaultAddress = 'user/addresses/default';
+  static const String setDefaultAddress = 'user/addresses/default';
 }

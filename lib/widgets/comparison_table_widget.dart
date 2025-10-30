@@ -148,7 +148,7 @@ class ComparisonTableWidget extends StatelessWidget {
           _buildStoreCountRow(),
 
           // 综合总分行
-          _buildTotalScoreRow(),
+          // _buildTotalScoreRow(),
 
           // 品牌数据行
           ...sortedBrands.map((brandName) => _buildBrandDataRow(brandName)),
