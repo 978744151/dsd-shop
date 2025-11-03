@@ -12,7 +12,7 @@ class ImageUploadUtil {
   /// [uploadPath] 上传路径，默认为'/upload/image'
   static Future<Map<String, dynamic>> uploadImageForWeb(
     XFile imageFile, {
-    String uploadPath = '/upload/image',
+    String uploadPath = 'upload/image',
   }) async {
     try {
       // 获取token
@@ -63,7 +63,7 @@ class ImageUploadUtil {
   /// [uploadPath] 上传路径，默认为'/upload/image'
   static Future<Map<String, dynamic>> uploadImage(
     XFile imageFile, {
-    String uploadPath = '/upload/image',
+    String uploadPath = 'upload/image',
   }) async {
     return await uploadImageForWeb(imageFile, uploadPath: uploadPath);
   }

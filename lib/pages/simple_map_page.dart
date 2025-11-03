@@ -5,11 +5,8 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_echarts/flutter_echarts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:business_savvy/pages/mall_brand_page.dart';
-import 'package:business_savvy/pages/feedback_page.dart';
-import 'package:business_savvy/pages/mall_brand_page.dart';
 import '../api/brand.dart';
 import '../utils/http_client.dart';
-import '../models/province.dart';
 import '../models/brand.dart';
 
 class SimpleMapPage extends StatefulWidget {
@@ -293,7 +290,6 @@ class _SimpleMapPageState extends State<SimpleMapPage>
             }
           }
         } catch (_) {}
-        print(parsed);
       });
     } catch (e) {
       // 读取失败时置为空对象，避免JS执行报错
@@ -307,7 +303,6 @@ class _SimpleMapPageState extends State<SimpleMapPage>
   }
 
   Future<void> _drillDownToProvince(String provinceName) async {
-    print('provinceName: $provinceName');
     // 规范化：得到拼音 key
     // 通过拼音获取 id（或从全国 features 构建的 name->id）
     await fetchCity();
@@ -361,7 +356,6 @@ class _SimpleMapPageState extends State<SimpleMapPage>
         setState(() {
           _selectedBrand = BrandModel.fromJson(response['data']['brand']);
         });
-        print(_selectedBrand);
       }
     } catch (e) {
       if (!mounted) return;
@@ -388,7 +382,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
       });
 
       // 检查是否为直辖市
-      final municipalities = ['北京市', '上海市', '天津市', '重庆市'];
+      final municipalities = [];
       final isMunicipality = municipalities.contains(cityName);
 
       Map<String, dynamic> params = {
@@ -418,7 +412,6 @@ class _SimpleMapPageState extends State<SimpleMapPage>
           _storeList = storeData;
           _storeLoading = false;
         });
-        print(_selectedBrand);
       }
     } catch (e) {
       if (!mounted) return;
@@ -591,7 +584,6 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                   // 解析点击事件
                   try {
                     final Map<String, dynamic> m = json.decode(message);
-                    print('点击事件: $m');
 
                     if (m['type'] == 'map_click') {
                       if (!_isProvince) {
@@ -600,7 +592,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                         final provinceDataId = m['data']['adcode'];
 
                         // 检查是否为直辖市
-                        final municipalities = ['北京市', '上海市', '天津市', '重庆市'];
+                        final municipalities = [];
                         if (municipalities.contains(provinceName)) {
                           // 直辖市直接显示门店列表，使用省份ID作为城市ID
                           _showStoreBottomSheet(provinceDataId, provinceName);
@@ -674,7 +666,6 @@ class _SimpleMapPageState extends State<SimpleMapPage>
         ),
       ),
     ).then((_) {
-      print('弹框已关闭');
       setState(() {
         _storeList.clear();
         _storeLoading = false;
@@ -1193,7 +1184,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                         controller: _tabController!,
                         physics: const NeverScrollableScrollPhysics(),
                         children: [
-                          _buildMapView(),
+                          // _buildMapView(),
                           _buildListView(),
                         ],
                       ),

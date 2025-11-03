@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
+import 'dart:html' as html show IFrameElement, window;
+import 'dart:ui_web' as ui;
 
 class PrivacyPolicyPage extends StatefulWidget {
   const PrivacyPolicyPage({super.key});
@@ -11,11 +15,52 @@ class PrivacyPolicyPage extends StatefulWidget {
 class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
   late final WebViewController _controller;
   bool _isLoading = true;
+  final String _url =
+      'https://agreement-drcn.hispace.dbankcloud.cn/index.html?lang=zh&agreementId=1802222266591763904';
 
   @override
   void initState() {
     super.initState();
-    _initializeWebView();
+    if (!kIsWeb) {
+      _initializeWebView();
+    } else {
+      _initializeWebFrame();
+    }
+  }
+
+  void _initializeWebFrame() {
+    if (kIsWeb) {
+      // 在Web端注册iframe
+      final String viewId = 'privacy-policy-iframe';
+      // ignore: undefined_prefixed_name
+      ui.platformViewRegistry.registerViewFactory(
+        viewId,
+        (int viewId) {
+          final html.IFrameElement iframe = html.IFrameElement()
+            ..src = _url
+            ..style.border = 'none'
+            ..style.width = '100%'
+            ..style.height = '100%';
+
+          iframe.onLoad.listen((_) {
+            setState(() {
+              _isLoading = false;
+            });
+          });
+
+          return iframe;
+        },
+      );
+
+      // 延迟设置加载状态
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      });
+    }
   }
 
   void _initializeWebView() {
@@ -47,8 +92,7 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
           },
         ),
       )
-      ..loadRequest(Uri.parse(
-          'https://agreement-drcn.hispace.dbankcloud.cn/index.html?lang=zh&agreementId=1802222266591763904'));
+      ..loadRequest(Uri.parse(_url));
   }
 
   @override
@@ -100,7 +144,12 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
               ),
             ),
             onPressed: () {
-              _controller.reload();
+              if (!kIsWeb) {
+                _controller.reload();
+              } else {
+                // Web端刷新页面
+                html.window.location.reload();
+              }
             },
           ),
           const SizedBox(width: 16),
@@ -108,8 +157,11 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
       ),
       body: Stack(
         children: [
-          // WebView内容
-          WebViewWidget(controller: _controller),
+          // WebView内容 - 根据平台选择不同的实现
+          if (!kIsWeb)
+            WebViewWidget(controller: _controller)
+          else
+            const HtmlElementView(viewType: 'privacy-policy-iframe'),
 
           // 加载指示器
           if (_isLoading)
