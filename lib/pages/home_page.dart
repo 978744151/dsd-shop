@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nft_once/pages/brand_center_page.dart';
+import 'package:business_savvy/pages/brand_center_page.dart';
 import '../api/brand.dart';
 import '../utils/http_client.dart';
 import '../models/brand.dart';
 import '../models/mall.dart';
 import '../widgets/custom_refresh_widget.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:nft_once/pages/message_page.dart';
+import 'package:business_savvy/pages/message_page.dart';
 import '../utils/event_bus.dart';
 import 'dart:async';
 
@@ -128,7 +128,7 @@ class _HomePageState extends State<HomePage> {
       isLoadingRecommend = true;
     });
     try {
-      final response = await HttpClient.get('blogs/all?page=$recommendPage');
+      final response = await HttpClient.get('blogs/all?page=$recommendPage&userId=68f208e63f2c4cbd03ab2bd8');
       if (!mounted) return;
       if (response['success'] == true) {
         final List<dynamic> blogsData = response['data']['blogs'] ?? [];
@@ -311,6 +311,27 @@ class _HomePageState extends State<HomePage> {
                   // // 底部导航图标
                   // _buildBottomNavigation(),
                 ],
+              ),
+            ),
+          ),
+                  Positioned(
+            right: 10,
+            bottom: 20,
+            child: RawMaterialButton(
+              onPressed: () {
+                context.go('/message/create');
+              },
+              elevation: 4.0,
+              fillColor: Colors.white,
+              shape: const CircleBorder(),
+              constraints: const BoxConstraints.tightFor(
+                width: 60,
+                height: 60,
+              ),
+              child: Icon(
+                Icons.add_photo_alternate,
+                color: Theme.of(context).primaryColor,
+                size: 35,
               ),
             ),
           ),

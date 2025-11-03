@@ -5,7 +5,7 @@ import 'package:flutter_screenshot_callback/flutter_screenshot_callback.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:typed_data';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
-import 'package:nft_once/utils/toast_util.dart';
+import 'package:business_savvy/utils/toast_util.dart';
 import '../utils/http_client.dart';
 import '../api/brand.dart';
 import 'dart:ui' as ui;

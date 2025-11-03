@@ -1,4 +1,4 @@
-import 'package:nft_once/pages/user_profile_page.dart';
+import 'package:business_savvy/pages/user_profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../utils/http_client.dart';

@@ -1,4 +1,4 @@
-name: nft_once
+name: business_savvy
 description: 懂商帝
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -62,7 +62,19 @@ dependencies:
   image_gallery_saver:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_image_gallery_saver.git
-
+  # 地址和位置相关依赖
+  geolocator:
+    git:
+      url: https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git
+      path: "geolocator"
+  permission_handler: 
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_permission_handler.git
+      path: "permission_handler"
+  geocoding:
+    git:
+      url: https://gitcode.com/openharmony-sig/fluttertpc_geocoding.git
+      path: "geocoding"
 # dependency_overrides:
 #   webview_flutter:
 #      git:
@@ -86,3 +98,4 @@ flutter:
     - assets/brand/
     - assets/map/json/
     - assets/map/json/province/
+    - assets/images/

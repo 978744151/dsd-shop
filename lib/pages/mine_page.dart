@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:nft_once/pages/blacklist_page.dart';
-import 'package:nft_once/pages/blog_detail_page.dart';
-import 'package:nft_once/pages/compare_detail_page.dart';
-import 'package:nft_once/pages/compare_page.dart';
-import 'package:nft_once/pages/history_page.dart';
-import 'package:nft_once/pages/favorites_page.dart';
-import 'package:nft_once/pages/follow_page.dart';
-import 'package:nft_once/pages/notifications_page.dart';
-// import 'package:nft_once/pages/nft/nft_edition_detail.dart';
+import 'package:business_savvy/pages/blacklist_page.dart';
+import 'package:business_savvy/pages/blog_detail_page.dart';
+import 'package:business_savvy/pages/compare_detail_page.dart';
+import 'package:business_savvy/pages/compare_page.dart';
+import 'package:business_savvy/pages/history_page.dart';
+import 'package:business_savvy/pages/favorites_page.dart';
+import 'package:business_savvy/pages/follow_page.dart';
+import 'package:business_savvy/pages/notifications_page.dart';
+// import 'package:business_savvy/pages/nft/nft_edition_detail.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/http_client.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
@@ -676,7 +676,7 @@ class _MinePageState extends State<MinePage> with TickerProviderStateMixin {
                       indicatorColor: Theme.of(context).primaryColor,
                       indicatorWeight: 5,
                       tabs: const [
-                        Tab(text: '我的发帖'),
+                        Tab(text: '我的笔记'),
                         Tab(text: '我的报告'),
                         // Tab(text: '售出藏品'),
                       ],

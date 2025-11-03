@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:nft_once/pages/blog_detail_page.dart';
-import 'package:nft_once/pages/search_blog_page.dart';
+import 'package:business_savvy/pages/blog_detail_page.dart';
+import 'package:business_savvy/pages/search_blog_page.dart';
 import '../utils/http_client.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/event_bus.dart';
@@ -116,9 +116,9 @@ class _MessagePageState extends State<MessagePage>
     dictionaries();
     // 初始化TabController
     _tabController = TabController(
-      length: 3,
+      length: 2,
       vsync: this,
-      initialIndex: 1,
+      initialIndex: 0,
       animationDuration: const Duration(milliseconds: 100), // 加快切换速度
     ); // 默认选中推荐
 
@@ -185,12 +185,12 @@ class _MessagePageState extends State<MessagePage>
     try {
       // 根据当前标签获取不同的数据
       String endpoint =
-          'blogs/all?page=${_tabPage[currentTab]}&sortByLatest=false';
+          'blogs/all?page=${_tabPage[currentTab]}&sortByLatest=false&userId=68f208e63f2c4cbd03ab2bd8';
 
       if (currentTab == '关注') {
-        endpoint = 'blogs/following?page=${_tabPage[currentTab]}';
+        endpoint = 'blogs/following?page=${_tabPage[currentTab]}&userId=68f208e63f2c4cbd03ab2bd8';
       } else if (currentTab == '最新') {
-        endpoint = 'blogs/all?page=${_tabPage[currentTab]}&sortByLatest=true';
+        endpoint = 'blogs/all?page=${_tabPage[currentTab]}&sortByLatest=true&userId=68f208e63f2c4cbd03ab2bd8';
       }
 
       final response = await HttpClient.get(endpoint);
@@ -250,12 +250,12 @@ class _MessagePageState extends State<MessagePage>
     });
     try {
       final nextPage = _tabPage[currentTab]! + 1;
-      String endpoint = 'blogs/all?page=$nextPage&sortByLatest=false';
+      String endpoint = 'blogs/all?page=$nextPage&sortByLatest=false&userId=68f208e63f2c4cbd03ab2bd8';
 
       if (currentTab == '关注') {
-        endpoint = 'blogs/following?page=$nextPage';
+        endpoint = 'blogs/following?page=$nextPage&userId=68f208e63f2c4cbd03ab2bd8';
       } else if (currentTab == '最新') {
-        endpoint = 'blogs/all?page=$nextPage&sortByLatest=true';
+        endpoint = 'blogs/all?page=$nextPage&sortByLatest=true&userId=68f208e63f2c4cbd03ab2bd8';
       }
       final response = await HttpClient.get(endpoint);
       if (!mounted) return;
@@ -287,13 +287,13 @@ class _MessagePageState extends State<MessagePage>
     String endpoint;
     switch (tabName) {
       case '关注':
-        endpoint = 'blogs/following?sortByLatest=true';
+        endpoint = 'blogs/following?sortByLatest=true&userId=68f208e63f2c4cbd03ab2bd8';
         break;
       case '最新':
-        endpoint = 'blogs/all?sortByLatest=true';
+        endpoint = 'blogs/all?sortByLatest=true&userId=68f208e63f2c4cbd03ab2bd8';
         break;
       default:
-        endpoint = 'blogs/all?sortByLatest=false';
+        endpoint = 'blogs/all?sortByLatest=false&userId=68f208e63f2c4cbd03ab2bd8';
     }
 
     return TabContentWidget(
@@ -370,7 +370,7 @@ class _MessagePageState extends State<MessagePage>
                                 indicatorSize: TabBarIndicatorSize.label,
                                 dividerColor: Colors.transparent,
                                 tabs: const [
-                                  Tab(text: '关注'),
+                                  // Tab(text: '关注'),
                                   Tab(text: '推荐'),
                                   Tab(text: '最新'),
                                 ],
@@ -404,10 +404,10 @@ class _MessagePageState extends State<MessagePage>
                     child: TabBarView(
                       controller: _tabController,
                       children: [
-                        Container(
-                          key: const PageStorageKey('关注_tab'),
-                          child: _buildTabContent('关注'),
-                        ), // 关注
+                        // Container(
+                        //   key: const PageStorageKey('关注_tab'),
+                        //   child: _buildTabContent('关注'),
+                        // ), // 关注
                         Container(
                           key: const PageStorageKey('推荐_tab'),
                           child: _buildTabContent('推荐'),

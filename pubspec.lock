@@ -181,6 +181,15 @@ packages:
       relative: true
     source: path
     version: "2.5.0"
+  flutter_geolocator_ohos:
+    dependency: transitive
+    description:
+      path: geolocator_ohos
+      ref: HEAD
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
+    source: git
+    version: "1.0.0"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -239,6 +248,105 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "8.2.14"
+  geocoding:
+    dependency: "direct main"
+    description:
+      path: geocoding
+      ref: HEAD
+      resolved-ref: "0c523ea10302850281cb2ac62ccdd94bdbedeb18"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geocoding.git"
+    source: git
+    version: "3.0.0"
+  geocoding_android:
+    dependency: transitive
+    description:
+      path: geocoding_android
+      ref: HEAD
+      resolved-ref: "0c523ea10302850281cb2ac62ccdd94bdbedeb18"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geocoding.git"
+    source: git
+    version: "3.3.1"
+  geocoding_ios:
+    dependency: transitive
+    description:
+      path: geocoding_ios
+      ref: HEAD
+      resolved-ref: "0c523ea10302850281cb2ac62ccdd94bdbedeb18"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geocoding.git"
+    source: git
+    version: "3.0.1"
+  geocoding_ohos:
+    dependency: transitive
+    description:
+      path: geocoding_ohos
+      ref: HEAD
+      resolved-ref: "0c523ea10302850281cb2ac62ccdd94bdbedeb18"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geocoding.git"
+    source: git
+    version: "1.0.0"
+  geocoding_platform_interface:
+    dependency: transitive
+    description:
+      path: geocoding_platform_interface
+      ref: HEAD
+      resolved-ref: "0c523ea10302850281cb2ac62ccdd94bdbedeb18"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geocoding.git"
+    source: git
+    version: "3.2.1"
+  geolocator:
+    dependency: "direct main"
+    description:
+      path: geolocator
+      ref: HEAD
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
+    source: git
+    version: "10.1.0"
+  geolocator_android:
+    dependency: transitive
+    description:
+      path: geolocator_android
+      ref: HEAD
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
+    source: git
+    version: "4.3.0"
+  geolocator_apple:
+    dependency: transitive
+    description:
+      path: geolocator_apple
+      ref: HEAD
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
+    source: git
+    version: "2.3.1"
+  geolocator_platform_interface:
+    dependency: transitive
+    description:
+      path: geolocator_platform_interface
+      ref: HEAD
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
+    source: git
+    version: "4.1.0"
+  geolocator_web:
+    dependency: transitive
+    description:
+      path: geolocator_web
+      ref: HEAD
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
+    source: git
+    version: "2.2.0"
+  geolocator_windows:
+    dependency: transitive
+    description:
+      path: geolocator_windows
+      ref: HEAD
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
+    source: git
+    version: "0.2.1"
   getwidget:
     dependency: "direct main"
     description:
@@ -522,6 +630,56 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.3.0"
+  permission_handler:
+    dependency: "direct main"
+    description:
+      path: permission_handler
+      ref: HEAD
+      resolved-ref: "453788b37d0ac41b5f8ed77ffcf1732c4849a883"
+      url: "https://gitcode.com/openharmony-sig/flutter_permission_handler.git"
+    source: git
+    version: "10.4.3"
+  permission_handler_android:
+    dependency: transitive
+    description:
+      name: permission_handler_android
+      sha256: "59c6322171c29df93a22d150ad95f3aa19ed86542eaec409ab2691b8f35f9a47"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "10.3.6"
+  permission_handler_apple:
+    dependency: transitive
+    description:
+      name: permission_handler_apple
+      sha256: "99e220bce3f8877c78e4ace901082fb29fa1b4ebde529ad0932d8d664b34f3f5"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "9.1.4"
+  permission_handler_ohos:
+    dependency: transitive
+    description:
+      path: permission_handler_ohos
+      ref: master
+      resolved-ref: "1e7c80f0720aff742d9f1e08017e1753bcad76ef"
+      url: "https://gitee.com/openharmony-sig/flutter_permission_handler.git"
+    source: git
+    version: "10.3.2"
+  permission_handler_platform_interface:
+    dependency: transitive
+    description:
+      name: permission_handler_platform_interface
+      sha256: "6760eb5ef34589224771010805bea6054ad28453906936f843a8cc4d3a55c4a4"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "3.12.0"
+  permission_handler_windows:
+    dependency: transitive
+    description:
+      name: permission_handler_windows
+      sha256: cc074aace208760f1eee6aa4fae766b45d947df85bc831cde77009cdb4720098
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.1.3"
   petitparser:
     dependency: transitive
     description:
@@ -763,6 +921,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "3.1.4"
+  uuid:
+    dependency: transitive
+    description:
+      name: uuid
+      sha256: "648e103079f7c64a36dc7d39369cabb358d377078a051d6ae2ad3aa539519313"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "3.0.7"
   vector_math:
     dependency: transitive
     description:

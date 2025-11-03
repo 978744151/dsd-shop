@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // 添加foundation导入用于kIsWeb
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nft_once/api/comment_api.dart';
-import 'package:nft_once/router/router.dart';
-import 'package:nft_once/utils/toast_util.dart';
+import 'package:business_savvy/api/comment_api.dart';
+import 'package:business_savvy/router/router.dart';
+import 'package:business_savvy/utils/toast_util.dart';
 
 import 'dart:io';
 import 'dart:convert';
@@ -384,7 +384,7 @@ class _CreateBlogPageState extends State<CreateBlogPage> {
                     maxLines: null,
                     style: TextStyle(fontSize: 16),
                     decoration: InputDecoration(
-                      hintText: '分享你的故事...',
+                      hintText: '书写你的想法...',
                       border: InputBorder.none,
                       hintStyle: TextStyle(color: Colors.grey[400]),
                     ),

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:ui' as ui;
 import 'package:image_gallery_saver/image_gallery_saver.dart';
-import 'package:nft_once/api/brand.dart';
-import 'package:nft_once/utils/toast_util.dart';
+import 'package:business_savvy/api/brand.dart';
+import 'package:business_savvy/utils/toast_util.dart';
 import '../utils/http_client.dart';
 import '../models/mall.dart';
 
@@ -1128,6 +1129,7 @@ class _ComparePageState extends State<ComparePage> {
       body: Stack(
         children: [
           _buildCustomHeader(),
+              
           // 隐藏的完整表格用于截图
       Positioned(
             left: -10000, // 移到屏幕外，不可见但可以截图

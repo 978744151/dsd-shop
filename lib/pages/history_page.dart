@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:nft_once/pages/blog_detail_page.dart';
-import 'package:nft_once/utils/toast_util.dart';
+import 'package:business_savvy/pages/blog_detail_page.dart';
+import 'package:business_savvy/utils/toast_util.dart';
 import '../utils/http_client.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';

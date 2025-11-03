@@ -127,9 +127,6 @@ class _NotificationsPageState extends State<NotificationsPage>
       setState(() {
         isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('加载通知失败：$e')),
-      );
     }
   }
 

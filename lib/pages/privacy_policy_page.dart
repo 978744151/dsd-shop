@@ -47,7 +47,8 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
           },
         ),
       )
-      ..loadRequest(Uri.parse('http://nfttools.cn/privacy-policy'));
+      ..loadRequest(Uri.parse(
+          'https://agreement-drcn.hispace.dbankcloud.cn/index.html?lang=zh&agreementId=1802222266591763904'));
   }
 
   @override

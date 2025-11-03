@@ -552,50 +552,39 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 40),
-                        // Logo或图标
-                        // Center(
-                        //   child: Container(
-                        //     width: 80,
-                        //     height: 80,
-                        //     decoration: BoxDecoration(
-                        //       shape: BoxShape.circle,
-                        //       color: const Color(0xFFFFFFFF),
-                        //       boxShadow: [
-                        //         BoxShadow(
-                        //           // ignore: deprecated_member_use
-                        //           color: Colors.black.withOpacity(0.1),
-                        //           blurRadius: 10,
-                        //           offset: const Offset(0, 5),
-                        //         ),
-                        //       ],
-                        //     ),
-                        //     child: const Icon(
-                        //       Icons.flutter_dash,
-                        //       size: 40,
-                        //       color: Color(0xFF1890FF),
-                        //     ),
+                        Row(
+                          children: [
+                             ClipRRect(
+                              borderRadius: BorderRadius.circular(30), // 圆角半径可调整
+                              child: Image.asset(
+                                'assets/images/icon.png',
+                                fit: BoxFit.cover,
+                                width: 60,
+                                height: 60,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                             Text(
+                              '请登录您的账号',
+                              style: TextStyle(
+                                fontSize: 16,
+                                // ignore: deprecated_member_use
+                                color: const Color(0xFFFFFFFF).withOpacity(0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                       
+                        // const SizedBox(height: 8),
+                        // Text(
+                        //   '请登录您的账号',
+                        //   style: TextStyle(
+                        //     fontSize: 16,
+                        //     // ignore: deprecated_member_use
+                        //     color: const Color(0xFFFFFFFF).withOpacity(0.8),
                         //   ),
                         // ),
                         const SizedBox(height: 40),
-                        const Text(
-                          '欢迎回来',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFFFFFFFF),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '请登录您的账号',
-                          style: TextStyle(
-                            fontSize: 16,
-                            // ignore: deprecated_member_use
-                            color: const Color(0xFFFFFFFF).withOpacity(0.8),
-                          ),
-                        ),
-                        const SizedBox(height: 48),
                         // 登录表单容器
                         Container(
                           decoration: BoxDecoration(

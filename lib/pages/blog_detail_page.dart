@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:convert'; // 添加这行
 import 'package:flutter/services.dart'; // 新增：用于剪贴板
-import 'package:nft_once/utils/toast_util.dart';
+import 'package:business_savvy/utils/toast_util.dart';
 
 import '../api/comment_api.dart';
 import 'package:intl/intl.dart'; // 添加这行
@@ -1449,7 +1449,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                         ),
                         const SizedBox(width: 8),
                         // 关注按钮
-                        if (blogInfo.user?['_id'] != userInfo['_id'])
+                        if (blogInfo.user?['_id'] != userInfo['_id'] && isShow)
                               TextButton(
                             onPressed: () async {
                               print(isFollowing);
@@ -1724,6 +1724,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                 const Divider(
                                   color: Color.fromARGB(68, 200, 207, 201),
                                 ),
+                                if(isShow)
                                 Row(
                                   children: [
                                     const Text(
@@ -1818,7 +1819,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                                             child: const Row(
                                               children: [
                                                 Text(
-                                                  '说点什么吧...',
+                                                  '发布自己的笔记...',
                                                   style: TextStyle(
                                                     fontSize: 14,
                                                     color: Colors.grey,
@@ -1838,6 +1839,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
                         ],
                       ),
                       // 修改 ListView.builder 中的调用
+                      if(isShow)
                       ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),

@@ -158,7 +158,7 @@ class _CustomBottomNavigationState extends State<CustomBottomNavigation> {
         // 移除 const
         const BottomNavigationBarItem(
           icon: SizedBox(),
-          label: '社区',
+          label: '发现',
         ),
 
         BottomNavigationBarItem(

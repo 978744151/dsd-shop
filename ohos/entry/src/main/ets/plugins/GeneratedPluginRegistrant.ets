@@ -1,6 +1,9 @@
 import { FlutterEngine, Log } from '@ohos/flutter_ohos';
+import GeolocatorOhosPlugin from 'flutter_geolocator_ohos';
+import GeocodingOhosPlugin from 'geocoding_ohos';
 import ImageGallerySaverPlugin from 'image_gallery_saver';
 import ImagePickerPlugin from 'image_picker_ohos';
+import PermissionHandlerPlugin from 'permission_handler_ohos';
 import SharedPreferencesPlugin from 'shared_preferences_ohos';
 import UrlLauncherPlugin from 'url_launcher_ohos';
 import WebViewFlutterPlugin from 'webview_flutter_ohos';
@@ -17,8 +20,11 @@ export class GeneratedPluginRegistrant {
 
   static registerWith(flutterEngine: FlutterEngine) {
     try {
+      flutterEngine.getPlugins()?.add(new GeolocatorOhosPlugin());
+      flutterEngine.getPlugins()?.add(new GeocodingOhosPlugin());
       flutterEngine.getPlugins()?.add(new ImageGallerySaverPlugin());
       flutterEngine.getPlugins()?.add(new ImagePickerPlugin());
+      flutterEngine.getPlugins()?.add(new PermissionHandlerPlugin());
       flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
       flutterEngine.getPlugins()?.add(new UrlLauncherPlugin());
       flutterEngine.getPlugins()?.add(new WebViewFlutterPlugin());

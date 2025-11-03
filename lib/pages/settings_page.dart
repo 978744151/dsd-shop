@@ -1,6 +1,6 @@
-import 'package:nft_once/pages/feedback_page.dart';
-import 'package:nft_once/pages/privacy_policy_page.dart';
-import 'package:nft_once/pages/user_agreement_page.dart';
+import 'package:business_savvy/pages/feedback_page.dart';
+import 'package:business_savvy/pages/privacy_policy_page.dart';
+import 'package:business_savvy/pages/user_agreement_page.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -555,6 +555,7 @@ class _SettingsPageState extends State<SettingsPage> {
           TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            enabled: false, 
             decoration: InputDecoration(
               hintText: '请输入您的邮箱地址（可选）',
               hintStyle: TextStyle(
