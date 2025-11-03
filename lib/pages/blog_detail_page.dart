@@ -121,9 +121,6 @@ class _BlogDetailPageState extends State<BlogDetailPage>
     fetchBlogDetail();
     fetchComments();
     fetchHistory();
-    checkFavoriteStatus(); // 检查收藏状态
-    _loadDislikedWords(); // 加载不喜欢词
-    
   }
 
   
@@ -147,6 +144,7 @@ class _BlogDetailPageState extends State<BlogDetailPage>
         });
         fetchFollowInfo(userInfo['_id']);
         checkFavoriteStatus(); // 获取用户信息后检查收藏状态
+        _loadDislikedWords(); // 加载不喜欢词
       }
     } catch (e) {
       print('获取用户信息失败: $e');
