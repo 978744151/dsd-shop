@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'dart:html' as html show IFrameElement, window;
 import 'dart:ui_web' as ui;
 
@@ -13,7 +12,7 @@ class PrivacyPolicyPage extends StatefulWidget {
 }
 
 class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
-  late final WebViewController _controller;
+  InAppWebViewController? _controller;
   bool _isLoading = true;
   final String _url =
       'https://agreement-drcn.hispace.dbankcloud.cn/index.html?lang=zh&agreementId=1802222266591763904';
@@ -21,9 +20,7 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
   @override
   void initState() {
     super.initState();
-    if (!kIsWeb) {
-      _initializeWebView();
-    } else {
+    if (kIsWeb) {
       _initializeWebFrame();
     }
   }
@@ -63,38 +60,6 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
     }
   }
 
-  void _initializeWebView() {
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (int progress) {
-            // 更新加载进度
-          },
-          onPageStarted: (String url) {
-            setState(() {
-              _isLoading = true;
-            });
-          },
-          onPageFinished: (String url) {
-            setState(() {
-              _isLoading = false;
-            });
-          },
-          onWebResourceError: (WebResourceError error) {
-            // 处理加载错误
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('页面加载失败: ${error.description}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(_url));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,52 +67,34 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1A1A1A),
-        title: const Text(
-          '隐私协议',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A1A),
-          ),
-        ),
         leading: IconButton(
-          icon: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.arrow_back_ios_new,
-              size: 16,
-              color: Color(0xFF666666),
-            ),
+          icon: const Icon(
+            Icons.arrow_back_ios,
+            color: Color(0xFF333333),
+            size: 20,
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        title: const Text(
+          '隐私协议',
+          style: TextStyle(
+            color: Color(0xFF333333),
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
         actions: [
-          // 刷新按钮
           IconButton(
-            icon: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(
-                Icons.refresh,
-                size: 16,
-                color: Color(0xFF666666),
-              ),
+            icon: const Icon(
+              Icons.refresh,
+              color: Color(0xFF333333),
+              size: 24,
             ),
             onPressed: () {
-              if (!kIsWeb) {
-                _controller.reload();
-              } else {
-                // Web端刷新页面
+              if (!kIsWeb && _controller != null) {
+                _controller!.reload();
+              } else if (kIsWeb) {
                 html.window.location.reload();
               }
             },
@@ -159,7 +106,35 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
         children: [
           // WebView内容 - 根据平台选择不同的实现
           if (!kIsWeb)
-            WebViewWidget(controller: _controller)
+            InAppWebView(
+              initialUrlRequest: URLRequest(url: WebUri(_url)),
+              initialSettings: InAppWebViewSettings(
+                javaScriptEnabled: true,
+                supportZoom: false,
+                useOnLoadResource: true,
+              ),
+              onWebViewCreated: (controller) {
+                _controller = controller;
+              },
+              onLoadStart: (controller, url) {
+                setState(() {
+                  _isLoading = true;
+                });
+              },
+              onLoadStop: (controller, url) {
+                setState(() {
+                  _isLoading = false;
+                });
+              },
+              onReceivedError: (controller, request, error) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('页面加载失败: ${error.description}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              },
+            )
           else
             const HtmlElementView(viewType: 'privacy-policy-iframe'),
 

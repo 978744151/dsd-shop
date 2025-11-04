@@ -25,9 +25,7 @@ dependencies:
   provider: ^6.0.0
   fluttertoast: ^8.2.12
   loading_indicator: ^3.1.1
-  webview_flutter: ^4.7.0
-  webview_flutter_android: ^3.16.0  # For Android
-  webview_flutter_wkwebview: ^3.23.0  # For iOS
+  flutter_inappwebview: ^6.0.0
   intl: ^0.18.1  # 添加这一行
   flutter_svg: ^2.0.17
   image_picker: ^1.1.2
@@ -71,4 +69,4 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/logo.jpg"    
+  image_path: "assets/logo.jpg"

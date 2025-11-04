@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   dynamic_color
   file_selector_windows
+  flutter_inappwebview_windows
   geolocator_windows
   permission_handler_windows
   rive_common
