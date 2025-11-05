@@ -102,18 +102,39 @@ class ComparisonTableWidget extends StatelessWidget {
   Widget _buildDefaultTable(BuildContext context) {
     if (comparisonData.isEmpty) return const SizedBox.shrink();
 
-    // 获取所有品牌
-    Set<String> allBrands = {};
+    // 获取所有品牌及其平均分值
+    final Map<String, List<double>> brandScoreMap = {};
     for (var data in comparisonData) {
       List<dynamic> brands = data['brands'] ?? [];
       for (var brand in brands) {
         String brandName =
             brand['brand']?['name'] ?? brand['brand']?['code'] ?? '未知品牌';
-        allBrands.add(brandName);
+        // 支持两种字段：averageScore 或 totalScore
+        final String? scoreStr = brand['totalScore']?.toString();
+        final double? score =
+            scoreStr != null ? double.tryParse(scoreStr) : null;
+        if (score != null) {
+          brandScoreMap.putIfAbsent(brandName, () => []);
+          brandScoreMap[brandName]!.add(score);
+        } else {
+          brandScoreMap.putIfAbsent(brandName, () => []);
+        }
       }
     }
 
-    List<String> sortedBrands = allBrands.toList()..sort();
+    // 计算平均分值并排序品牌名称
+    final List<Map<String, dynamic>> sortedBrands = brandScoreMap.entries
+        .map((e) {
+      final List<double> values = e.value;
+      final double avg = values.isEmpty
+          ? 0.0
+          : (values.reduce((a, b) => a + b) / values.length);
+      return {
+        'name': e.key,
+        'score': avg,
+      };
+    }).toList()
+      ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
 
     // 计算表格宽度
     double tableWidth = 154 + (comparisonData.length * 150.0);
@@ -148,10 +169,11 @@ class ComparisonTableWidget extends StatelessWidget {
           _buildStoreCountRow(),
 
           // 综合总分行
-          // _buildTotalScoreRow(),
+          _buildTotalScoreRow(),
 
-          // 品牌数据行
-          ...sortedBrands.map((brandName) => _buildBrandDataRow(brandName)),
+          // 品牌数据行（传入品牌名称与总分/平均分）
+          ...sortedBrands.map((b) =>
+              _buildBrandDataRow(b['name'] as String, (b['score'] as double))),
 
           // 免责声明
           _buildDisclaimer(),
@@ -386,15 +408,25 @@ class ComparisonTableWidget extends StatelessWidget {
     );
   }
 
+  Color _getBrandScoreColor(double score) {
+    if (score == 10.0) {
+      return Colors.purple; // 重奢10分
+    } else if (score > 5.0 && score < 10.0) {
+      return Colors.orange; // 5-10分
+    } else {
+      return Colors.red; // 1-5分
+    }
+  }
+
   /// 构建品牌数据行
-  Widget _buildBrandDataRow(String brandName) {
+  Widget _buildBrandDataRow(String brandName, double averageScore) {
     return Container(
-      height: 70,
+      height: 60,
       child: Row(
         children: [
           Container(
             width: 150,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(left: 10),
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(color: Colors.grey.shade300),
@@ -407,12 +439,35 @@ class ComparisonTableWidget extends StatelessWidget {
                 color: Colors.blue.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Text(
-                brandName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                ),
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  Text(
+                    brandName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                  if (averageScore > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 2, horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: _getBrandScoreColor(averageScore),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        averageScore.round().toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

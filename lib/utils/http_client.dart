@@ -107,7 +107,7 @@ class HttpClient {
     try {
       final data = json.decode(response.body);
       if (response.statusCode == 401) {
-        _showErrorMessage('登录已过期，请重新登录');
+        // _showErrorMessage('登录已过期，请重新登录');
 
         // ignore: depend_on_referenced_packages
         ToastUtil.showDanger("登录已过期，请重新登录");
@@ -120,7 +120,7 @@ class HttpClient {
       }
       if (data['success'] != true) {
         final message = data['message'] ?? data['error'] ?? '请求失败';
-        _showErrorMessage(message);
+        ToastUtil.showDanger(message);
         throw Exception(message); // 传递具体错误信息，避免catch块重复显示
       }
 

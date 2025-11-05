@@ -2,6 +2,7 @@ import 'package:adaptive_dialog/adaptive_dialog.dart';
 import 'package:business_savvy/pages/feedback_page.dart';
 import 'package:business_savvy/pages/privacy_policy_page.dart';
 import 'package:business_savvy/pages/user_agreement_page.dart';
+import 'package:business_savvy/pages/brand_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -655,6 +656,20 @@ class _SettingsPageState extends State<SettingsPage> {
           // ),
           // const SizedBox(height: 20),
           _buildModernSettingItem(
+            icon: Icons.tune,
+            title: '品牌设置',
+            subtitle: '为品牌自定义分数',
+            color: Colors.teal,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BrandSettingsPage(),
+                ),
+              );
+            },
+          ),
+          _buildModernSettingItem(
             icon: Icons.history,
             title: '浏览历史',
             subtitle: '查看您的浏览记录',
@@ -702,6 +717,7 @@ class _SettingsPageState extends State<SettingsPage> {
               // TODO: 实现隐私设置
             },
           ),
+
           _buildModernSettingItem(
             icon: Icons.help_outline,
             title: '帮助与反馈',

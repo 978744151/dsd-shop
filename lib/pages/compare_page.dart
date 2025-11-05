@@ -1,3 +1,4 @@
+import 'package:business_savvy/pages/brand_settings_page.dart';
 import 'package:business_savvy/pages/feedback_page.dart';
 import 'package:business_savvy/utils/screenshot_util.dart';
 import 'package:flutter/material.dart';
@@ -90,6 +91,7 @@ class _ComparePageState extends State<ComparePage> {
   List<Map<String, dynamic>> brands = [];
   List<String> selectedBrandIds = [];
   List<String> selectedBrandNames = [];
+  Map<String, String> brandScores = {}; // 品牌分值输入
 
   // 获取当前类型的选中ID列表
   List<String> get _selectedIds =>
@@ -335,8 +337,15 @@ class _ComparePageState extends State<ComparePage> {
             .map((brand) => {
                   'id': brand['_id'].toString(),
                   'name': brand['name'].toString(),
+                  // 默认附带后端返回的分数（若有）
+                  'score': brand['score']?.toString(),
                 })
             .toList();
+        // 默认给 brandScores 赋值为品牌 id -> score
+        brandScores.clear();
+        for (final b in brands) {
+          brandScores[b['id']] = b['score']?.toString() ?? '';
+        }
       }
     } catch (e) {
       print('加载品牌数据失败: $e');
@@ -344,6 +353,7 @@ class _ComparePageState extends State<ComparePage> {
   }
 
   void _openSelectionDialogSafely() {
+    _loadBrands();
     if (_isSelectionSheetOpen) {
       Navigator.of(context).pop();
       Future.microtask(() => _showSelectionDialog());
@@ -899,10 +909,37 @@ class _ComparePageState extends State<ComparePage> {
                         setBrandModalState(() {
                           selectedBrandIds.clear();
                           selectedBrandNames.clear();
+                          brandScores.clear();
                         });
                       },
                       child: Text(
                         '清空',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    GestureDetector(
+                      onTap: () {
+                        setBrandModalState(() {
+                          selectedBrandIds.clear();
+                          selectedBrandNames.clear();
+                          for (final b in brands) {
+                            selectedBrandIds.add(b['id']);
+                            selectedBrandNames.add(b['name']);
+                            // 若 brandScores 缺失或为空，填充为默认 score
+                            final cur = brandScores[b['id']];
+                            if (cur == null || cur.toString().trim().isEmpty) {
+                              brandScores[b['id']] =
+                                  b['score']?.toString() ?? '';
+                            }
+                          }
+                        });
+                      },
+                      child: Text(
+                        '全选',
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).primaryColor,
@@ -935,20 +972,61 @@ class _ComparePageState extends State<ComparePage> {
                   itemBuilder: (context, index) {
                     final brand = brands[index];
                     final isSelected = selectedBrandIds.contains(brand['id']);
-                    return CheckboxListTile(
-                      title: Text(brand['name']),
-                      value: isSelected,
-                      onChanged: (bool? value) {
-                        setBrandModalState(() {
-                          if (value == true) {
-                            selectedBrandIds.add(brand['id']);
-                            selectedBrandNames.add(brand['name']);
-                          } else {
-                            selectedBrandIds.remove(brand['id']);
-                            selectedBrandNames.remove(brand['name']);
-                          }
-                        });
-                      },
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: isSelected,
+                            onChanged: (bool? value) {
+                              setBrandModalState(() {
+                                if (value == true) {
+                                  selectedBrandIds.add(brand['id']);
+                                  selectedBrandNames.add(brand['name']);
+                                } else {
+                                  selectedBrandIds.remove(brand['id']);
+                                  selectedBrandNames.remove(brand['name']);
+                                  brandScores.remove(brand['id']);
+                                }
+                              });
+                            },
+                          ),
+                          Expanded(
+                            child: Text(
+                              brand['name'],
+                              style: const TextStyle(fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          SizedBox(
+                            width: 90,
+                            child: TextFormField(
+                              initialValue: brandScores[brand['id']] ??
+                                  (brand['score']?.toString() ?? ''),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                              textAlign: TextAlign.center,
+                              decoration: const InputDecoration(
+                                hintText: '分值',
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 8),
+                                border: OutlineInputBorder(),
+                              ),
+                              onChanged: (val) {
+                                setBrandModalState(() {
+                                  final v = val.trim();
+                                  brandScores[brand['id']] = v.isEmpty
+                                      ? (brand['score']?.toString() ?? '')
+                                      : v;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -963,6 +1041,37 @@ class _ComparePageState extends State<ComparePage> {
                       foregroundColor: Colors.white,
                     ),
                     onPressed: () {
+                      // 如果存在任一分数输入，则所有选中的品牌必须填写分数且为数字
+                      final bool hasAnyScore = selectedBrandIds.any((id) {
+                        final v = brandScores[id];
+                        return v != null && v.toString().trim().isNotEmpty;
+                      });
+
+                      if (hasAnyScore) {
+                        // 检查是否所有选中的品牌都填写了分数
+                        final bool allFilled = selectedBrandIds.every((id) {
+                          final v = brandScores[id];
+                          return v != null && v.toString().trim().isNotEmpty;
+                        });
+                        if (!allFilled) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('请为所有已选品牌填写分数')),
+                          );
+                          return;
+                        }
+                        // 检查分数是否为数字
+                        final bool allNumeric = selectedBrandIds.every((id) {
+                          final v = brandScores[id]!;
+                          return double.tryParse(v.toString().trim()) != null;
+                        });
+                        if (!allNumeric) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('分数需为数字')),
+                          );
+                          return;
+                        }
+                      }
+
                       Navigator.pop(context);
                       setModalState(() {});
                       setState(() {
@@ -1148,7 +1257,8 @@ class _ComparePageState extends State<ComparePage> {
         'ids': _selectedIds,
         'type': _selectedType,
         'brandIds': selectedBrandIds,
-        'saveReport': saveReport
+        'brandScores': brandScores,
+        'saveReport': saveReport,
       });
 
       if (response['success'] == true) {
@@ -1400,6 +1510,7 @@ class _ComparePageState extends State<ComparePage> {
                   ),
                   child: Text(
                     _selectedIds.isEmpty ? '点击选择' : '重新选择',
+                    style: TextStyle(fontSize: 12),
                   ),
                 ),
               ),
@@ -1432,7 +1543,31 @@ class _ComparePageState extends State<ComparePage> {
               //     ),
               //   ),
               // ],
+              const SizedBox(width: 8),
 
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                      builder: (context) => const BrandSettingsPage(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.tune, size: 16),
+                  label: const Text(
+                    '定义分值',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
               // 生成表格图片按钮
               if (_comparisonData.isNotEmpty) ...[
                 const SizedBox(width: 8),
@@ -1440,7 +1575,10 @@ class _ComparePageState extends State<ComparePage> {
                   child: ElevatedButton.icon(
                     onPressed: _captureAndShowImage,
                     icon: const Icon(Icons.camera_alt, size: 16),
-                    label: const Text('生成图片'),
+                    label: const Text(
+                      '生成图片',
+                      style: TextStyle(fontSize: 12),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
@@ -1458,7 +1596,10 @@ class _ComparePageState extends State<ComparePage> {
                   child: ElevatedButton.icon(
                     onPressed: () => _fetchComparisonData(saveReport: true),
                     icon: const Icon(Icons.download, size: 16),
-                    label: const Text('保存报告'),
+                    label: const Text(
+                      '保存报告',
+                      style: TextStyle(fontSize: 12),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,

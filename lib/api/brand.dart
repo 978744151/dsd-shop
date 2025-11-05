@@ -10,6 +10,9 @@ class brandApi {
   static const String getComparisonReports = 'map/comparison/reports';
   static String getComparisonReportsDetail(id) => 'map/comparison/reports/$id';
 
+  // 新增：保存品牌分数
+  static const String setBrandScores = 'admin/brands-scores';
+
   // 地址相关API
   static const String getAddressList = 'user/addresses';
   static const String getDefaultAddress = 'user/addresses/default';

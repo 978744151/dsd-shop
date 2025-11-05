@@ -50,10 +50,6 @@ final router = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
-          path: '/feedback',
-          builder: (context, state) => const FeedbackPage(),
-        ),
-        GoRoute(
               path: '/',
               builder: (context, state) => const HomePage(),
               routes: [
@@ -177,7 +173,8 @@ final router = GoRouter(
       path: '/follow',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final initialTabIndex = int.tryParse(state.queryParameters['tab'] ?? '0') ?? 0;
+        final initialTabIndex =
+            int.tryParse(state.queryParameters['tab'] ?? '0') ?? 0;
         return FollowPage(initialTabIndex: initialTabIndex);
       },
     ),
@@ -216,6 +213,10 @@ final router = GoRouter(
       path: '/blacklist',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const BlacklistPage(),
+    ),
+    GoRoute(
+      path: '/feedback',
+      builder: (context, state) => const FeedbackPage(),
     ),
   ],
 );

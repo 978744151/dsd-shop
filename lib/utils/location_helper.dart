@@ -54,48 +54,43 @@ class LocationHelper {
   /// 根据坐标获取详细地址信息
   static Future<AddressModel?> getDetailedAddressFromCoordinates(
       double latitude, double longitude) async {
-    try {
-      List<Placemark> placemarks =
-          await placemarkFromCoordinates(latitude, longitude);
+    List<Placemark> placemarks =
+        await placemarkFromCoordinates(latitude, longitude);
 
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        print('获取位置成功: $place');
-        String province = place.administrativeArea ?? '';
-        String city = place.locality ?? place.subAdministrativeArea ?? '';
-        String district = place.subLocality ?? '';
-        String street = place.street ?? '';
-        String detail = place.name ?? '';
+    if (placemarks.isNotEmpty) {
+      Placemark place = placemarks[0];
+      print('获取位置成功: $place');
+      String province = place.administrativeArea ?? '';
+      String city = place.locality ?? place.subAdministrativeArea ?? '';
+      String district = place.subLocality ?? '';
+      String street = place.street ?? '';
+      String detail = place.name ?? '';
 
-        // 构建完整地址
-        String fullDetail = '';
-        if (street.isNotEmpty) fullDetail += street;
-        if (detail.isNotEmpty && detail != street) {
-          fullDetail += (fullDetail.isNotEmpty ? ' ' : '') + detail;
-        }
-
-        return AddressModel(
-          id: 'current_location',
-          name: '当前位置',
-          province: province,
-          city: city,
-          district: district,
-          detail: fullDetail,
-          phone: '',
-          isDefault: false,
-          // 注意：geocoding库无法直接获取省市ID，这里使用名称作为临时ID
-          // 在实际应用中，你可能需要调用额外的API来获取真实的省市ID
-          provinceId: _generateIdFromName(province),
-          cityId: _generateIdFromName(city),
-          districtId: _generateIdFromName(district),
-        );
+      // 构建完整地址
+      String fullDetail = '';
+      if (street.isNotEmpty) fullDetail += street;
+      if (detail.isNotEmpty && detail != street) {
+        fullDetail += (fullDetail.isNotEmpty ? ' ' : '') + detail;
       }
 
-      return null;
-    } catch (e) {
-      print('地址解析失败: $e');
-      return null;
+      return AddressModel(
+        id: 'current_location',
+        name: '当前位置',
+        province: province,
+        city: city,
+        district: district,
+        detail: fullDetail,
+        phone: '',
+        isDefault: false,
+        // 注意：geocoding库无法直接获取省市ID，这里使用名称作为临时ID
+        // 在实际应用中，你可能需要调用额外的API来获取真实的省市ID
+        provinceId: _generateIdFromName(province),
+        cityId: _generateIdFromName(city),
+        districtId: _generateIdFromName(district),
+      );
     }
+
+    return null;
   }
 
   /// 根据坐标获取地址信息（保持向后兼容）
