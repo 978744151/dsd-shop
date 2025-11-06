@@ -1632,6 +1632,7 @@ class _ComparePageState extends State<ComparePage> {
           showScreenshotButton: false, // 因为上面已经有截图按钮了
           screenshotController: _comparisonTableController,
           columnColors: _getColumnColors(),
+          isCity: _selectedType == 'city',
         ),
       ),
     );

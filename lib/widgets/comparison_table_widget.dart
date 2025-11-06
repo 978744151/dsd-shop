@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:screenshot/screenshot.dart';
 import '../utils/screenshot_util.dart';
+import '../widgets/store_detail_dialog.dart';
+import '../models/coach_data.dart';
 
 /// 对比表格组件，可复用的表格展示和截图功能
 class ComparisonTableWidget extends StatelessWidget {
@@ -11,6 +13,7 @@ class ComparisonTableWidget extends StatelessWidget {
   final Widget Function(List<Map<String, dynamic>> data)? customTableBuilder;
   final Color headerBackgroundColor;
   final List<Color>? columnColors;
+  final bool isCity; // 是否为城市选择，用于控制字体大小
 
   const ComparisonTableWidget({
     Key? key,
@@ -21,6 +24,7 @@ class ComparisonTableWidget extends StatelessWidget {
     this.customTableBuilder,
     this.headerBackgroundColor = const Color(0xFFF5F5F5),
     this.columnColors,
+    this.isCity = false,
   }) : super(key: key);
 
   @override
@@ -137,14 +141,14 @@ class ComparisonTableWidget extends StatelessWidget {
       ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
 
     // 计算表格宽度
-    double tableWidth = 154 + (comparisonData.length * 150.0);
+    double tableWidth = 142 + (comparisonData.length * 110.0);
 
     return Container(
       width: tableWidth,
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: Colors.grey.shade300, width: 2),
+        border: Border.all(color: Colors.grey.shade300, width: 1),
         // borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -189,48 +193,55 @@ class ComparisonTableWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: headerBackgroundColor,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300, width: 2),
+          bottom: BorderSide(color: Colors.grey.shade300, width: 1),
         ),
       ),
       child: Row(
         children: [
           // 固定列表头
           Container(
-            width: 150,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: const Text(
-              '品牌',
-              textAlign: TextAlign.left,
+            width: 140,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade300),
+              ),
+            ),
+            alignment: Alignment.centerLeft,
+            child: Text(
+              title,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontSize: isCity ? 14 : 10, // 根据是否选择城市设置字体大小
+                color: Colors.black,
               ),
             ),
           ),
-          // 动态列表头
+          // 动态列头
           ...comparisonData.asMap().entries.map((entry) {
             int index = entry.key;
             var data = entry.value;
-            String name = data['location']['name'] ?? '未知';
+            String locationName =
+                data['location']?['name']?.toString() ?? '未知地区';
             Color columnColor = _getColumnColor(index);
             return Container(
-              width: 150,
-              padding: const EdgeInsets.all(12),
+              width: 110,
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.1),
+                color: columnColor.withOpacity(0.2),
                 border: Border(
                   left: BorderSide(color: Colors.grey.shade300),
+                  bottom: BorderSide(color: Colors.grey.shade300),
                 ),
               ),
-              alignment: Alignment.centerLeft,
+              alignment: Alignment.center,
               child: Text(
-                name,
+                locationName,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: columnColor.withOpacity(0.8),
+                  fontSize: isCity ? 14 : 10, // 根据是否选择城市设置字体大小
+                  color: columnColor,
                 ),
-                textAlign: TextAlign.center,
               ),
             );
           }).toList(),
@@ -246,7 +257,7 @@ class ComparisonTableWidget extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 150,
+            width: 140,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               border: Border(
@@ -259,33 +270,33 @@ class ComparisonTableWidget extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: Colors.orange,
+                color: Colors.blue,
               ),
             ),
           ),
           ...comparisonData.asMap().entries.map((entry) {
             int index = entry.key;
             var data = entry.value;
-            List<dynamic> brands = data['brands'] ?? [];
-            int brandCount = brands.length;
+            String totalStores =
+                data['summary']?['totalStores']?.toString() ?? '0';
             Color columnColor = _getColumnColor(index);
             return Container(
-              width: 150,
+              width: 110,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.1),
+                color: columnColor.withOpacity(0.2),
                 border: Border(
                   left: BorderSide(color: Colors.grey.shade300),
                   bottom: BorderSide(color: Colors.grey.shade300),
                 ),
               ),
-              alignment: Alignment.centerLeft,
+              alignment: Alignment.center,
               child: Text(
-                '总计: $brandCount',
+                totalStores,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  color: columnColor.withOpacity(0.8),
+                  color: columnColor,
                 ),
               ),
             );
@@ -302,7 +313,7 @@ class ComparisonTableWidget extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 150,
+            width: 140,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               border: Border(
@@ -326,79 +337,22 @@ class ComparisonTableWidget extends StatelessWidget {
                 data['summary']?['totalStores']?.toString() ?? '0';
             Color columnColor = _getColumnColor(index);
             return Container(
-              width: 150,
+              width: 110,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.1),
+                color: columnColor.withOpacity(0.2),
                 border: Border(
                   left: BorderSide(color: Colors.grey.shade300),
                   bottom: BorderSide(color: Colors.grey.shade300),
                 ),
               ),
-              alignment: Alignment.centerLeft,
+              alignment: Alignment.center,
               child: Text(
                 totalStores,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  color: columnColor.withOpacity(0.8),
-                ),
-              ),
-            );
-          }).toList(),
-        ],
-      ),
-    );
-  }
-
-  /// 构建综合总分行
-  Widget _buildTotalScoreRow() {
-    return Container(
-      height: 60,
-      child: Row(
-        children: [
-          Container(
-            width: 150,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade300),
-              ),
-            ),
-            alignment: Alignment.centerLeft,
-            child: const Text(
-              '综合总分',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: Colors.green,
-              ),
-            ),
-          ),
-          ...comparisonData.asMap().entries.map((entry) {
-            int index = entry.key;
-            var data = entry.value;
-            double totalScore = double.tryParse(
-                    data['summary']?['totalScore']?.toString() ?? '0.0') ??
-                0.0;
-            Color columnColor = _getColumnColor(index);
-            return Container(
-              width: 150,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.1),
-                border: Border(
-                  left: BorderSide(color: Colors.grey.shade300),
-                  bottom: BorderSide(color: Colors.grey.shade300),
-                ),
-              ),
-              alignment: Alignment.centerLeft,
-              child: Text(
-                totalScore.toStringAsFixed(1),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: _getScoreColor(totalScore),
+                  color: columnColor,
                 ),
               ),
             );
@@ -418,6 +372,62 @@ class ComparisonTableWidget extends StatelessWidget {
     }
   }
 
+  /// 构建综合总分行
+  Widget _buildTotalScoreRow() {
+    return Container(
+      height: 60,
+      child: Row(
+        children: [
+          Container(
+            width: 140,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade300),
+              ),
+            ),
+            alignment: Alignment.centerLeft,
+            child: const Text(
+              '综合总分',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Colors.blue,
+              ),
+            ),
+          ),
+          ...comparisonData.asMap().entries.map((entry) {
+            int index = entry.key;
+            var data = entry.value;
+            String totalScore =
+                data['summary']?['totalScore']?.toString() ?? '0';
+            Color columnColor = _getColumnColor(index);
+            return Container(
+              width: 110,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: columnColor.withOpacity(0.2),
+                border: Border(
+                  left: BorderSide(color: Colors.grey.shade300),
+                  bottom: BorderSide(color: Colors.grey.shade300),
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                totalScore,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: Colors.black,
+                ),
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
   /// 构建品牌数据行
   Widget _buildBrandDataRow(String brandName, double averageScore) {
     return Container(
@@ -425,7 +435,7 @@ class ComparisonTableWidget extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 150,
+            width: 140,
             padding: const EdgeInsets.only(left: 10),
             decoration: BoxDecoration(
               border: Border(
@@ -436,7 +446,7 @@ class ComparisonTableWidget extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                // color: Color(0xFF4e65ff).withOpacity(0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Wrap(
@@ -448,6 +458,7 @@ class ComparisonTableWidget extends StatelessWidget {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 11,
+                      color: Colors.black,
                     ),
                   ),
                   if (averageScore > 0)
@@ -481,32 +492,68 @@ class ComparisonTableWidget extends StatelessWidget {
             );
             Color columnColor = _getColumnColor(index);
             return Container(
-              width: 150,
+              width: 110,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.1),
+                color: columnColor.withOpacity(0.2),
                 border: Border(
                   left: BorderSide(color: Colors.grey.shade300),
                   bottom: BorderSide(color: Colors.grey.shade300),
                 ),
               ),
-              alignment: Alignment.centerLeft,
+              alignment: Alignment.center,
               child: brandData == null
-                  ? Text('-',
-                      style: TextStyle(color: columnColor.withOpacity(0.6)))
-                  : Text(
-                      '${brandData['storeCount'] ?? 0}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: columnColor.withOpacity(0.8),
-                      ),
-                    ),
+                  ? Text('', style: TextStyle(color: columnColor))
+                  : Builder(builder: (ctx) {
+                      return InkWell(
+                        onTap: () {
+                          final String locationName =
+                              data['location']?['name']?.toString() ?? '';
+                          final List<dynamic> rawStores =
+                              (brandData['stores'] as List<dynamic>?) ?? [];
+                          final List<CoachData> stores = rawStores
+                              .map((e) => CoachData.fromJson(
+                                  (e as Map<String, dynamic>)))
+                              .toList();
+                          final String dialogTitle =
+                              '${locationName.isEmpty ? '' : '$locationName - '}$brandName 门店';
+                          _showStoreDialog(ctx, dialogTitle, stores);
+                        },
+                        child: Text(
+                          '${brandData['storeCount'] ?? 0}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Colors.black,
+                          ),
+                        ),
+                      );
+                    }),
             );
           }).toList(),
         ],
       ),
     );
+  }
+
+  void _showStoreDialog(
+      BuildContext context, String title, List<CoachData> stores) {
+    // 避免在构建阶段进行导航，延迟到帧结束后执行
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: context,
+        useRootNavigator: true,
+        barrierDismissible: true,
+        builder: (_) => Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: StoreDetailDialog(
+            title: title,
+            stores: stores,
+            onClose: () => Navigator.of(context, rootNavigator: true).pop(),
+          ),
+        ),
+      );
+    });
   }
 
   /// 构建免责声明
@@ -537,19 +584,18 @@ class ComparisonTableWidget extends StatelessWidget {
     if (columnColors != null && index < columnColors!.length) {
       return columnColors![index];
     }
-
     // 默认颜色列表
-    const List<Color> defaultColors = [
+    final defaultColors = [
       Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.red,
-      Colors.teal,
-      Colors.indigo,
       Colors.pink,
-      Colors.amber,
+      Colors.orange,
+      Colors.green,
+      Colors.purple,
       Colors.cyan,
+      Colors.teal,
+      Colors.amber,
+      Colors.indigo,
+      Colors.lime,
     ];
     return defaultColors[index % defaultColors.length];
   }

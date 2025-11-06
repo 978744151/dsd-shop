@@ -21,7 +21,7 @@ class ScreenshotUtil {
       // 捕获截图
       final Uint8List? image = await controller.capture(
         delay: const Duration(milliseconds: 200),
-        pixelRatio: 3.0, // 高像素比例，确保图片质量和完整性
+        pixelRatio: MediaQuery.of(context).devicePixelRatio, // 高像素比例，确保图片质量和完整性
       );
 
       if (context.mounted && image != null) {

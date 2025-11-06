@@ -941,7 +941,14 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                     setState(() {
                       provinceId = province['adcode'];
                     });
+                    final municipalities = ['北京市', '上海市', '天津市', '重庆市'];
 
+                    if (municipalities.contains(province['name'])) {
+                      // 直辖市直接显示门店列表，使用省份ID作为城市ID
+                      _showStoreBottomSheet(
+                          province['adcode'], province['name']);
+                      return;
+                    }
                     _drillDownToProvince(name);
                   } else {
                     _showStoreBottomSheet(province['id'], province['name']);
