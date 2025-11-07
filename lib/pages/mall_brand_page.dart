@@ -32,7 +32,8 @@ class _MallBrandPageState extends State<MallBrandPage> {
     });
 
     try {
-      final response = await HttpClient.get('mall/${widget.mallId}/brands');
+      final response =
+          await HttpClient.get('mall/${widget.mallId}/brands?limit=999');
 
       if (response['success'] == true) {
         final List<dynamic> brandsData = response['data']['brands'] ?? [];

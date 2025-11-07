@@ -14,7 +14,10 @@ class ComparisonTableWidget extends StatelessWidget {
   final Color headerBackgroundColor;
   final List<Color>? columnColors;
   final bool isCity; // 是否为城市选择，用于控制字体大小
-
+  final Color headerTextColor;
+  final Color cellTextColor;
+  final Color borderColor;
+  final Color firstColumnColor;
   const ComparisonTableWidget({
     Key? key,
     required this.comparisonData,
@@ -25,6 +28,10 @@ class ComparisonTableWidget extends StatelessWidget {
     this.headerBackgroundColor = const Color(0xFFF5F5F5),
     this.columnColors,
     this.isCity = false,
+    this.headerTextColor = Colors.black,
+    this.cellTextColor = Colors.black,
+    this.borderColor = const Color(0xFFe0e0e0),
+    this.firstColumnColor = const Color(0xFFF5F5F5),
   }) : super(key: key);
 
   @override
@@ -34,18 +41,6 @@ class ComparisonTableWidget extends StatelessWidget {
 
     return Column(
       children: [
-        // Padding(
-        //   padding: const EdgeInsets.all(0),
-        //   child: ElevatedButton.icon(
-        //     onPressed: () => _captureAndShowImage(context, controller),
-        //     icon: const Icon(Icons.camera_alt),
-        //     label: const Text('生成表格图片'),
-        //     style: ElevatedButton.styleFrom(
-        //       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        //     ),
-        //   ),
-        // ),
-
         // 可滚动的表格显示区域
         Expanded(
           child: SingleChildScrollView(
@@ -64,7 +59,6 @@ class ComparisonTableWidget extends StatelessWidget {
         if (showScreenshotButton)
           Container(
             width: double.infinity,
-            // padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             decoration: const BoxDecoration(
               color: Colors.white,
             ),
@@ -92,6 +86,8 @@ class ComparisonTableWidget extends StatelessWidget {
     );
   }
 
+  // 筛选面板入口已移动至 ComparePage 的 AppBar 区域
+
   /// 生成截图并显示
   Future<void> _captureAndShowImage(
       BuildContext context, ScreenshotController controller) async {
@@ -113,7 +109,6 @@ class ComparisonTableWidget extends StatelessWidget {
       for (var brand in brands) {
         String brandName =
             brand['brand']?['name'] ?? brand['brand']?['code'] ?? '未知品牌';
-        // 支持两种字段：averageScore 或 totalScore
         final String? scoreStr = brand['totalScore']?.toString();
         final double? score =
             scoreStr != null ? double.tryParse(scoreStr) : null;
@@ -126,7 +121,6 @@ class ComparisonTableWidget extends StatelessWidget {
       }
     }
 
-    // 计算平均分值并排序品牌名称
     final List<Map<String, dynamic>> sortedBrands = brandScoreMap.entries
         .map((e) {
       final List<double> values = e.value;
@@ -140,7 +134,6 @@ class ComparisonTableWidget extends StatelessWidget {
     }).toList()
       ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
 
-    // 计算表格宽度
     double tableWidth = 142 + (comparisonData.length * 110.0);
 
     return Container(
@@ -148,11 +141,10 @@ class ComparisonTableWidget extends StatelessWidget {
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: Colors.grey.shade300, width: 1),
-        // borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey,
             spreadRadius: 2,
             blurRadius: 8,
             offset: const Offset(0, 4),
@@ -163,23 +155,12 @@ class ComparisonTableWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 表头
           _buildTableHeader(),
-
-          // 品牌数量行
           _buildBrandCountRow(),
-
-          // 门店数量行
           _buildStoreCountRow(),
-
-          // 综合总分行
           _buildTotalScoreRow(),
-
-          // 品牌数据行（传入品牌名称与总分/平均分）
           ...sortedBrands.map((b) =>
               _buildBrandDataRow(b['name'] as String, (b['score'] as double))),
-
-          // 免责声明
           _buildDisclaimer(),
         ],
       ),
@@ -193,7 +174,7 @@ class ComparisonTableWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: headerBackgroundColor,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+          bottom: BorderSide(color: borderColor),
         ),
       ),
       child: Row(
@@ -202,18 +183,13 @@ class ComparisonTableWidget extends StatelessWidget {
           Container(
             width: 140,
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade300),
-              ),
-            ),
             alignment: Alignment.centerLeft,
             child: Text(
               title,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: isCity ? 14 : 10, // 根据是否选择城市设置字体大小
-                color: Colors.black,
+                fontSize: isCity ? 14 : 14, // 根据是否选择城市设置字体大小
+                color: headerTextColor,
               ),
             ),
           ),
@@ -228,19 +204,22 @@ class ComparisonTableWidget extends StatelessWidget {
               width: 110,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.2),
+                color: columnColor,
                 border: Border(
-                  left: BorderSide(color: Colors.grey.shade300),
-                  bottom: BorderSide(color: Colors.grey.shade300),
+                  left: BorderSide(color: borderColor),
+                  // bottom: BorderSide(color: Colors.grey.shade300),
                 ),
               ),
               alignment: Alignment.center,
               child: Text(
                 locationName,
+                maxLines: 2,
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: isCity ? 14 : 10, // 根据是否选择城市设置字体大小
-                  color: columnColor,
+                  fontSize: isCity ? 14 : 11, // 根据是否选择城市设置字体大小
+                  color: cellTextColor,
                 ),
               ),
             );
@@ -260,17 +239,17 @@ class ComparisonTableWidget extends StatelessWidget {
             width: 140,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade300),
-              ),
-            ),
+                border: Border(
+                  bottom: BorderSide(color: borderColor),
+                ),
+                color: firstColumnColor),
             alignment: Alignment.centerLeft,
-            child: const Text(
+            child: Text(
               '品牌数量',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: Colors.blue,
+                color: headerTextColor,
               ),
             ),
           ),
@@ -278,16 +257,16 @@ class ComparisonTableWidget extends StatelessWidget {
             int index = entry.key;
             var data = entry.value;
             String totalStores =
-                data['summary']?['totalStores']?.toString() ?? '0';
+                data['summary']?['totalBrands']?.toString() ?? '0';
             Color columnColor = _getColumnColor(index);
             return Container(
               width: 110,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.2),
+                color: columnColor,
                 border: Border(
-                  left: BorderSide(color: Colors.grey.shade300),
-                  bottom: BorderSide(color: Colors.grey.shade300),
+                  left: BorderSide(color: borderColor),
+                  bottom: BorderSide(color: borderColor),
                 ),
               ),
               alignment: Alignment.center,
@@ -296,7 +275,7 @@ class ComparisonTableWidget extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  color: columnColor,
+                  color: cellTextColor,
                 ),
               ),
             );
@@ -316,17 +295,17 @@ class ComparisonTableWidget extends StatelessWidget {
             width: 140,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade300),
-              ),
-            ),
+                border: Border(
+                  bottom: BorderSide(color: borderColor),
+                ),
+                color: firstColumnColor),
             alignment: Alignment.centerLeft,
-            child: const Text(
+            child: Text(
               '门店数量',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: Colors.blue,
+                color: headerTextColor,
               ),
             ),
           ),
@@ -340,10 +319,10 @@ class ComparisonTableWidget extends StatelessWidget {
               width: 110,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.2),
+                color: columnColor,
                 border: Border(
-                  left: BorderSide(color: Colors.grey.shade300),
-                  bottom: BorderSide(color: Colors.grey.shade300),
+                  left: BorderSide(color: borderColor),
+                  bottom: BorderSide(color: borderColor),
                 ),
               ),
               alignment: Alignment.center,
@@ -352,7 +331,7 @@ class ComparisonTableWidget extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  color: columnColor,
+                  color: cellTextColor,
                 ),
               ),
             );
@@ -382,17 +361,17 @@ class ComparisonTableWidget extends StatelessWidget {
             width: 140,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade300),
-              ),
-            ),
+                border: Border(
+                  bottom: BorderSide(color: borderColor),
+                ),
+                color: firstColumnColor),
             alignment: Alignment.centerLeft,
-            child: const Text(
+            child: Text(
               '综合总分',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: Colors.blue,
+                color: headerTextColor,
               ),
             ),
           ),
@@ -406,19 +385,19 @@ class ComparisonTableWidget extends StatelessWidget {
               width: 110,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.2),
+                color: columnColor,
                 border: Border(
-                  left: BorderSide(color: Colors.grey.shade300),
-                  bottom: BorderSide(color: Colors.grey.shade300),
+                  left: BorderSide(color: borderColor),
+                  bottom: BorderSide(color: borderColor),
                 ),
               ),
               alignment: Alignment.center,
               child: Text(
                 totalScore,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  color: Colors.black,
+                  color: cellTextColor,
                 ),
               ),
             );
@@ -439,14 +418,14 @@ class ComparisonTableWidget extends StatelessWidget {
             padding: const EdgeInsets.only(left: 10),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: Colors.grey.shade300),
+                bottom: BorderSide(color: borderColor),
               ),
+              color: firstColumnColor,
             ),
             alignment: Alignment.centerLeft,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
               decoration: BoxDecoration(
-                // color: Color(0xFF4e65ff).withOpacity(0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Wrap(
@@ -455,10 +434,10 @@ class ComparisonTableWidget extends StatelessWidget {
                 children: [
                   Text(
                     brandName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                      color: Colors.black,
+                      fontSize: 12,
+                      color: cellTextColor,
                     ),
                   ),
                   if (averageScore > 0)
@@ -495,15 +474,15 @@ class ComparisonTableWidget extends StatelessWidget {
               width: 110,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.2),
+                color: columnColor,
                 border: Border(
-                  left: BorderSide(color: Colors.grey.shade300),
-                  bottom: BorderSide(color: Colors.grey.shade300),
+                  left: BorderSide(color: borderColor),
+                  bottom: BorderSide(color: borderColor),
                 ),
               ),
               alignment: Alignment.center,
               child: brandData == null
-                  ? Text('', style: TextStyle(color: columnColor))
+                  ? Text('', style: TextStyle(color: cellTextColor))
                   : Builder(builder: (ctx) {
                       return InkWell(
                         onTap: () {
@@ -521,10 +500,10 @@ class ComparisonTableWidget extends StatelessWidget {
                         },
                         child: Text(
                           '${brandData['storeCount'] ?? 0}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
-                            color: Colors.black,
+                            color: cellTextColor,
                           ),
                         ),
                       );
@@ -564,11 +543,11 @@ class ComparisonTableWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         border: Border(
-          top: BorderSide(color: Colors.grey.shade300, width: 1),
+          top: BorderSide(color: borderColor, width: 1),
         ),
       ),
       child: const Text(
-        '懂商帝: 分值采用用户自定义输入分数,仅作统计参考',
+        '更多商业信息就在 懂商帝',
         style: TextStyle(
           fontSize: 12,
           color: Colors.grey,
@@ -580,12 +559,9 @@ class ComparisonTableWidget extends StatelessWidget {
   }
 
   /// 获取列颜色
-  Color _getColumnColor(int index) {
-    if (columnColors != null && index < columnColors!.length) {
-      return columnColors![index];
-    }
-    // 默认颜色列表
-    final defaultColors = [
+  Color _getColumnColor(int index, {String role = 'background'}) {
+    // 基础色板：优先使用外部传入的 columnColors
+    final List<Color> defaultColors = const [
       Colors.blue,
       Colors.pink,
       Colors.orange,
@@ -597,7 +573,28 @@ class ComparisonTableWidget extends StatelessWidget {
       Colors.indigo,
       Colors.lime,
     ];
-    return defaultColors[index % defaultColors.length];
+    final Color base = (columnColors != null && index < columnColors!.length)
+        ? columnColors![index]
+        : defaultColors[index % defaultColors.length];
+
+    if (role == 'background') {
+      return base;
+    }
+
+    // 根据亮度计算文字与边框颜色
+    final double luminance = base.computeLuminance();
+    final bool isDark = luminance < 0.5;
+    switch (role) {
+      case 'text':
+      case 'headerText':
+        return isDark ? Colors.white : Colors.black;
+      case 'border':
+        // 边框采用与文字同色的轻度透明以提升对比度
+        final Color overlay = isDark ? Colors.white : Colors.black;
+        return overlay.withOpacity(0.18);
+      default:
+        return base;
+    }
   }
 
   /// 获取分数颜色

@@ -13,12 +13,31 @@ import '../utils/http_client.dart';
 import '../models/mall.dart';
 import '../api/feedback_api.dart';
 import '../widgets/comparison_table_widget.dart';
+import '../widgets/comparison_filter_panel.dart';
 import '../services/screenshot_service.dart';
 import '../utils/screenshot_util.dart';
 
 // 全局颜色常量定义
 const Color kHeaderBackgroundColor = Color(0xFFF4F8FF);
 const tableLableWidth = 150;
+
+class ComparisonStyle {
+  final Color headerColor; // 表头背景色
+  final Color firstColumnColor; // 第一列背景色
+  final Color textColor; // 文字颜色（表头/单元格）
+  final Color borderColor; // 边框颜色
+  final Color firstColumnTextColor;
+  final List<Color> columnColors; // 动态列背景色列表
+
+  const ComparisonStyle({
+    this.firstColumnTextColor = Colors.white,
+    required this.headerColor,
+    required this.firstColumnColor,
+    required this.textColor,
+    required this.borderColor,
+    required this.columnColors,
+  });
+}
 
 class ComparePage extends StatefulWidget {
   final String? mallId;
@@ -53,6 +72,7 @@ class _ComparePageState extends State<ComparePage> {
   bool _isLoading = false;
   bool _isLoadingData = false;
   bool _isSelectionSheetOpen = false;
+  int _styleIndex = 1; // 0=暗黑, 1=标准(彩色), 2=商务
 
   // 反馈相关状态
   bool _isFeedbackSheetOpen = false;
@@ -106,26 +126,60 @@ class _ComparePageState extends State<ComparePage> {
       _selectedType == 'mall' ? _mallSelectedNames : _citySelectedNames;
 
   // 为不同列分配颜色的方法
-  Color _getColumnColor(int index) {
-    List<Color> colors = [
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.red,
-      Colors.teal,
-      Colors.indigo,
-      Colors.pink,
-      Colors.amber,
-      Colors.cyan,
-    ];
-    return colors[index % colors.length];
+
+  ComparisonStyle _getStyle() {
+    switch (_styleIndex) {
+      case 0: // 暗黑
+        return ComparisonStyle(
+          headerColor: Colors.black,
+          firstColumnColor: Colors.black,
+          textColor: Colors.white,
+          borderColor: const Color(0xFF374151),
+          columnColors: const [Colors.black],
+        );
+      case 2: // 商务
+        return ComparisonStyle(
+          headerColor: Colors.white,
+          firstColumnColor: Colors.white,
+          textColor: Colors.black,
+          borderColor: const Color(0xFFE2E8F0),
+          columnColors: const [Colors.white],
+        );
+      default: // 标准（彩色）
+        return ComparisonStyle(
+          headerColor: Colors.grey.shade100,
+          firstColumnColor: Colors.grey.shade50,
+          textColor: Colors.black,
+          firstColumnTextColor: Colors.black,
+          borderColor: Colors.grey.shade300,
+          columnColors: const [
+            Colors.blue,
+            Colors.purple,
+            Colors.green,
+            Colors.yellow,
+            Colors.teal,
+            Colors.red,
+            Colors.deepOrange,
+            Colors.pink,
+            Colors.grey,
+            Colors.amber,
+            Colors.cyan,
+            Colors.brown,
+            Colors.blueGrey,
+            Colors.deepPurple,
+          ],
+        );
+    }
   }
 
   // 获取所有列的颜色列表
   List<Color> _getColumnColors() {
+    final style = _getStyle();
+    final palette = style.columnColors;
     return List.generate(
-        _comparisonData.length, (index) => _getColumnColor(index));
+      _comparisonData.length,
+      (index) => palette[index % palette.length],
+    );
   }
 
   @override
@@ -444,6 +498,22 @@ class _ComparePageState extends State<ComparePage> {
                                 visualDensity: const VisualDensity(
                                     horizontal: -4, vertical: -4),
                                 backgroundColor: const Color(0xFFF5F5F5),
+                                deleteIcon: const Icon(Icons.close, size: 12),
+                                onDeleted: () {
+                                  final idx = _selectedNames.indexOf(name);
+                                  if (idx >= 0) {
+                                    if (_selectedType == 'mall') {
+                                      _mallSelectedIds.removeAt(idx);
+                                      _mallSelectedNames.removeAt(idx);
+                                      _mallComparisonData.clear();
+                                    } else {
+                                      _citySelectedIds.removeAt(idx);
+                                      _citySelectedNames.removeAt(idx);
+                                      _cityComparisonData.clear();
+                                    }
+                                  }
+                                  setModalState(() {});
+                                },
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
@@ -1290,6 +1360,15 @@ class _ComparePageState extends State<ComparePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      endDrawer: Drawer(
+        child: SafeArea(
+          child: ComparisonFilterPanel(
+            onClose: () => Navigator.of(context).pop(),
+            onStyleChanged: (i) => setState(() => _styleIndex = i),
+            initialStyleIndex: _styleIndex,
+          ),
+        ),
+      ),
       body: Stack(
         children: [
           _buildCustomHeader(),
@@ -1343,7 +1422,7 @@ class _ComparePageState extends State<ComparePage> {
                   padding: const EdgeInsets.all(16),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      // color: Colors.white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.white.withOpacity(0.3)),
                     ),
@@ -1402,6 +1481,11 @@ class _ComparePageState extends State<ComparePage> {
                               ),
                             ),
                           ),
+                        ),
+                        IconButton(
+                          tooltip: '筛选',
+                          icon: const Icon(Icons.menu, color: Colors.white),
+                          onPressed: () => _openFilterPanel(context),
                         ),
                       ],
                     ),
@@ -1466,23 +1550,34 @@ class _ComparePageState extends State<ComparePage> {
           //           spacing: 8,
           //           runSpacing: 4,
           //           children: _selectedNames
-          //               .map((name) => Container(
-          //                     padding: const EdgeInsets.symmetric(
-          //                         horizontal: 8, vertical: 4),
-          //                     decoration: BoxDecoration(
-          //                       color: Colors.blue[50],
-          //                       borderRadius: BorderRadius.circular(12),
-          //                       border: Border.all(
-          //                           color: Colors.blue.withOpacity(0.3)),
-          //                     ),
-          //                     child: Text(
-          //                       name,
-          //                       style: TextStyle(
-          //                         fontSize: 12,
-          //                         color: Colors.blue[700],
-          //                       ),
-          //                     ),
-          //                   ))
+          //               .map((name) => Chip(
+          //                 label: Text(name,
+          //                     style: const TextStyle(fontSize: 10)),
+          //                 materialTapTargetSize:
+          //                     MaterialTapTargetSize.shrinkWrap,
+          //                 visualDensity: const VisualDensity(
+          //                     horizontal: -4, vertical: -4),
+          //                 backgroundColor: const Color(0xFFF5F5F5),
+          //                 deleteIcon: const Icon(Icons.close, size: 12),
+          //                 onDeleted: () {
+          //                   final idx = _selectedNames.indexOf(name);
+          //                   if (idx >= 0) {
+          //                     if (_selectedType == 'mall') {
+          //                       _mallSelectedIds.removeAt(idx);
+          //                       _mallSelectedNames.removeAt(idx);
+          //                       _mallComparisonData.clear();
+          //                     } else {
+          //                       _citySelectedIds.removeAt(idx);
+          //                       _citySelectedNames.removeAt(idx);
+          //                       _cityComparisonData.clear();
+          //                     }
+          //                   }
+          //                   setState(() {});
+          //                 },
+          //                 shape: RoundedRectangleBorder(
+          //                   borderRadius: BorderRadius.circular(14),
+          //                 ),
+          //               ),
           //               .toList(),
           //         ),
           //       ],
@@ -1628,11 +1723,16 @@ class _ComparePageState extends State<ComparePage> {
         margin: const EdgeInsets.all(0),
         child: ComparisonTableWidget(
           comparisonData: _comparisonData,
-          title: '商场对比分析',
+          title: '对比分析',
           showScreenshotButton: false, // 因为上面已经有截图按钮了
           screenshotController: _comparisonTableController,
           columnColors: _getColumnColors(),
           isCity: _selectedType == 'city',
+          headerBackgroundColor: _getStyle().headerColor,
+          firstColumnColor: _getStyle().firstColumnColor,
+          headerTextColor: _getStyle().textColor,
+          borderColor: _getStyle().borderColor,
+          cellTextColor: _getStyle().textColor,
         ),
       ),
     );
@@ -1690,6 +1790,52 @@ class _ComparePageState extends State<ComparePage> {
       return Colors.red; // 1-5分
     }
   }
+
+  void _openFilterPanel(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: true,
+      barrierLabel: '筛选',
+      barrierColor: Colors.black45,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final offset =
+            Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+        return SlideTransition(
+          position: offset,
+          child: Material(
+            color: Colors.transparent,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () =>
+                        Navigator.of(context, rootNavigator: true).pop(),
+                    child: Container(color: Colors.transparent),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ComparisonFilterPanel(
+                    onClose: () =>
+                        Navigator.of(context, rootNavigator: true).pop(),
+                    onStyleChanged: (i) => setState(() => _styleIndex = i),
+                    initialStyleIndex: _styleIndex,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 300),
+    );
+  }
 }
 
 class _SyncScrollTable extends StatefulWidget {
@@ -1711,23 +1857,6 @@ class _SyncScrollTableState extends State<_SyncScrollTable> {
   late ScrollController _leftScrollController;
   late ScrollController _rightScrollController;
   bool _isSyncing = false;
-
-  // 为不同列分配颜色的方法
-  Color _getColumnColor(int index) {
-    List<Color> colors = [
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.red,
-      Colors.teal,
-      Colors.indigo,
-      Colors.pink,
-      Colors.amber,
-      Colors.cyan,
-    ];
-    return colors[index % colors.length];
-  }
 
   @override
   void initState() {
@@ -1812,74 +1941,7 @@ class _SyncScrollTableState extends State<_SyncScrollTable> {
             ],
           ),
         ),
-        // 可滚动的数据列
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Container(
-              width: widget.comparisonData.length * 150.0,
-              child: Column(
-                children: [
-                  // 表头
-                  Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children:
-                          widget.comparisonData.asMap().entries.map((entry) {
-                        int index = entry.key;
-                        var data = entry.value;
-                        // 为每列分配不同的颜色
-                        Color columnColor = _getColumnColor(index);
-                        return Flexible(
-                          child: Container(
-                            width: 150,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            alignment: Alignment.centerLeft,
-                            decoration: BoxDecoration(
-                              color: columnColor.withOpacity(0.1),
-                              border: Border(
-                                right: BorderSide(
-                                    color: Colors.grey.shade300, width: 0.5),
-                              ),
-                            ),
-                            child: Text(
-                              data['location']['name'] ?? '未知',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: columnColor.withOpacity(0.8),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  // 数据行
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: _rightScrollController,
-                      physics: const ClampingScrollPhysics(),
-                      child: Column(
-                        children: widget.buildScrollableColumnRows(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ],
     );
   }
-
-  // 提交反馈
 }

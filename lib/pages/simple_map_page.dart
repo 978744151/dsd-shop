@@ -55,7 +55,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
     '贵州省': 'guizhou',
     '云南省': 'yunnan',
     '西藏自治区': 'xizang',
-    '陕西省': 'shaanxi',
+    '陕西省': 'shanxi1',
     '甘肃省': 'gansu',
     '青海省': 'qinghai',
     '宁夏省': 'ningxia',
