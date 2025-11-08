@@ -55,7 +55,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
     '贵州省': 'guizhou',
     '云南省': 'yunnan',
     '西藏自治区': 'xizang',
-    '陕西省': 'shaanxi',
+    '陕西省': 'shanxi1',
     '甘肃省': 'gansu',
     '青海省': 'qinghai',
     '宁夏省': 'ningxia',
@@ -942,6 +942,14 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                       provinceId = province['adcode'];
                     });
 
+                     final municipalities = ['北京市', '上海市', '天津市', '重庆市'];
+
+                    if (municipalities.contains(province['name'])) {
+                      // 直辖市直接显示门店列表，使用省份ID作为城市ID
+                      _showStoreBottomSheet(
+                          province['adcode'], province['name']);
+                      return;
+                    }
                     _drillDownToProvince(name);
                   } else {
                     _showStoreBottomSheet(province['id'], province['name']);

@@ -22,6 +22,7 @@
     "url_launcher_ohos": "file:./har/url_launcher_ohos.har",
     "flutter_geolocator_ohos": "file:./har/flutter_geolocator_ohos.har",
     "permission_handler_ohos": "file:./har/permission_handler_ohos.har",
-    "geocoding_ohos": "file:./har/geocoding_ohos.har"
+    "geocoding_ohos": "file:./har/geocoding_ohos.har",
+    "fluttertoast": "file:./har/fluttertoast.har"
   }
 }

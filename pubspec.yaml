@@ -3,7 +3,7 @@ description: 懂商帝
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 0.0.1+1
+version: 1.0.1+1
 
 environment:
   sdk: '>=2.19.4 <4.0.0'
@@ -24,7 +24,9 @@ dependencies:
   http_parser: ^4.0.1
   english_words: ^4.0.0
   provider: ^6.0.0
-  fluttertoast: ^8.2.8
+  fluttertoast:  
+    git:
+      url: "https://gitcode.com/openharmony-sig/flutter_fluttertoast.git"
   loading_indicator: ^3.1.1
   webview_flutter:
    git:
@@ -51,7 +53,7 @@ dependencies:
     sdk: flutter
   photo_view: ^0.15.0
   carousel_slider: ^5.0.0
-  # adaptive_dialog: ^1.5.0
+  adaptive_dialog: 1.8.2
   getwidget: ^6.0.0
   # rive: ^0.13.20
   flutter_staggered_animations: ^1.1.0  # 检查最新版本

@@ -1,17 +1,42 @@
+import 'package:business_savvy/pages/brand_settings_page.dart';
+import 'package:business_savvy/pages/feedback_page.dart';
+import 'package:business_savvy/utils/screenshot_util.dart';
+import 'package:business_savvy/utils/toast_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
-import 'dart:ui' as ui;
-import 'package:image_gallery_saver/image_gallery_saver.dart';
-import 'package:business_savvy/api/brand.dart';
-import 'package:business_savvy/utils/toast_util.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+
+import '../api/brand.dart';
+import '../models/brand.dart';
 import '../utils/http_client.dart';
 import '../models/mall.dart';
+import '../api/feedback_api.dart';
+import '../widgets/comparison_table_widget.dart';
+import '../widgets/comparison_filter_panel.dart';
+import '../utils/screenshot_util.dart';
 
 // 全局颜色常量定义
 const Color kHeaderBackgroundColor = Color(0xFFF4F8FF);
 const tableLableWidth = 150;
+
+class ComparisonStyle {
+  final Color headerColor; // 表头背景色
+  final Color firstColumnColor; // 第一列背景色
+  final Color textColor; // 文字颜色（表头/单元格）
+  final Color borderColor; // 边框颜色
+  final Color firstColumnTextColor;
+  final List<Color> columnColors; // 动态列背景色列表
+
+  const ComparisonStyle({
+    this.firstColumnTextColor = Colors.white,
+    required this.headerColor,
+    required this.firstColumnColor,
+    required this.textColor,
+    required this.borderColor,
+    required this.columnColors,
+  });
+}
 
 class ComparePage extends StatefulWidget {
   final String? mallId;
@@ -46,22 +71,43 @@ class _ComparePageState extends State<ComparePage> {
   bool _isLoading = false;
   bool _isLoadingData = false;
   bool _isSelectionSheetOpen = false;
+  int _styleIndex = 1; // 0=暗黑, 1=标准(彩色), 2=商务
 
-  // 截图相关
-  final GlobalKey _screenshotKey = GlobalKey();
-  final GlobalKey _fullTableScreenshotKey = GlobalKey();
+  // 反馈相关状态
+  bool _isFeedbackSheetOpen = false;
+  final TextEditingController _feedbackController = TextEditingController();
+  String _selectedFeedbackType = 'bug'; // 默认选择错误报告
+  final ValueNotifier<String> _feedbackLabelNotifier =
+      ValueNotifier<String>('错误报告');
+  bool _isFeedbackTypeDialogOpen = false; // 控制反馈类型选择弹框
+
+  // 添加截图控制器用于访问ComparisonTableWidget的截图功能
+
+  // 反馈类型选项 - 使用label-value形式
+  final List<Map<String, String>> _feedbackTypes = [
+    {'value': 'bug', 'label': '错误报告'},
+    {'value': 'feature', 'label': '功能建议'},
+    {'value': 'improvement', 'label': '改进建议'},
+    {'value': 'question', 'label': '问题咨询'},
+    {'value': 'complaint', 'label': '投诉建议'},
+    {'value': 'other', 'label': '其他'},
+  ];
+
+  // Screenshot controller
+
   // 省市数据
   List<Map<String, dynamic>> provinces = [];
   List<Map<String, dynamic>> cities = [];
   String? selectedProvinceId;
-  String selectedProvinceName = '省份';
+  String selectedProvinceName = '全部省份';
   String? selectedCityId;
-  String selectedCityName = '城市';
+  String selectedCityName = '全部城市';
 
   // 品牌筛选数据
   List<Map<String, dynamic>> brands = [];
   List<String> selectedBrandIds = [];
   List<String> selectedBrandNames = [];
+  Map<String, String> brandScores = {}; // 品牌分值输入
 
   // 获取当前类型的选中ID列表
   List<String> get _selectedIds =>
@@ -74,6 +120,63 @@ class _ComparePageState extends State<ComparePage> {
   // 获取当前类型的选中名称列表
   List<String> get _selectedNames =>
       _selectedType == 'mall' ? _mallSelectedNames : _citySelectedNames;
+
+  // 为不同列分配颜色的方法
+
+  ComparisonStyle _getStyle() {
+    switch (_styleIndex) {
+      case 0: // 暗黑
+        return ComparisonStyle(
+          headerColor: Colors.black,
+          firstColumnColor: Colors.black,
+          textColor: Colors.white,
+          borderColor: const Color(0xFF374151),
+          columnColors: const [Colors.black],
+        );
+      case 2: // 商务
+        return ComparisonStyle(
+          headerColor: Colors.white,
+          firstColumnColor: Colors.white,
+          textColor: Colors.black,
+          borderColor: const Color(0xFFE2E8F0),
+          columnColors: const [Colors.white],
+        );
+      default: // 标准（彩色）
+        return ComparisonStyle(
+          headerColor: Colors.grey.shade100,
+          firstColumnColor: Colors.grey.shade50,
+          textColor: Colors.black,
+          firstColumnTextColor: Colors.black,
+          borderColor: Colors.grey.shade300,
+          columnColors: const [
+            Colors.blue,
+            Colors.purple,
+            Colors.green,
+            Colors.yellow,
+            Colors.teal,
+            Colors.red,
+            Colors.deepOrange,
+            Colors.pink,
+            Colors.grey,
+            Colors.amber,
+            Colors.cyan,
+            Colors.brown,
+            Colors.blueGrey,
+            Colors.deepPurple,
+          ],
+        );
+    }
+  }
+
+  // 获取所有列的颜色列表
+  List<Color> _getColumnColors() {
+    final style = _getStyle();
+    final palette = style.columnColors;
+    return List.generate(
+      _comparisonData.length,
+      (index) => palette[index % palette.length],
+    );
+  }
 
   @override
   void initState() {
@@ -284,8 +387,15 @@ class _ComparePageState extends State<ComparePage> {
             .map((brand) => {
                   'id': brand['_id'].toString(),
                   'name': brand['name'].toString(),
+                  // 默认附带后端返回的分数（若有）
+                  'score': brand['score']?.toString(),
                 })
             .toList();
+        // 默认给 brandScores 赋值为品牌 id -> score
+        brandScores.clear();
+        for (final b in brands) {
+          brandScores[b['id']] = b['score']?.toString() ?? '';
+        }
       }
     } catch (e) {
       print('加载品牌数据失败: $e');
@@ -293,6 +403,7 @@ class _ComparePageState extends State<ComparePage> {
   }
 
   void _openSelectionDialogSafely() {
+    _loadBrands();
     if (_isSelectionSheetOpen) {
       Navigator.of(context).pop();
       Future.microtask(() => _showSelectionDialog());
@@ -383,6 +494,22 @@ class _ComparePageState extends State<ComparePage> {
                                 visualDensity: const VisualDensity(
                                     horizontal: -4, vertical: -4),
                                 backgroundColor: const Color(0xFFF5F5F5),
+                                deleteIcon: const Icon(Icons.close, size: 12),
+                                onDeleted: () {
+                                  final idx = _selectedNames.indexOf(name);
+                                  if (idx >= 0) {
+                                    if (_selectedType == 'mall') {
+                                      _mallSelectedIds.removeAt(idx);
+                                      _mallSelectedNames.removeAt(idx);
+                                      _mallComparisonData.clear();
+                                    } else {
+                                      _citySelectedIds.removeAt(idx);
+                                      _citySelectedNames.removeAt(idx);
+                                      _cityComparisonData.clear();
+                                    }
+                                  }
+                                  setModalState(() {});
+                                },
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
@@ -483,14 +610,14 @@ class _ComparePageState extends State<ComparePage> {
               value: selectedProvinceName,
               onTap: () => _showFilterDialog(
                 title: '选择省份',
-                items: ['省份', ...provinces.map((p) => p['name'] as String)],
+                items: ['全部省份', ...provinces.map((p) => p['name'] as String)],
                 selectedValue: selectedProvinceName,
                 onSelected: (value) async {
-                  if (value == '省份') {
+                  if (value == '全部省份') {
                     selectedProvinceId = null;
-                    selectedProvinceName = '省份';
+                    selectedProvinceName = '全部省份';
                     selectedCityId = null;
-                    selectedCityName = '城市';
+                    selectedCityName = '全部城市';
                     // 加载所有城市
                     await _loadCitiesByProvince(null, setModalState);
                     // 加载所有商场
@@ -501,7 +628,7 @@ class _ComparePageState extends State<ComparePage> {
                     selectedProvinceId = province['id'];
                     selectedProvinceName = value;
                     selectedCityId = null;
-                    selectedCityName = '城市';
+                    selectedCityName = '全部城市';
                     // 根据省份加载城市
                     await _loadCitiesByProvince(
                         selectedProvinceId, setModalState);
@@ -527,15 +654,15 @@ class _ComparePageState extends State<ComparePage> {
                 onTap: () => _showFilterDialog(
                   title: '选择城市',
                   items: [
-                    '城市',
+                    '全部城市',
                     ..._getCitiesByProvince(selectedProvinceId)
                         .map((c) => c['name'] as String)
                   ],
                   selectedValue: selectedCityName,
                   onSelected: (value) {
-                    if (value == '城市') {
+                    if (value == '全部城市') {
                       selectedCityId = null;
-                      selectedCityName = '城市';
+                      selectedCityName = '全部城市';
                     } else {
                       final city = _getCitiesByProvince(selectedProvinceId)
                           .firstWhere((c) => c['name'] == value);
@@ -708,12 +835,15 @@ class _ComparePageState extends State<ComparePage> {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const Spacer(),
@@ -845,10 +975,37 @@ class _ComparePageState extends State<ComparePage> {
                         setBrandModalState(() {
                           selectedBrandIds.clear();
                           selectedBrandNames.clear();
+                          brandScores.clear();
                         });
                       },
                       child: Text(
                         '清空',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    GestureDetector(
+                      onTap: () {
+                        setBrandModalState(() {
+                          selectedBrandIds.clear();
+                          selectedBrandNames.clear();
+                          for (final b in brands) {
+                            selectedBrandIds.add(b['id']);
+                            selectedBrandNames.add(b['name']);
+                            // 若 brandScores 缺失或为空，填充为默认 score
+                            final cur = brandScores[b['id']];
+                            if (cur == null || cur.toString().trim().isEmpty) {
+                              brandScores[b['id']] =
+                                  b['score']?.toString() ?? '';
+                            }
+                          }
+                        });
+                      },
+                      child: Text(
+                        '全选',
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).primaryColor,
@@ -881,20 +1038,61 @@ class _ComparePageState extends State<ComparePage> {
                   itemBuilder: (context, index) {
                     final brand = brands[index];
                     final isSelected = selectedBrandIds.contains(brand['id']);
-                    return CheckboxListTile(
-                      title: Text(brand['name']),
-                      value: isSelected,
-                      onChanged: (bool? value) {
-                        setBrandModalState(() {
-                          if (value == true) {
-                            selectedBrandIds.add(brand['id']);
-                            selectedBrandNames.add(brand['name']);
-                          } else {
-                            selectedBrandIds.remove(brand['id']);
-                            selectedBrandNames.remove(brand['name']);
-                          }
-                        });
-                      },
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: isSelected,
+                            onChanged: (bool? value) {
+                              setBrandModalState(() {
+                                if (value == true) {
+                                  selectedBrandIds.add(brand['id']);
+                                  selectedBrandNames.add(brand['name']);
+                                } else {
+                                  selectedBrandIds.remove(brand['id']);
+                                  selectedBrandNames.remove(brand['name']);
+                                  brandScores.remove(brand['id']);
+                                }
+                              });
+                            },
+                          ),
+                          Expanded(
+                            child: Text(
+                              brand['name'],
+                              style: const TextStyle(fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          SizedBox(
+                            width: 90,
+                            child: TextFormField(
+                              initialValue: brandScores[brand['id']] ??
+                                  (brand['score']?.toString() ?? ''),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                              textAlign: TextAlign.center,
+                              decoration: const InputDecoration(
+                                hintText: '分值',
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 8),
+                                border: OutlineInputBorder(),
+                              ),
+                              onChanged: (val) {
+                                setBrandModalState(() {
+                                  final v = val.trim();
+                                  brandScores[brand['id']] = v.isEmpty
+                                      ? (brand['score']?.toString() ?? '')
+                                      : v;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -909,6 +1107,37 @@ class _ComparePageState extends State<ComparePage> {
                       foregroundColor: Colors.white,
                     ),
                     onPressed: () {
+                      // 如果存在任一分数输入，则所有选中的品牌必须填写分数且为数字
+                      final bool hasAnyScore = selectedBrandIds.any((id) {
+                        final v = brandScores[id];
+                        return v != null && v.toString().trim().isNotEmpty;
+                      });
+
+                      if (hasAnyScore) {
+                        // 检查是否所有选中的品牌都填写了分数
+                        final bool allFilled = selectedBrandIds.every((id) {
+                          final v = brandScores[id];
+                          return v != null && v.toString().trim().isNotEmpty;
+                        });
+                        if (!allFilled) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('请为所有已选品牌填写分数')),
+                          );
+                          return;
+                        }
+                        // 检查分数是否为数字
+                        final bool allNumeric = selectedBrandIds.every((id) {
+                          final v = brandScores[id]!;
+                          return double.tryParse(v.toString().trim()) != null;
+                        });
+                        if (!allNumeric) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('分数需为数字')),
+                          );
+                          return;
+                        }
+                      }
+
                       Navigator.pop(context);
                       setModalState(() {});
                       setState(() {
@@ -1094,7 +1323,8 @@ class _ComparePageState extends State<ComparePage> {
         'ids': _selectedIds,
         'type': _selectedType,
         'brandIds': selectedBrandIds,
-        'saveReport': saveReport
+        'brandScores': brandScores,
+        'saveReport': saveReport,
       });
 
       if (response['success'] == true) {
@@ -1126,17 +1356,39 @@ class _ComparePageState extends State<ComparePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      endDrawer: Drawer(
+        child: SafeArea(
+          child: ComparisonFilterPanel(
+            onClose: () => Navigator.of(context).pop(),
+            onStyleChanged: (i) => setState(() => _styleIndex = i),
+            initialStyleIndex: _styleIndex,
+          ),
+        ),
+      ),
       body: Stack(
         children: [
           _buildCustomHeader(),
-              
-          // 隐藏的完整表格用于截图
-      Positioned(
-            left: -10000, // 移到屏幕外，不可见但可以截图
-            top: 0,
-            child: RepaintBoundary(
-              key: _fullTableScreenshotKey,
-              child: _buildFullTableForScreenshot(),
+          // 悬浮的红色感叹号按钮 - 导航到反馈页面
+          Positioned(
+            right: 0,
+            bottom: 10,
+            child: FloatingActionButton(
+              // shape: CircleBorder(),
+              mini: true,
+              onPressed: () {
+                // 导航到新的反馈页面
+                // context.push('/feedback');
+                Navigator.of(context, rootNavigator: true)
+                    .push(MaterialPageRoute(
+                  builder: (context) => FeedbackPage(),
+                ));
+              },
+              backgroundColor: Colors.red,
+              child: const Icon(
+                Icons.error_outline,
+                color: Colors.white,
+                size: 28,
+              ),
             ),
           ),
         ],
@@ -1166,7 +1418,7 @@ class _ComparePageState extends State<ComparePage> {
                   padding: const EdgeInsets.all(16),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      // color: Colors.white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.white.withOpacity(0.3)),
                     ),
@@ -1225,6 +1477,11 @@ class _ComparePageState extends State<ComparePage> {
                               ),
                             ),
                           ),
+                        ),
+                        IconButton(
+                          tooltip: '筛选',
+                          icon: const Icon(Icons.menu, color: Colors.white),
+                          onPressed: () => _openFilterPanel(context),
                         ),
                       ],
                     ),
@@ -1289,23 +1546,34 @@ class _ComparePageState extends State<ComparePage> {
           //           spacing: 8,
           //           runSpacing: 4,
           //           children: _selectedNames
-          //               .map((name) => Container(
-          //                     padding: const EdgeInsets.symmetric(
-          //                         horizontal: 8, vertical: 4),
-          //                     decoration: BoxDecoration(
-          //                       color: Colors.blue[50],
-          //                       borderRadius: BorderRadius.circular(12),
-          //                       border: Border.all(
-          //                           color: Colors.blue.withOpacity(0.3)),
-          //                     ),
-          //                     child: Text(
-          //                       name,
-          //                       style: TextStyle(
-          //                         fontSize: 12,
-          //                         color: Colors.blue[700],
-          //                       ),
-          //                     ),
-          //                   ))
+          //               .map((name) => Chip(
+          //                 label: Text(name,
+          //                     style: const TextStyle(fontSize: 10)),
+          //                 materialTapTargetSize:
+          //                     MaterialTapTargetSize.shrinkWrap,
+          //                 visualDensity: const VisualDensity(
+          //                     horizontal: -4, vertical: -4),
+          //                 backgroundColor: const Color(0xFFF5F5F5),
+          //                 deleteIcon: const Icon(Icons.close, size: 12),
+          //                 onDeleted: () {
+          //                   final idx = _selectedNames.indexOf(name);
+          //                   if (idx >= 0) {
+          //                     if (_selectedType == 'mall') {
+          //                       _mallSelectedIds.removeAt(idx);
+          //                       _mallSelectedNames.removeAt(idx);
+          //                       _mallComparisonData.clear();
+          //                     } else {
+          //                       _citySelectedIds.removeAt(idx);
+          //                       _citySelectedNames.removeAt(idx);
+          //                       _cityComparisonData.clear();
+          //                     }
+          //                   }
+          //                   setState(() {});
+          //                 },
+          //                 shape: RoundedRectangleBorder(
+          //                   borderRadius: BorderRadius.circular(14),
+          //                 ),
+          //               ),
           //               .toList(),
           //         ),
           //       ],
@@ -1333,6 +1601,7 @@ class _ComparePageState extends State<ComparePage> {
                   ),
                   child: Text(
                     _selectedIds.isEmpty ? '点击选择' : '重新选择',
+                    style: TextStyle(fontSize: 12),
                   ),
                 ),
               ),
@@ -1365,7 +1634,31 @@ class _ComparePageState extends State<ComparePage> {
               //     ),
               //   ),
               // ],
+              const SizedBox(width: 8),
 
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                      builder: (context) => const BrandSettingsPage(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.tune, size: 16),
+                  label: const Text(
+                    '定义分值',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
               // 生成表格图片按钮
               if (_comparisonData.isNotEmpty) ...[
                 const SizedBox(width: 8),
@@ -1373,7 +1666,10 @@ class _ComparePageState extends State<ComparePage> {
                   child: ElevatedButton.icon(
                     onPressed: _captureAndShowImage,
                     icon: const Icon(Icons.camera_alt, size: 16),
-                    label: const Text('生成图片'),
+                    label: const Text(
+                      '生成图片',
+                      style: TextStyle(fontSize: 12),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
@@ -1391,7 +1687,10 @@ class _ComparePageState extends State<ComparePage> {
                   child: ElevatedButton.icon(
                     onPressed: () => _fetchComparisonData(saveReport: true),
                     icon: const Icon(Icons.download, size: 16),
-                    label: const Text('保存报告'),
+                    label: const Text(
+                      '保存报告',
+                      style: TextStyle(fontSize: 12),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
@@ -1417,32 +1716,38 @@ class _ComparePageState extends State<ComparePage> {
 
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.all(16),
-        child:  Container(
-            constraints: const BoxConstraints(
-              maxHeight: 800, // 限制最大高度以减少内存使用
-              maxWidth: 1200, // 限制最大宽度
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(0),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _SyncScrollTable(
-                    comparisonData: _comparisonData,
-                    buildFixedColumnRows: _buildFixedColumnRows,
-                    buildScrollableColumnRows: _buildScrollableColumnRows,
-                  ),
-                ),
-              ],
-            ),
-          ),
+        margin: const EdgeInsets.all(0),
+        child: ComparisonTableWidget(
+          comparisonData: _comparisonData,
+          title: '对比分析',
+          showScreenshotButton: false, // 因为上面已经有截图按钮了
+          columnColors: _getColumnColors(),
+          isCity: _selectedType == 'city',
+          headerBackgroundColor: _getStyle().headerColor,
+          firstColumnColor: _getStyle().firstColumnColor,
+          headerTextColor: _getStyle().textColor,
+          borderColor: _getStyle().borderColor,
+          cellTextColor: _getStyle().textColor,
+        ),
       ),
     );
+  }
+
+  /// 生成表格截图
+  Future<void> _captureAndShowImage() async {
+    if (!mounted) return;
+    try {
+      await ScreenshotUtil.captureAndShowImage(
+        context: context,
+        errorMessage: '表格截图生成失败，请重试',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('截图失败: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   List<Widget> _buildFixedColumnRows() {
@@ -1461,362 +1766,12 @@ class _ComparePageState extends State<ComparePage> {
       }
     }
 
-    // 添加汇总信息行
-    rows.add(
-      Container(
-        height: 50,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: Colors.grey.shade300),
-          ),
-        ),
-        alignment: Alignment.centerLeft,
-        child: const Text(
-          '汇总信息',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.orange,
-          ),
-        ),
-      ),
-    );
-
-    // 门店数量
-    rows.add(
-      Container(
-        height: 50,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: Colors.grey.shade300),
-          ),
-        ),
-        alignment: Alignment.centerLeft,
-        child: const Text(
-          '门店数量',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.orange,
-          ),
-        ),
-      ),
-    );
-
-    // // 添加综合总分行
-    // rows.add(
-    //   Container(
-    //     height: 50,
-    //     padding: const EdgeInsets.all(12),
-    //     decoration: BoxDecoration(
-    //       border: Border(
-    //         bottom: BorderSide(color: Colors.grey.shade300),
-    //       ),
-    //     ),
-    //     alignment: Alignment.centerLeft,
-    //     child: const Text(
-    //       '综合总分',
-    //       style: TextStyle(
-    //         fontWeight: FontWeight.bold,
-    //         fontSize: 14,
-    //         color: Colors.green,
-    //       ),
-    //     ),
-    //   ),
-    // );
-
-    // 为每个品牌创建行
-    for (String brandName in allBrands.toList()..sort()) {
-      // 计算该品牌的平均分数
-      double totalScore = 0.0;
-      int validScoreCount = 0;
-
-      for (var data in _comparisonData) {
-        List<dynamic> brands = data['brands'] ?? [];
-        var brandData = brands.firstWhere(
-          (b) => (b['brand']?['name'] ?? b['brand']?['code']) == brandName,
-          orElse: () => null,
-        );
-        if (brandData != null) {
-          double score =
-              double.tryParse(brandData['averageScore']?.toString() ?? '0.0') ??
-                  0.0;
-          if (score > 0) {
-            totalScore += score;
-            validScoreCount++;
-          }
-        }
-      }
-
-      double averageScore =
-          validScoreCount > 0 ? totalScore / validScoreCount : 0.0;
-
-      rows.add(
-        Container(
-          height: 50,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: Colors.grey.shade300),
-            ),
-          ),
-          alignment: Alignment.centerLeft,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: validScoreCount > 0
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        brandName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      // Container(
-                      //   padding: const EdgeInsets.symmetric(
-                      //       vertical: 2, horizontal: 4),
-                      //   decoration: BoxDecoration(
-                      //     color: _getBrandScoreColor(averageScore),
-                      //     borderRadius: BorderRadius.circular(8),
-                      //   ),
-                      //   child: Text(
-                      //     averageScore.round().toString(),
-                      //     style: const TextStyle(
-                      //       color: Colors.white,
-                      //       fontSize: 8,
-                      //       fontWeight: FontWeight.bold,
-                      //     ),
-                      //   ),
-                      // ),
-                    ],
-                  )
-                : Text(
-                    brandName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                    ),
-                  ),
-          ),
-        ),
-      );
-    }
-
     return rows;
   }
 
-  List<Widget> _buildScrollableColumnRows() {
-    if (_comparisonData.isEmpty) return [];
-
-    List<Widget> rows = [];
-
-    // 获取所有品牌
-    Set<String> allBrands = {};
-    for (var data in _comparisonData) {
-      List<dynamic> brands = data['brands'] ?? [];
-      for (var brand in brands) {
-        String brandName =
-            brand['brand']?['name'] ?? brand['brand']?['code'] ?? '未知品牌';
-        allBrands.add(brandName);
-      }
-    }
-
-    // 添加汇总信息行
-    rows.add(
-      Container(
-        height: 50,
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: Colors.grey.shade300),
-          ),
-        ),
-        child: Row(
-          children:[ ..._comparisonData.asMap().entries.map((entry) {
-            List<dynamic> brands = entry.value['brands'] ?? [];
-            int index = entry.key;
-            int brandCount = brands.length;
-            Color columnColor = _getColumnColor(index);
-            return Container(
-              width: 150,
-              padding: const EdgeInsets.all(12),
-              alignment: Alignment.centerLeft,
-                decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.1),
-                border: Border(
-                  left: BorderSide(color: Colors.grey.shade300),
-                  bottom: BorderSide(color: Colors.grey.shade300),
-                ),
-              ),
-              child: Text(
-                '品牌数: $brandCount',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            );
-          }).toList()],
-        ),
-      ),
-    );
-
-    rows.add(
-      Container(
-        height: 50,
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: Colors.grey.shade300),
-          ),
-        ),
-        child: Row(
-          children: [ ..._comparisonData.asMap().entries.map((entry) {
-            int index = entry.key;
-            var data = entry.value;
-            String totalStores =
-                data['summary']?['totalStores']?.toString() ?? '0';
-            Color columnColor = _getColumnColor(index);
-            return Container(
-              width: 150,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.1),
-                border: Border(
-                  left: BorderSide(color: Colors.grey.shade300),
-                  bottom: BorderSide(color: Colors.grey.shade300),
-                ),
-              ),
-              alignment: Alignment.centerLeft,
-              child: Text(
-                totalStores,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: columnColor.withOpacity(0.8),
-                ),
-              ),
-            );
-          }).toList(),]
-        ),
-      ),
-    );
-
-    // 添加综合总分行
-    // rows.add(
-    //   Container(
-    //     height: 50,
-    //     decoration: BoxDecoration(
-    //       border: Border(
-    //         bottom: BorderSide(color: Colors.grey.shade300),
-    //       ),
-    //     ),
-    //     child: Row(
-    //       children: _comparisonData.map((data) {
-    //         double totalScore = double.tryParse(
-    //                 data['summary']?['totalScore']?.toString() ?? '0.0') ??
-    //             0.0;
-
-    //         return Container(
-    //           width: 150,
-    //           padding: const EdgeInsets.all(12),
-    //           alignment: Alignment.centerLeft,
-    //           child: Text(
-    //             totalScore.toStringAsFixed(1),
-    //             style: TextStyle(
-    //               fontWeight: FontWeight.bold,
-    //               fontSize: 14,
-    //               color: _getScoreColor(totalScore),
-    //             ),
-    //           ),
-    //         );
-    //       }).toList(),
-    //     ),
-    //   ),
-    // );
-
-    // 为每个品牌创建行
-    for (String brandName in allBrands.toList()..sort()) {
-      rows.add(
-        Container(
-          height: 50,
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: Colors.grey.shade300),
-            ),
-          ),
-          child: Row(
-            children: [
-                        ..._comparisonData.asMap().entries.map((entry) {
-            int index = entry.key;
-            var data = entry.value;
-            List<dynamic> brands = data['brands'] ?? [];
-            var brandData = brands.firstWhere(
-              (b) => (b['brand']?['name'] ?? b['brand']?['code']) == brandName,
-              orElse: () => null,
-            );
-            Color columnColor = _getColumnColor(index);
-            return Container(
-              width: 150,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.1),
-                border: Border(
-                  left: BorderSide(color: Colors.grey.shade300),
-                  bottom: BorderSide(color: Colors.grey.shade300),
-                ),
-              ),
-              alignment: Alignment.centerLeft,
-              child: brandData == null
-                  ? Text('-',
-                      style: TextStyle(color: columnColor.withOpacity(0.6)))
-                  : Text(
-                      '${brandData['storeCount'] ?? 0}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: columnColor.withOpacity(0.8),
-                      ),
-                    ),
-            );
-          }).toList(),
-
-            ]
-          ),
-        ),
-      );
-    }
-
-    return rows;
-  }
-
-  /// 获取列颜色
-  Color _getColumnColor(int index) {
-    // 默认颜色列表
-    const List<Color> defaultColors = [
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.red,
-      Colors.teal,
-      Colors.indigo,
-      Colors.pink,
-      Colors.amber,
-      Colors.cyan,
-    ];
-    return defaultColors[index % defaultColors.length];
-  }
   Color _getScoreColor(double score) {
     if (score >= 80) return Colors.green;
-    if (score >= 50) return Colors.orange;
+    if (score >= 60) return Colors.orange;
     return Colors.red;
   }
 
@@ -1830,477 +1785,41 @@ class _ComparePageState extends State<ComparePage> {
     }
   }
 
-  // 构建完整表格用于截图（包含所有品牌数据）
-  Widget _buildFullTableForScreenshot() {
-    if (_comparisonData.isEmpty) return const SizedBox.shrink();
-
-    // 获取所有品牌
-    Set<String> allBrands = {};
-    for (var data in _comparisonData) {
-      List<dynamic> brands = data['brands'] ?? [];
-      for (var brand in brands) {
-        String brandName =
-            brand['brand']?['name'] ?? brand['brand']?['code'] ?? '未知品牌';
-        allBrands.add(brandName);
-      }
-    }
-
-    List<String> sortedBrands = allBrands.toList()..sort();
-
-    // 计算表格宽度，确保有足够空间显示所有数据
-    double tableWidth = 154 + (_comparisonData.length * 150.0); // 进一步增加列宽和缓冲空间
-
-    return Container(
-      width: tableWidth,
-      margin: const EdgeInsets.all(16), // 减少外边距避免溢出
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.shade300, width: 2),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 表头
-          Container(
-            height: 50,
-            decoration: BoxDecoration(
-              color: kHeaderBackgroundColor,
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade300, width: 1),
-              ),
-            ),
-            child: Row(
-              children: [
-                // 固定列表头
-                Container(
-                  width: 150,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: const Text(
-                    '品牌/对象',
-                    textAlign: TextAlign.left,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-          // 动态列表头
-                ..._comparisonData.asMap().entries.map((entry) {
-                  int index = entry.key;
-                  var data = entry.value;
-                  String name = data['location']['name'] ?? '未知';
-                  Color columnColor = _getColumnColor(index);
-                  return Container(
-                    width: 150,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: columnColor.withOpacity(0.1),
-                      border: Border(
-                        left: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      name,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: columnColor.withOpacity(0.8),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }).toList(),
-              ],
-            ),
-          ),
-
-          // 汇总信息行
-          Container(
-            height: 50,
-            child: Row(
-              children: [
-                Container(
-                  width: 150,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey.shade300),
-                    ),
-                  ),
-                  alignment: Alignment.centerLeft,
-                  child: const Text(
-                    '汇总信息',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Colors.orange,
-                    ),
-                  ),
-                ),
-          ..._comparisonData.asMap().entries.map((entry) {
-            int index = entry.key;
-            var data = entry.value;
-            List<dynamic> brands = data['brands'] ?? [];
-            int brandCount = brands.length;
-            Color columnColor = _getColumnColor(index);
-            return Container(
-              width: 150,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: columnColor.withOpacity(0.1),
-                border: Border(
-                  left: BorderSide(color: Colors.grey.shade300),
-                  bottom: BorderSide(color: Colors.grey.shade300),
-                ),
-              ),
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '总计: $brandCount',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: columnColor.withOpacity(0.8),
-                ),
-              ),
-            );
-          }).toList(),
-              ],
-            ),
-          ),
-
-          // 综合总分行
-          // Container(
-          //   height: 50,
-          //   child: Row(
-          //     children: [
-          //       Container(
-          //         width: 150,
-          //         padding: const EdgeInsets.all(16),
-          //         decoration: BoxDecoration(
-          //           border: Border(
-          //             bottom: BorderSide(color: Colors.grey.shade300),
-          //           ),
-          //         ),
-          //         alignment: Alignment.centerLeft,
-          //         child: const Text(
-          //           '综合总分',
-          //           style: TextStyle(
-          //             fontWeight: FontWeight.bold,
-          //             fontSize: 14,
-          //             color: Colors.green,
-          //           ),
-          //         ),
-          //       ),
-          //       ..._comparisonData.map((data) {
-          //         double totalScore = double.tryParse(
-          //                 data['summary']?['totalScore']?.toString() ??
-          //                     '0.0') ??
-          //             0.0;
-          //         return Container(
-          //           width: 150,
-          //           padding: const EdgeInsets.all(12),
-          //           decoration: BoxDecoration(
-          //             border: Border(
-          //               left: BorderSide(color: Colors.grey.shade300),
-          //               bottom: BorderSide(color: Colors.grey.shade300),
-          //             ),
-          //           ),
-          //           alignment: Alignment.centerLeft,
-          //           child: Text(
-          //             totalScore.toStringAsFixed(1),
-          //             style: TextStyle(
-          //               fontWeight: FontWeight.bold,
-          //               fontSize: 12,
-          //               color: _getScoreColor(totalScore),
-          //             ),
-          //           ),
-          //         );
-          //       }).toList(),
-          //     ],
-          //   ),
-          // ),
-
-          // 品牌数据行
-          ...sortedBrands.map((brandName) {
-            // 计算该品牌的平均分数
-            double totalScore = 0.0;
-            int validScoreCount = 0;
-
-            for (var data in _comparisonData) {
-              List<dynamic> brands = data['brands'] ?? [];
-              var brandData = brands.firstWhere(
-                (b) =>
-                    (b['brand']?['name'] ?? b['brand']?['code']) == brandName,
-                orElse: () => null,
-              );
-              if (brandData != null) {
-                double score = double.tryParse(
-                        brandData['averageScore']?.toString() ?? '0.0') ??
-                    0.0;
-                if (score > 0) {
-                  totalScore += score;
-                  validScoreCount++;
-                }
-              }
-            }
-
-            double averageScore =
-                validScoreCount > 0 ? totalScore / validScoreCount : 0.0;
-
-            return Container(
-              height: 70,
-              child: Row(
-                children: [
-                  Container(
-                    width: 150,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 4, horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: validScoreCount > 0
-                          ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  brandName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                // Container(
-                                //   padding: const EdgeInsets.symmetric(
-                                //       vertical: 2, horizontal: 4),
-                                //   decoration: BoxDecoration(
-                                //     color: _getBrandScoreColor(averageScore),
-                                //     borderRadius: BorderRadius.circular(8),
-                                //   ),
-                                //   child: Text(
-                                //     averageScore.round().toString(),
-                                //     style: const TextStyle(
-                                //       color: Colors.white,
-                                //       fontSize: 9,
-                                //       fontWeight: FontWeight.bold,
-                                //     ),
-                                //   ),
-                                // ),
-                              ],
-                            )
-                          : Text(
-                              brandName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
-                    ),
-                  ),
-                  ..._comparisonData.asMap().entries.map((entry) {
-                    int index = entry.key;
-                       var data = entry.value;
-                    List<dynamic> brands = data['brands'] ?? [];
-                    Color columnColor = _getColumnColor(index);
-                    var brandData = brands.firstWhere(
-                      (b) =>
-                          (b['brand']?['name'] ?? b['brand']?['code']) ==
-                          brandName,
-                      orElse: () => null,
-                    );
-                    return Container(
-                      width: 150,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: columnColor.withOpacity(0.1),
-                        border: Border(
-                          left: BorderSide(color: Colors.grey.shade300),
-                          bottom: BorderSide(color: Colors.grey.shade300),
-                        ),
-                      ),
-                      alignment: Alignment.centerLeft,
-                      child: brandData == null
-                          ? const Text('-',
-                              style: TextStyle(color: Colors.grey))
-                          : Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${brandData['storeCount'] ?? 0}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                // const SizedBox(height: 2),
-                                // Text(
-                                //   '1',
-                                //   style: TextStyle(
-                                //     fontSize: 11,
-                                //     color: _getScoreColor(1.0),
-                                //     fontWeight: FontWeight.w500,
-                                //   ),
-                                // ),
-                              ],
-                            ),
-                    );
-                  }).toList(),
-                ],
-              ),
-            );
-          }).toList(),
-          // 免责声明
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              border: Border(
-                top: BorderSide(color: Colors.grey.shade300, width: 1),
-              ),
-            ),
-            child: const Text(
-              '懂商帝: 分值采用自定义输入分数,仅作参考',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-                fontWeight: FontWeight.w400,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 生成表格截图
-  Future<void> _captureAndShowImage() async {
-    if (!mounted) return;
-
-      // 延迟确保UI已经完全渲染
-      await Future.delayed(const Duration(milliseconds: 300));
-      
-      // 使用 RepaintBoundary 捕获 widget
-      RenderRepaintBoundary? boundary = 
-          _fullTableScreenshotKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      
-      if (boundary == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('截图生成失败，请重试')),
-        );
-        return;
-      }
-      
-      // 捕获图像
-      final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
-        
-      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    print('1234$ByteData');
-      if (byteData == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('截图生成失败，请重试')),
-        );
-        return;
-      }
-      
-      Uint8List imageBytes = byteData.buffer.asUint8List();
-      
-      if (mounted) {
-        _showImageDialog(imageBytes);
-      }
-    
-  }
-
-  // 显示生成的图片
-  void _showImageDialog(Uint8List imageBytes) {
-    if (!mounted) return;
-    print('1234');
-    showDialog(
+  void _openFilterPanel(BuildContext context) {
+    showGeneralDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return Dialog(
-          insetPadding: EdgeInsets.zero,
-          child: Container(
-            width: MediaQuery.of(dialogContext).size.width,
-            height: MediaQuery.of(dialogContext).size.height,
-            color: Colors.black,
+      useRootNavigator: true,
+      barrierDismissible: true,
+      barrierLabel: '筛选',
+      barrierColor: Colors.black45,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const SizedBox.shrink();
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final offset =
+            Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+        return SlideTransition(
+          position: offset,
+          child: Material(
+            color: Colors.transparent,
             child: Stack(
               children: [
-                // 图片显示区域
-                Center(
-                  child: InteractiveViewer(
-                    child: Image.memory(imageBytes),
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () =>
+                        Navigator.of(context, rootNavigator: true).pop(),
+                    child: Container(color: Colors.transparent),
                   ),
                 ),
-                // 底部操作栏
-                Positioned(
-                  bottom: 50,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // 关闭图标
-                      GestureDetector(
-                        onTap: () {
-                          if (Navigator.canPop(dialogContext)) {
-                            Navigator.of(dialogContext).pop();
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                      // 下载图标
-                      GestureDetector(
-                        onTap: () async {
-                          await _saveImageToGallery(imageBytes);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          child: const Icon(
-                            Icons.download,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                    ],
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ComparisonFilterPanel(
+                    onClose: () =>
+                        Navigator.of(context, rootNavigator: true).pop(),
+                    onStyleChanged: (i) => setState(() => _styleIndex = i),
+                    initialStyleIndex: _styleIndex,
                   ),
                 ),
               ],
@@ -2308,31 +1827,8 @@ class _ComparePageState extends State<ComparePage> {
           ),
         );
       },
+      transitionDuration: const Duration(milliseconds: 300),
     );
-  }
-
-  // 保存图片到相册
-  Future<void> _saveImageToGallery(Uint8List imageBytes) async {
-    try {
-      // 使用 image_gallery_saver 保存图片到相册
-      final result = await ImageGallerySaver.saveImage(
-        imageBytes,
-        quality: 100,
-        name: "comparison_table_${DateTime.now().millisecondsSinceEpoch}",
-      );
-
-      if (mounted) {
-        if (result['isSuccess'] == true) {
-          ToastUtil.showPrimary('图片已保存到相册');
-        } else {
-            ToastUtil.showError('保存失败，请检查相册权限');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-         ToastUtil.showError('保存失败，$e');
-      }
-    }
   }
 }
 
@@ -2395,23 +1891,6 @@ class _SyncScrollTableState extends State<_SyncScrollTable> {
 
   @override
   Widget build(BuildContext context) {
-      /// 获取列颜色
-  Color _getColumnColor(int index) {
-    // 默认颜色列表
-    const List<Color> defaultColors = [
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.red,
-      Colors.teal,
-      Colors.indigo,
-      Colors.pink,
-      Colors.amber,
-      Colors.cyan,
-    ];
-    return defaultColors[index % defaultColors.length];
-  }
     return Row(
       children: [
         // 固定的名称列
@@ -2454,60 +1933,6 @@ class _SyncScrollTableState extends State<_SyncScrollTable> {
                 ),
               ),
             ],
-          ),
-        ),
-        // 可滚动的数据列
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Container(
-              width: widget.comparisonData.length * 150.0,
-              child: Column(
-                children: [
-                  // 表头
-                  Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: kHeaderBackgroundColor,
-                      border: Border(
-                        bottom: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                    child: Row(
-                      children: widget.comparisonData.asMap().entries.map((entry) 
-                         => 
-                          Container(
-                                width: 150,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                alignment: Alignment.centerLeft,
-                                decoration: BoxDecoration(
-                                  color: _getColumnColor(entry.key).withOpacity(0.1),
-                                ),
-                                child: Text(
-                                  entry.value['location']['name'] ?? '未知',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ))
-                          .toList(),
-                    ),
-                  ),
-                  // 数据行
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: _rightScrollController,
-                      physics: const ClampingScrollPhysics(),
-                      child: Column(
-                        children: widget.buildScrollableColumnRows(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
       ],

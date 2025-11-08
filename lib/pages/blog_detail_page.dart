@@ -10,7 +10,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../utils/http_client.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import '../utils/storage.dart'; // 添加导入
-import 'package:fluttertoast/fluttertoast.dart'; // 替换为fluttertoast导入
 import 'user_profile_page.dart'; // 添加UserProfilePage导入
 
 class BlogDetailPage extends StatefulWidget {
