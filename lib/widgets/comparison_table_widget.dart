@@ -18,6 +18,7 @@ class ComparisonTableWidget extends StatelessWidget {
   final Color cellTextColor;
   final Color borderColor;
   final Color firstColumnColor;
+  final double rowHeight;
   const ComparisonTableWidget({
     Key? key,
     required this.comparisonData,
@@ -32,6 +33,7 @@ class ComparisonTableWidget extends StatelessWidget {
     this.cellTextColor = Colors.black,
     this.borderColor = const Color(0xFFe0e0e0),
     this.firstColumnColor = const Color(0xFFF5F5F5),
+    this.rowHeight = 60,
   }) : super(key: key);
 
   @override
@@ -202,7 +204,7 @@ class ComparisonTableWidget extends StatelessWidget {
             Color columnColor = _getColumnColor(index);
             return Container(
               width: 110,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(0),
               decoration: BoxDecoration(
                 color: columnColor,
                 border: Border(
@@ -218,7 +220,7 @@ class ComparisonTableWidget extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: isCity ? 14 : 11, // 根据是否选择城市设置字体大小
+                  fontSize: isCity ? 14 : 12, // 根据是否选择城市设置字体大小
                   color: cellTextColor,
                 ),
               ),
@@ -232,7 +234,7 @@ class ComparisonTableWidget extends StatelessWidget {
   /// 构建品牌数量行
   Widget _buildBrandCountRow() {
     return Container(
-      height: 60,
+      height: rowHeight,
       child: Row(
         children: [
           Container(
@@ -288,7 +290,7 @@ class ComparisonTableWidget extends StatelessWidget {
   /// 构建门店数量行
   Widget _buildStoreCountRow() {
     return Container(
-      height: 60,
+      height: rowHeight,
       child: Row(
         children: [
           Container(
@@ -354,7 +356,7 @@ class ComparisonTableWidget extends StatelessWidget {
   /// 构建综合总分行
   Widget _buildTotalScoreRow() {
     return Container(
-      height: 60,
+      height: rowHeight,
       child: Row(
         children: [
           Container(
@@ -410,7 +412,7 @@ class ComparisonTableWidget extends StatelessWidget {
   /// 构建品牌数据行
   Widget _buildBrandDataRow(String brandName, double averageScore) {
     return Container(
-      height: 60,
+      height: rowHeight,
       child: Row(
         children: [
           Container(

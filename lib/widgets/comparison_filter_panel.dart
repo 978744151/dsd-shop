@@ -4,9 +4,16 @@ class ComparisonFilterPanel extends StatelessWidget {
   final VoidCallback? onClose;
   final ValueChanged<int>? onStyleChanged;
   final int initialStyleIndex;
+  final ValueChanged<double>? onRowHeightChanged;
+  final double initialRowHeight;
 
   const ComparisonFilterPanel(
-      {Key? key, this.onClose, this.onStyleChanged, this.initialStyleIndex = 0})
+      {Key? key,
+      this.onClose,
+      this.onStyleChanged,
+      this.initialStyleIndex = 0,
+      this.onRowHeightChanged,
+      this.initialRowHeight = 60})
       : super(key: key);
 
   @override
@@ -66,9 +73,17 @@ class ComparisonFilterPanel extends StatelessWidget {
                   children: [
                     _FilterRadioGroup(
                       title: '风格',
-                      options: const ['暗黑', '标准', '商务'],
+                      options: const ['暗黑', '标准', '商务', '深色'],
                       initialIndex: initialStyleIndex,
                       onChanged: onStyleChanged,
+                    ),
+                    const SizedBox(height: 16),
+                    _FilterSlider(
+                      title: '行高',
+                      min: 40,
+                      max: 100,
+                      initialValue: initialRowHeight,
+                      onChanged: onRowHeightChanged,
                     ),
                     const SizedBox(height: 16),
                     const Divider(),
@@ -203,6 +218,63 @@ class _FilterRadioGroupState extends State<_FilterRadioGroup> {
                 ),
               ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FilterSlider extends StatefulWidget {
+  final String title;
+  final double min;
+  final double max;
+  final double initialValue;
+  final ValueChanged<double>? onChanged;
+  const _FilterSlider({
+    Key? key,
+    required this.title,
+    required this.min,
+    required this.max,
+    required this.initialValue,
+    this.onChanged,
+  }) : super(key: key);
+
+  @override
+  State<_FilterSlider> createState() => _FilterSliderState();
+}
+
+class _FilterSliderState extends State<_FilterSlider> {
+  late double value;
+
+  @override
+  void initState() {
+    super.initState();
+    value = widget.initialValue.clamp(widget.min, widget.max);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(widget.title),
+            Text('${value.toStringAsFixed(0)}'),
+          ],
+        ),
+        Slider(
+          min: widget.min,
+          max: widget.max,
+          divisions: (widget.max - widget.min).round(),
+          value: value,
+          label: '${value.toStringAsFixed(0)}',
+          activeColor: Theme.of(context).primaryColor,
+          onChanged: (v) {
+            setState(() => value = v);
+            widget.onChanged?.call(v);
+          },
         ),
       ],
     );

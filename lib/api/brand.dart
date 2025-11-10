@@ -1,5 +1,5 @@
 class brandApi {
-  static const String getBrand = 'map/brands';
+  static const String getBrand = 'map/brands?status=approved';
   static const String getBrandTree = 'map/tree';
   static const String getBrandDetail = 'map/brandDetail';
   static const String getBrandBase = 'map/brands/detail';

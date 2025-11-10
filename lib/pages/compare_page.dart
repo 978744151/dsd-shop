@@ -86,6 +86,9 @@ class _ComparePageState extends State<ComparePage> {
   final ScreenshotController _comparisonTableController =
       ScreenshotController();
 
+  // 表格行高（可在筛选面板中调整）
+  double _rowHeight = 60;
+
   // 反馈类型选项 - 使用label-value形式
   final List<Map<String, String>> _feedbackTypes = [
     {'value': 'bug', 'label': '错误报告'},
@@ -130,7 +133,7 @@ class _ComparePageState extends State<ComparePage> {
   ComparisonStyle _getStyle() {
     switch (_styleIndex) {
       case 0: // 暗黑
-        return ComparisonStyle(
+        return const ComparisonStyle(
           headerColor: Colors.black,
           firstColumnColor: Colors.black,
           textColor: Colors.white,
@@ -138,21 +141,20 @@ class _ComparePageState extends State<ComparePage> {
           columnColors: const [Colors.black],
         );
       case 2: // 商务
+        return const ComparisonStyle(
+          headerColor: Colors.white,
+          firstColumnColor: Colors.white,
+          textColor: Colors.black,
+          borderColor: Color(0xFFE2E8F0),
+          columnColors: [Colors.white],
+        );
+      case 3: // 浅色
         return ComparisonStyle(
           headerColor: Colors.white,
           firstColumnColor: Colors.white,
           textColor: Colors.black,
-          borderColor: const Color(0xFFE2E8F0),
-          columnColors: const [Colors.white],
-        );
-      default: // 标准（彩色）
-        return ComparisonStyle(
-          headerColor: Colors.grey.shade100,
-          firstColumnColor: Colors.grey.shade50,
-          textColor: Colors.black,
-          firstColumnTextColor: Colors.black,
-          borderColor: Colors.grey.shade300,
-          columnColors: const [
+          borderColor: Color(0xFFE2E8F0),
+          columnColors: [
             Colors.blue,
             Colors.purple,
             Colors.green,
@@ -167,6 +169,30 @@ class _ComparePageState extends State<ComparePage> {
             Colors.brown,
             Colors.blueGrey,
             Colors.deepPurple,
+          ],
+        );
+      default: // 标准（彩色）
+        return ComparisonStyle(
+          headerColor: Colors.grey.shade100,
+          firstColumnColor: Colors.grey.shade50,
+          textColor: Colors.black,
+          firstColumnTextColor: Colors.black,
+          borderColor: Colors.grey.shade300,
+          columnColors: [
+            Colors.blue.withOpacity(0.6),
+            Colors.purple.withOpacity(0.6),
+            Colors.green.withOpacity(0.6),
+            Colors.yellow.withOpacity(0.6),
+            Colors.teal.withOpacity(0.6),
+            Colors.red.withOpacity(0.6),
+            Colors.deepOrange.withOpacity(0.6),
+            Colors.pink.withOpacity(0.6),
+            Colors.grey.withOpacity(0.6),
+            Colors.amber.withOpacity(0.6),
+            Colors.cyan.withOpacity(0.6),
+            Colors.brown.withOpacity(0.6),
+            Colors.blueGrey.withOpacity(0.6),
+            Colors.deepPurple.withOpacity(0.6),
           ],
         );
     }
@@ -1366,6 +1392,8 @@ class _ComparePageState extends State<ComparePage> {
             onClose: () => Navigator.of(context).pop(),
             onStyleChanged: (i) => setState(() => _styleIndex = i),
             initialStyleIndex: _styleIndex,
+            initialRowHeight: _rowHeight,
+            onRowHeightChanged: (h) => setState(() => _rowHeight = h.roundToDouble()),
           ),
         ),
       ),
@@ -1733,6 +1761,7 @@ class _ComparePageState extends State<ComparePage> {
           headerTextColor: _getStyle().textColor,
           borderColor: _getStyle().borderColor,
           cellTextColor: _getStyle().textColor,
+          rowHeight: _rowHeight,
         ),
       ),
     );
@@ -1826,6 +1855,8 @@ class _ComparePageState extends State<ComparePage> {
                         Navigator.of(context, rootNavigator: true).pop(),
                     onStyleChanged: (i) => setState(() => _styleIndex = i),
                     initialStyleIndex: _styleIndex,
+                    initialRowHeight: _rowHeight,
+                    onRowHeightChanged: (h) => setState(() => _rowHeight = h.roundToDouble()),
                   ),
                 ),
               ],

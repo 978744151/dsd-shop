@@ -59,6 +59,7 @@ class _BrandCenterPageState extends State<BrandCenterPage> {
         'limit': 20,
         'category': selectedCategoryId,
         'search': searchQuery,
+        'status': 'approved'
       });
 
       if (response['success'] == true) {
