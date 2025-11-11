@@ -88,6 +88,8 @@ class _ComparePageState extends State<ComparePage> {
 
   // 表格行高（可在筛选面板中调整）
   double _rowHeight = 60;
+  // 是否计算奥莱店（isola）：true=计算，false=不计算
+  bool _isola = true;
 
   // 反馈类型选项 - 使用label-value形式
   final List<Map<String, String>> _feedbackTypes = [
@@ -1355,6 +1357,7 @@ class _ComparePageState extends State<ComparePage> {
         'brandIds': selectedBrandIds,
         'brandScores': brandScores,
         'saveReport': saveReport,
+        'isOla': !_isola,
       });
 
       if (response['success'] == true) {
@@ -1393,7 +1396,15 @@ class _ComparePageState extends State<ComparePage> {
             onStyleChanged: (i) => setState(() => _styleIndex = i),
             initialStyleIndex: _styleIndex,
             initialRowHeight: _rowHeight,
-            onRowHeightChanged: (h) => setState(() => _rowHeight = h.roundToDouble()),
+            onRowHeightChanged: (h) =>
+                setState(() => _rowHeight = h.roundToDouble()),
+            initialIsola: _isola,
+            onIsolaChanged: (v) {
+              setState(() => _isola = v);
+              if (_selectedIds.length >= 2) {
+                _fetchComparisonData();
+              }
+            },
           ),
         ),
       ),
@@ -1750,19 +1761,19 @@ class _ComparePageState extends State<ComparePage> {
       child: Container(
         margin: const EdgeInsets.all(0),
         child: ComparisonTableWidget(
-          comparisonData: _comparisonData,
-          title: '对比分析',
-          showScreenshotButton: false, // 因为上面已经有截图按钮了
-          screenshotController: _comparisonTableController,
-          columnColors: _getColumnColors(),
-          isCity: _selectedType == 'city',
-          headerBackgroundColor: _getStyle().headerColor,
-          firstColumnColor: _getStyle().firstColumnColor,
-          headerTextColor: _getStyle().textColor,
-          borderColor: _getStyle().borderColor,
-          cellTextColor: _getStyle().textColor,
-          rowHeight: _rowHeight,
-        ),
+            comparisonData: _comparisonData,
+            title: '对比分析',
+            showScreenshotButton: false, // 因为上面已经有截图按钮了
+            screenshotController: _comparisonTableController,
+            columnColors: _getColumnColors(),
+            isCity: _selectedType == 'city',
+            headerBackgroundColor: _getStyle().headerColor,
+            firstColumnColor: _getStyle().firstColumnColor,
+            headerTextColor: _getStyle().textColor,
+            borderColor: _getStyle().borderColor,
+            cellTextColor: _getStyle().textColor,
+            rowHeight: _rowHeight,
+            isOla: _isola),
       ),
     );
   }
@@ -1856,7 +1867,15 @@ class _ComparePageState extends State<ComparePage> {
                     onStyleChanged: (i) => setState(() => _styleIndex = i),
                     initialStyleIndex: _styleIndex,
                     initialRowHeight: _rowHeight,
-                    onRowHeightChanged: (h) => setState(() => _rowHeight = h.roundToDouble()),
+                    onRowHeightChanged: (h) =>
+                        setState(() => _rowHeight = h.roundToDouble()),
+                    initialIsola: _isola,
+                    onIsolaChanged: (v) {
+                      setState(() => _isola = v);
+                      if (_selectedIds.length >= 2) {
+                        _fetchComparisonData();
+                      }
+                    },
                   ),
                 ),
               ],

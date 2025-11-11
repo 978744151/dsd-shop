@@ -4,6 +4,9 @@ class ComparisonFilterPanel extends StatelessWidget {
   final VoidCallback? onClose;
   final ValueChanged<int>? onStyleChanged;
   final int initialStyleIndex;
+  // isola 表示是否计算奥莱店：true=计算，false=不计算
+  final ValueChanged<bool>? onIsolaChanged;
+  final bool initialIsola;
   final ValueChanged<double>? onRowHeightChanged;
   final double initialRowHeight;
 
@@ -13,7 +16,9 @@ class ComparisonFilterPanel extends StatelessWidget {
       this.onStyleChanged,
       this.initialStyleIndex = 0,
       this.onRowHeightChanged,
-      this.initialRowHeight = 60})
+      this.initialRowHeight = 60,
+      this.onIsolaChanged,
+      this.initialIsola = true})
       : super(key: key);
 
   @override
@@ -88,7 +93,11 @@ class ComparisonFilterPanel extends StatelessWidget {
                     const SizedBox(height: 16),
                     const Divider(),
                     const SizedBox(height: 16),
-                    _FilterSwitch(title: '是否计算奥莱店'),
+                    _IsolaSwitch(
+                      title: '是否计算奥莱店',
+                      initialValue: initialIsola,
+                      onChanged: onIsolaChanged,
+                    ),
                   ],
                 ),
               ),
@@ -122,15 +131,37 @@ class ComparisonFilterPanel extends StatelessWidget {
   }
 }
 
-class _FilterSwitch extends StatefulWidget {
+// class _FilterSwitch extends StatefulWidget {
+//   final String title;
+//   const _FilterSwitch({Key? key, required this.title}) : super(key: key);
+//   @override
+//   State<_FilterSwitch> createState() => _FilterSwitchState();
+// }
+
+class _IsolaSwitch extends StatefulWidget {
   final String title;
-  const _FilterSwitch({Key? key, required this.title}) : super(key: key);
+  final bool initialValue;
+  final ValueChanged<bool>? onChanged;
+  const _IsolaSwitch({
+    Key? key,
+    required this.title,
+    this.initialValue = true,
+    this.onChanged,
+  }) : super(key: key);
+
   @override
-  State<_FilterSwitch> createState() => _FilterSwitchState();
+  State<_IsolaSwitch> createState() => _IsolaSwitchState();
 }
 
-class _FilterSwitchState extends State<_FilterSwitch> {
-  bool value = false;
+class _IsolaSwitchState extends State<_IsolaSwitch> {
+  late bool value;
+
+  @override
+  void initState() {
+    super.initState();
+    value = widget.initialValue; // 默认计算奥莱店（true）
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -138,10 +169,14 @@ class _FilterSwitchState extends State<_FilterSwitch> {
       children: [
         Expanded(child: Text(widget.title)),
         Switch(
-            value: value,
-            inactiveThumbColor: Theme.of(context).primaryColor,
-            activeThumbColor: Theme.of(context).primaryColor,
-            onChanged: (v) => setState(() => value = v)),
+          value: value,
+          inactiveThumbColor: Theme.of(context).primaryColor,
+          activeThumbColor: Theme.of(context).primaryColor,
+          onChanged: (v) {
+            setState(() => value = v);
+            widget.onChanged?.call(v); // 以 isola 参数传递 true/false
+          },
+        ),
       ],
     );
   }

@@ -360,9 +360,9 @@ class _SettingsPageState extends State<SettingsPage> {
               title: const Text(
                 '个人设置',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: Colors.black87,
                 ),
               ),
               background: Container(
@@ -378,14 +378,12 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             leading: Container(
-              margin: const EdgeInsets.all(8),
+              margin: const EdgeInsets.all(0),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
+                  // borderRadius: BorderRadius.circular(12),
+                  ),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios,
-                    color: Colors.white, size: 20),
+                icon: const Icon(Icons.arrow_back_ios, size: 22),
                 onPressed: () {
                   if (context.canPop()) {
                     context.pop();
@@ -413,7 +411,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       : const Text(
                           '保存',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
                           ),

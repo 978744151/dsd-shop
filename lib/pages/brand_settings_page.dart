@@ -29,18 +29,16 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
     });
 
     // 读取本地存储的分数
-    final saved = await Storage.getJson('brand_custom_scores');
-    if (saved != null) {
-      _customScores =
-          saved.map((key, value) => MapEntry(key, value.toString()));
-    }
+    // final saved = await Storage.getJson('brand_custom_scores');
+    // if (saved != null) {
+    //   _customScores =
+    //       saved.map((key, value) => MapEntry(key, value.toString()));
+    // }
 
     try {
       // 拉取品牌列表（尽量多取一些，支持搜索时可以扩展）
-      final response = await HttpClient.get(brandApi.getBrand, params: {
-        'page': 1,
-        'limit': 200,
-      });
+      final response = await HttpClient.get(brandApi.getBrand,
+          params: {'page': 1, 'limit': 200, 'status': 'approved'});
       if (response['success'] == true) {
         final List<dynamic> data = response['data']['brands'] ?? [];
         _brands = data.map((e) => BrandModel.fromJson(e)).toList();
@@ -126,7 +124,10 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
             onPressed: _isLoading ? null : _saveScores,
             child: const Text(
               '保存',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -165,7 +166,9 @@ class _BrandSettingsPageState extends State<BrandSettingsPage> {
                       final brand = _brands[index];
                       final brandId = brand.id;
                       final name = brand.name ?? '';
-                      final ctrlValue = _customScores[brandId] ?? brand.score?.toString() ?? '';
+                      final ctrlValue = _customScores[brandId] ??
+                          brand.score?.toString() ??
+                          '';
                       return Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),

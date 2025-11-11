@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:screenshot/screenshot.dart';
 import '../utils/screenshot_util.dart';
 import '../widgets/store_detail_dialog.dart';
-import '../models/coach_data.dart';
+import '../utils/http_client.dart';
+import '../api/brand.dart';
 
 /// 对比表格组件，可复用的表格展示和截图功能
 class ComparisonTableWidget extends StatelessWidget {
@@ -19,22 +20,24 @@ class ComparisonTableWidget extends StatelessWidget {
   final Color borderColor;
   final Color firstColumnColor;
   final double rowHeight;
-  const ComparisonTableWidget({
-    Key? key,
-    required this.comparisonData,
-    this.title = '对比表格',
-    this.showScreenshotButton = true,
-    this.screenshotController,
-    this.customTableBuilder,
-    this.headerBackgroundColor = const Color(0xFFF5F5F5),
-    this.columnColors,
-    this.isCity = false,
-    this.headerTextColor = Colors.black,
-    this.cellTextColor = Colors.black,
-    this.borderColor = const Color(0xFFe0e0e0),
-    this.firstColumnColor = const Color(0xFFF5F5F5),
-    this.rowHeight = 60,
-  }) : super(key: key);
+  final bool isOla;
+  const ComparisonTableWidget(
+      {Key? key,
+      required this.comparisonData,
+      this.title = '对比表格',
+      this.showScreenshotButton = true,
+      this.screenshotController,
+      this.customTableBuilder,
+      this.headerBackgroundColor = const Color(0xFFF5F5F5),
+      this.columnColors,
+      this.isCity = false,
+      this.headerTextColor = Colors.black,
+      this.cellTextColor = Colors.black,
+      this.borderColor = const Color(0xFFe0e0e0),
+      this.firstColumnColor = const Color(0xFFF5F5F5),
+      this.rowHeight = 50,
+      this.isOla = true})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +207,7 @@ class ComparisonTableWidget extends StatelessWidget {
             Color columnColor = _getColumnColor(index);
             return Container(
               width: 110,
-              padding: const EdgeInsets.all(0),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 5),
               decoration: BoxDecoration(
                 color: columnColor,
                 border: Border(
@@ -239,7 +242,7 @@ class ComparisonTableWidget extends StatelessWidget {
         children: [
           Container(
             width: 140,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
             decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(color: borderColor),
@@ -295,7 +298,7 @@ class ComparisonTableWidget extends StatelessWidget {
         children: [
           Container(
             width: 140,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
             decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(color: borderColor),
@@ -361,7 +364,7 @@ class ComparisonTableWidget extends StatelessWidget {
         children: [
           Container(
             width: 140,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
             decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(color: borderColor),
@@ -385,7 +388,7 @@ class ComparisonTableWidget extends StatelessWidget {
             Color columnColor = _getColumnColor(index);
             return Container(
               width: 110,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
               decoration: BoxDecoration(
                 color: columnColor,
                 border: Border(
@@ -487,15 +490,55 @@ class ComparisonTableWidget extends StatelessWidget {
                   ? Text('', style: TextStyle(color: cellTextColor))
                   : Builder(builder: (ctx) {
                       return InkWell(
-                        onTap: () {
+                        onTap: () async {
                           final String locationName =
                               data['location']?['name']?.toString() ?? '';
-                          final List<dynamic> rawStores =
-                              (brandData['stores'] as List<dynamic>?) ?? [];
-                          final List<CoachData> stores = rawStores
-                              .map((e) => CoachData.fromJson(
-                                  (e as Map<String, dynamic>)))
-                              .toList();
+                          final String? locationId =
+                              data['location']?['id']?.toString();
+                          final String? brandId =
+                              brandData?['brand']['_id']?.toString();
+
+                          List<dynamic> stores = [];
+                          bool fetched = false;
+                          print(
+                              'locationName: $locationName, locationId: $locationId, brandId: $brandData');
+                          // 优先调用接口获取门店数据，按需传入 cityId 和 brandId
+                          if (locationId != null &&
+                              locationId.isNotEmpty &&
+                              brandId != null &&
+                              brandId.isNotEmpty) {
+                            try {
+                              final response = await HttpClient.get(
+                                brandApi.getBrandDetail,
+                                params: {
+                                  'brandId': brandId,
+                                  'cityId': locationId,
+                                  'limit': 999,
+                                  'isOla': isOla
+                                },
+                              );
+                              if (response['success'] == true) {
+                                final List<dynamic> storeData =
+                                    (response['data']?['stores'] ?? [])
+                                        as List<dynamic>;
+                                // 直接保留原始 Map 列表，不做 CoachData 转换
+                                stores =
+                                    List<Map<String, dynamic>>.from(storeData);
+                                fetched = true;
+                              }
+                            } catch (_) {
+                              // 忽略错误，回退到已有数据
+                            }
+                          }
+
+                          // 接口未成功或参数缺失时，回退到已有数据中的 stores
+                          if (!fetched) {
+                            final List<dynamic> rawStores =
+                                (brandData['stores'] as List<dynamic>?) ?? [];
+                            // 回退时也直接使用原始数据
+                            stores = rawStores;
+                          }
+
                           final String dialogTitle =
                               '${locationName.isEmpty ? '' : '$locationName - '}$brandName 门店';
                           _showStoreDialog(ctx, dialogTitle, stores);
@@ -518,7 +561,7 @@ class ComparisonTableWidget extends StatelessWidget {
   }
 
   void _showStoreDialog(
-      BuildContext context, String title, List<CoachData> stores) {
+      BuildContext context, String title, List<dynamic> stores) {
     // 避免在构建阶段进行导航，延迟到帧结束后执行
     WidgetsBinding.instance.addPostFrameCallback((_) {
       showDialog(

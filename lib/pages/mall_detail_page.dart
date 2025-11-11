@@ -354,7 +354,6 @@ class _MallDetailPageState extends State<MallDetailPage> {
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(
                       Icons.arrow_back_ios,
-                      color: Colors.white,
                       size: 20,
                     ),
                   ),
@@ -364,7 +363,7 @@ class _MallDetailPageState extends State<MallDetailPage> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Colors.black87,
                       ),
                       textAlign: TextAlign.center,
                     ),
