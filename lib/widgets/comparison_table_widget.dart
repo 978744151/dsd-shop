@@ -126,8 +126,8 @@ class ComparisonTableWidget extends StatelessWidget {
       }
     }
 
-    final List<Map<String, dynamic>> sortedBrands = brandScoreMap.entries
-        .map((e) {
+    final List<Map<String, dynamic>> sortedBrands =
+        brandScoreMap.entries.map((e) {
       final List<double> values = e.value;
       final double avg = values.isEmpty
           ? 0.0
@@ -136,8 +136,8 @@ class ComparisonTableWidget extends StatelessWidget {
         'name': e.key,
         'score': avg,
       };
-    }).toList()
-      ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
+    }).toList();
+    // ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
 
     double tableWidth = 142 + (comparisonData.length * 110.0);
 

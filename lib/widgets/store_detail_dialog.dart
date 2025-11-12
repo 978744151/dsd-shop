@@ -217,7 +217,7 @@ class StoreDetailDialog extends StatelessWidget {
                   child: const Text(
                     '关闭',
                     style: TextStyle(
-                      color: Color(0xFF1E3A8A),
+                      color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),

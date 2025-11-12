@@ -14,7 +14,6 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
-		A6FFB9B82EB35E1900066E39 /* XiaoHongShuOpenSDK.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = A6FFB9B72EB35E1900066E39 /* XiaoHongShuOpenSDK.xcframework */; };
 		A6FFB9BA2EB35EDC00066E39 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = A6FFB9B92EB35EDC00066E39 /* libz.tbd */; };
 		A6FFB9BC2EB35EE500066E39 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = A6FFB9BB2EB35EE500066E39 /* libsqlite3.tbd */; };
 		B82FB3F57CA5D654F63D8BA9 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B92052A752BEAAE019E717B7 /* Pods_RunnerTests.framework */; };
@@ -88,7 +87,6 @@
 			files = (
 				A6FFB9BC2EB35EE500066E39 /* libsqlite3.tbd in Frameworks */,
 				A6FFB9BA2EB35EDC00066E39 /* libz.tbd in Frameworks */,
-				A6FFB9B82EB35E1900066E39 /* XiaoHongShuOpenSDK.xcframework in Frameworks */,
 				BB32A58EF5D94D52119EA189 /* Pods_Runner.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
