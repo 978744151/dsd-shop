@@ -28,7 +28,7 @@ class _CustomBottomNavigationState extends State<CustomBottomNavigation> {
   @override
   void initState() {
     super.initState();
-    _initializeIfLoggedIn();
+    // _initializeIfLoggedIn();
   }
 
   // 检查用户是否已登录，只有登录用户才初始化未读消息功能

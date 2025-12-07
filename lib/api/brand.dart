@@ -1,6 +1,7 @@
 class brandApi {
-  static const String getBrand = 'map/brands';
+  static const String getBrand = 'map/brands?status=approved';
   static const String getBrandTree = 'map/tree';
+  static const String getBrandTreeBy = 'map/malls-tree/tree-by-brand';
   static const String getBrandDetail = 'map/brandDetail';
   static const String getBrandBase = 'map/brands/detail';
   static const String getMalls = 'map/malls';
@@ -9,6 +10,9 @@ class brandApi {
   static const String getCities = 'map/cities';
   static const String getComparisonReports = 'map/comparison/reports';
   static String getComparisonReportsDetail(id) => 'map/comparison/reports/$id';
+
+  // 新增：保存品牌分数
+  static const String setBrandScores = 'admin/brands-scores';
 
   // 地址相关API
   static const String getAddressList = 'user/addresses';

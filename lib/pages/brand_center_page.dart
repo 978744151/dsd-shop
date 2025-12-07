@@ -56,7 +56,7 @@ class _BrandCenterPageState extends State<BrandCenterPage> {
     try {
       final response = await HttpClient.get(brandApi.getBrand, params: {
         'page': 1,
-        'limit': 20,
+        'limit': 999,
         'category': selectedCategoryId,
         'search': searchQuery,
       });
@@ -122,7 +122,7 @@ class _BrandCenterPageState extends State<BrandCenterPage> {
             (brand.name?.toLowerCase().contains(searchQuery.toLowerCase()) ??
                 false);
 
-        bool matchesCategory =
+        bool matchesCategory =              
             selectedCategoryId.isEmpty || brand.type == selectedCategoryId;
 
         return matchesSearch && matchesCategory;

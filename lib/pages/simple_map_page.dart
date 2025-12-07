@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:business_savvy/pages/feedback_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_echarts/flutter_echarts.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +14,8 @@ import '../api/brand.dart';
 import '../utils/http_client.dart';
 import '../models/province.dart';
 import '../models/brand.dart';
+
+import '../utils/screenshot_util.dart';
 
 class SimpleMapPage extends StatefulWidget {
   final String? brandId;
@@ -36,7 +41,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
     '天津市': 'tianjin',
     '河北省': 'hebei',
     '山西省': 'shanxi',
-    '内蒙古自治区': 'neimenggu',
+    '内蒙古': 'neimenggu',
     '辽宁省': 'liaoning',
     '吉林省': 'jilin',
     '黑龙江省': 'heilongjiang',
@@ -54,17 +59,17 @@ class _SimpleMapPageState extends State<SimpleMapPage>
     '四川省': 'sichuan',
     '贵州省': 'guizhou',
     '云南省': 'yunnan',
-    '西藏自治区': 'xizang',
-    '陕西省': 'shaanxi',
+    '西藏': 'xizang',
+    '陕西省': 'shanxi1',
     '甘肃省': 'gansu',
     '青海省': 'qinghai',
     '宁夏省': 'ningxia',
-    '新疆维吾尔自治区': 'xinjiang',
+    '新疆': 'xinjiang',
     '广东省': 'guangdong',
-    '广西省': 'guangxi',
+    '广西': 'guangxi',
     '海南省': 'hainan',
-    '香港特别行政区': 'xianggang',
-    '澳门特别行政区': 'aomen',
+    '香港': 'xianggang',
+    '澳门': 'aomen',
     '台湾省': 'taiwan',
   };
 
@@ -76,7 +81,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
     '天津市': '天津',
     '河北省': '河北',
     '山西省': '山西',
-    '内蒙古自治区': '内蒙古',
+    '内蒙古': '内蒙古',
     '辽宁省': '辽宁',
     '吉林省': '吉林',
     '黑龙江省': '黑龙江',
@@ -94,41 +99,121 @@ class _SimpleMapPageState extends State<SimpleMapPage>
     '四川省': '四川',
     '贵州省': '贵州',
     '云南省': '云南',
-    '西藏自治区': '西藏',
+    '西藏': '西藏',
     '陕西省': '陕西',
     '甘肃省': '甘肃',
     '青海省': '青海',
-    '宁夏回族自治区': '宁夏',
-    '新疆维吾尔自治区': '新疆',
+    '宁夏': '宁夏',
+    '新疆': '新疆',
     '广东省': '广东',
-    '广西壮族自治区': '广西',
+    '广西': '广西',
     '海南省': '海南',
-    '香港特别行政区': '香港',
-    '澳门特别行政区': '澳门',
+    '香港': '香港',
+    '澳门': '澳门',
     '台湾省': '台湾',
   };
   List<dynamic> provinces = [];
   List<dynamic> _cityData = [];
+  List<dynamic> _allCityData = [];
+  List<dynamic> _columnCityData = [];
   bool isLoading = true;
   String provinceId = '';
+
+  bool _allCityLoading = false;
+  String? _selectedProvinceIdForCities; // 选中的省份ID，用于显示城市列表
+  String? _selectedProvinceName; // 选中的省份名称
+
+  // 列表视图相关状态变量
+  String? _selectedCityIdForMalls; // 选中的城市ID
+  List<dynamic> _mallsForSelectedCity = []; // 选中城市的商场列表
+  bool _mallsLoading = false; // 商场加载状态
 
   // 添加门店列表相关状态变量
   List<dynamic> _storeList = []; // 门店列表数据
   bool _showStoreDialog = false; // 是否显示门店弹框
   bool _storeLoading = false; // 门店数据加载状态
   String _currentCityId = ''; // 当前选中的城市ID
-  String _currentCityName = ''; // 当前选中的城市名称
+  String? _currentCityName = ''; // 当前选中的城市名称
   dynamic _selectedBrand;
+  bool _tabSwipeLocked = false;
+  // final ScreenshotController _tableScreenshotController =
+  //     ScreenshotUtil.createController();
+  final GlobalKey _tableKey = GlobalKey();
+  List<dynamic> _brandCitiesAll = [];
+  bool _brandCitiesLoading = false;
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 5, vsync: this, initialIndex: 1);
     _tabController!.addListener(() {
       setState(() {});
+      final idx = _tabController!.index;
+      if (( idx == 4 || idx == 3) && _allCityData.isEmpty && !_allCityLoading) {
+        fetchAllCitiesOverview();
+      }
+     
+      if (idx == 2 && _brandCitiesAll.isEmpty && !_brandCitiesLoading) {
+        fetchAllCitiesByBrand();
+      }
+      
     });
     fetchBrandDetail();
     _loadChinaJson();
     fetchProvinces(); // 调用获取省份数据的方法
+  }
+
+  Future<void> fetchAllCitiesByBrand() async {
+    if (!mounted) return;
+    setState(() {
+      _brandCitiesLoading = true;
+    });
+
+    try {
+      final response = await HttpClient.get(brandApi.getBrandTreeBy, params: {
+        'level': 2,
+        'brandId': widget.brandId,
+      });
+
+      if (!mounted) return;
+      if (response['success']) {
+        final List<dynamic> citiesData = response['data']['cities'] ?? [];
+        final List<dynamic> flattenedCities = [];
+        for (final c in citiesData) {
+          final List<dynamic> malls = c['malls'] ?? [];
+          final List<String> mallNamesList = malls
+              .map((m) => (m['name'] ?? '').toString())
+              .where((n) => n.isNotEmpty)
+              .toList();
+          flattenedCities.add({
+            'name': c['name'],
+            'value': c['storeCount'] ?? 0,
+            'shopCount': mallNamesList.length,
+            'brandCount': c['brandCount'] ?? 0,
+            'id': c['_id'],
+            'provinceId': c['provinceId']?.toString() ?? '',
+            'mallNamesList': mallNamesList,
+          });
+        }
+        flattenedCities
+            .sort((b, a) => (a['shopCount'] as int).compareTo(b['shopCount'] as int));
+        setState(() {
+          _brandCitiesAll = flattenedCities;
+          _brandCitiesLoading = false;
+        });
+      } else {
+        setState(() {
+          _brandCitiesLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _brandCitiesLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('获取品牌城市数据失败：${e.toString()}')),
+      );
+    }
   }
 
   // 获取省份数据的方法
@@ -249,6 +334,164 @@ class _SimpleMapPageState extends State<SimpleMapPage>
       // 添加错误提示
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('获取省份数据失败：${e.toString()}')),
+      );
+    }
+  }
+
+  // 获取指定省份下的城市列表
+  Future<void> fetchCitiesByProvince(String provinceId, String provinceName) async {
+    if (!mounted) return;
+
+    setState(() {
+      _allCityLoading = true;
+      _selectedProvinceIdForCities = provinceId;
+      _selectedProvinceName = provinceName;
+    });
+
+    try {
+      final response = await HttpClient.get(brandApi.getBrandTree, params: {
+        'level': 2,
+        'brandId': widget.brandId,
+        'provinceId': provinceId,
+      });
+
+      if (!mounted) return;
+      if (response['success']) {
+        final List<dynamic> provincesData = response['data']['provinces'] ?? [];
+        
+        if (provincesData.isNotEmpty) {
+          final List<dynamic> cities = provincesData[0]['cities'] ?? [];
+          final List<dynamic> cityList = cities.map((c) {
+            return {
+              'name': c['name'],
+              'value': c['storeCount'] ?? 0,
+              'shopCount': c['shopCount'] ?? 0,
+              'brandCount': c['brandCount'] ?? 0,
+              'id': c['_id'],
+              'provinceId': provinceId,
+            };
+          }).toList();
+
+          cityList.removeWhere((item) => (item['value'] ?? 0) == 0);
+          cityList.sort((b, a) => (a['value'] as int).compareTo(b['value'] as int));
+
+          setState(() {
+            _allCityData = cityList;
+            _allCityLoading = false;
+          });
+        } else {
+          setState(() {
+            _allCityData = [];
+            _allCityLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          _allCityLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _allCityLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('获取城市数据失败：${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> fetchAllCitiesOverview() async {
+    if (!mounted) return;
+    setState(() {
+      _allCityLoading = true;
+    });
+
+    try {
+      final response = await HttpClient.get(brandApi.getBrandTree, params: {
+        'level': 2,
+        'brandId': widget.brandId,
+      });
+
+      if (!mounted) return;
+      if (response['success']) {
+        final List<dynamic> provincesData = response['data']['provinces'] ?? [];
+
+        final List<dynamic> flattenedCities = [];
+        for (final p in provincesData) {
+          final String pid = p['_id']?.toString() ?? '';
+          final List<dynamic> cities = p['cities'] ?? [];
+          for (final c in cities) {
+            flattenedCities.add({
+              'name': c['name'],
+              'value': c['storeCount'] ?? 0,
+              'shopCount': c['shopCount'] ?? 0,
+              'brandCount': c['brandCount'] ?? 0,
+              'id': c['_id'],
+              'provinceId': pid,
+            });
+          }
+        }
+
+        flattenedCities.removeWhere((item) => (item['value'] ?? 0) == 0);
+        flattenedCities
+            .sort((b, a) => (a['value'] as int).compareTo(b['value'] as int));
+
+        setState(() {
+          _allCityData = flattenedCities;
+          _columnCityData = flattenedCities;
+          _allCityLoading = false;
+        });
+      } else {
+        setState(() {
+          _allCityLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _allCityLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('获取城市数据失败：${e.toString()}')),
+      );
+    }
+  }
+
+  // 获取指定城市的商场列表
+  Future<void> fetchMallsByCity(String cityId) async {
+    if (!mounted) return;
+    setState(() {
+      _mallsLoading = true;
+      _mallsForSelectedCity = [];
+    });
+
+    try {
+      final response = await HttpClient.get(brandApi.getMalls, params: {
+        'cityId': cityId,
+        'brands': widget.brandId,
+      });
+
+      if (!mounted) return;
+
+      if (response['success']) {
+        final List<dynamic> mallsData = response['data']['malls'] ?? [];
+        setState(() {
+          _mallsForSelectedCity = mallsData;
+          _mallsLoading = false;
+        });
+      } else {
+        setState(() {
+          _mallsLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _mallsLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('获取商场数据失败：${e.toString()}')),
       );
     }
   }
@@ -379,7 +622,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
   }
 
   // 获取门店列表的方法
-  Future<void> fetchStores(String cityId, String cityName,
+  Future<void> fetchStores(String cityId, String? cityName,
       {String? customProvinceId}) async {
     if (!mounted) return;
     try {
@@ -472,13 +715,35 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                   valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E3A8A)),
                 ),
               )
-            : Echarts(
+            : Listener(
+                onPointerDown: (event) {
+                  if (_tabController?.index == 1) {
+                    setState(() {
+                      _tabSwipeLocked = true;
+                    });
+                  }
+                },
+                onPointerUp: (event) {
+                  if (_tabController?.index == 1) {
+                    setState(() {
+                      _tabSwipeLocked = false;
+                    });
+                  }
+                },
+                onPointerCancel: (event) {
+                  if (_tabController?.index == 1) {
+                    setState(() {
+                      _tabSwipeLocked = false;
+                    });
+                  }
+                },
+                child: Echarts(
                 key: ValueKey('map_${_currentMapKey}_${_isProvince}'),
                 option: '''
                 {
                   title: {
                     text: '${_isProvince ? _currentMapKey : '${_selectedBrand?.name ?? ''}门店分布图'}',
-                    subtext: '${_isProvince ? '点击城市查看详情' : '点击省份查看详情 (已收录${_selectedBrand?.storeCount ?? '-'}个)'}',
+                    subtext: '${_isProvince ? (_selectedBrand?.code ?? '') : '${_selectedBrand?.code ?? ''} (已收录${_selectedBrand?.storeCount ?? '-'}个 收录日期 ${(_selectedBrand?.updatedAt ?? '').toString().split('T').first} )'}',
                     left: 'center',
                     top: 20,
                     textStyle: {
@@ -621,21 +886,23 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                   } catch (_) {}
                 },
               ),
+            ),
       ),
     );
   }
 
   // 显示门店列表底部弹框
-  void _showStoreBottomSheet(String cityId, String cityName) async {
+  void _showStoreBottomSheet(String cityId, String? cityName,
+      {String? customProvinceId}) async {
     // setState(() {
     //   _currentCityId = cityId;
     //   _currentCityName = cityName;
-    //   _isShowingStoreDialog = true;
+    //   _isShg = true;
     // });
     _currentCityId = cityId;
     _currentCityName = cityName;
     _isShowingStoreDialog = true;
-    await fetchStores(cityId, cityName);
+    await fetchStores(cityId, cityName, customProvinceId: customProvinceId);
     if (!mounted) return;
     showModalBottomSheet(
       context: context,
@@ -885,10 +1152,286 @@ class _SimpleMapPageState extends State<SimpleMapPage>
   }
 
   Widget _buildListView() {
-    // 过滤掉门店数量为0的数据
-    final filteredData = _isProvince
-        ? _cityData.where((item) => (item['value'] as int) > 0).toList()
-        : provinces.where((item) => (item['value'] as int) > 0).toList();
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.grey.shade50,
+            Colors.white,
+          ],
+        ),
+      ),
+      child: Column(
+        children: [
+          // 表格区域
+          Expanded(
+            child: _brandCitiesLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E3A8A)),
+                    ),
+                  )
+                : _brandCitiesAll.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.table_chart,
+                              size: 80,
+                              color: Colors.grey.shade300,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              '暂无数据',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade500,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.vertical,
+                          child: RepaintBoundary(
+                            key: _tableKey,
+                            child: Container(
+                              color: Colors.black,
+                              child: Container(
+                                width: 800,
+                                color: Colors.white,
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Table(
+                                border: TableBorder.all(
+                                  color: Colors.grey.shade300,
+                                  width: 1,
+                                ),
+                                columnWidths: const {
+                                  0: FixedColumnWidth(100),
+                                  1: FixedColumnWidth(60),
+                                  2: FlexColumnWidth(),
+                                },
+                                children: [
+                                  // 表头
+                                  TableRow(
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF1E3A8A),
+                                    ),
+                                    children: [
+                                      const Padding(
+                                        padding:  EdgeInsets.all(12),
+                                        child: Text(
+                                          '城市',
+                                          style:  TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                       Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Text(
+                                          '${_selectedBrand?.storeCount ?? ''}',
+                                            textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Text(
+                                          '${_selectedBrand?.name ?? ''}(${_selectedBrand?.code ?? ''}) 城市分布',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  // 数据行
+                                  ..._brandCitiesAll.map((city) {
+                                    final cityName = city['name']?.toString() ?? '-';
+                                    final mallNamesList = city['mallNamesList'] as List<dynamic>? ?? [];
+                                    final mallCount = mallNamesList.length;
+                                    final mallsText = mallNamesList.isNotEmpty
+                                        ? mallNamesList.join('、')
+                                        : '-';
+
+                                    return TableRow(
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                      ),
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Text(
+                                            cityName,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Text(
+                                            mallCount.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: Color(0xFF1E3A8A),
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Text(
+                                            mallsText,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ],
+                              ),
+                              // 尾行：应用商店搜索信息
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF1E3A8A),
+                                  border: Border(
+                                    left: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+                                    right: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+                                    bottom: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+                                  ),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    '应用商店搜索 懂商帝 查看更多商业内容',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                          ),
+                        ),
+                      ),
+                    ),
+          ),
+          // 截图按钮
+          if (_brandCitiesAll.isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: () => _captureAndShowTableImage(context),
+                icon: const Icon(Icons.camera_alt, size: 18),
+                label: const Text('生成图片'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 生成表格截图并显示
+  Future<void> _captureAndShowTableImage(BuildContext context) async {
+    try {
+      // 获取RepaintBoundary
+      RenderRepaintBoundary? boundary = _tableKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('表格渲染未完成，请稍后再试')),
+          );
+        }
+        return;
+      }
+
+      // 等待渲染完成
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // 捕获图像
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('截图生成失败')),
+          );
+        }
+        return;
+      }
+
+      Uint8List imageBytes = byteData.buffer.asUint8List();
+
+      // 显示预览对话框
+      if (context.mounted) {
+        ScreenshotUtil.showImageDialog(context, imageBytes);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('截图失败: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Widget _buildProvinceOverviewView() {
+    // 如果已选中省份，显示该省份的城市列表
+    if (_selectedProvinceName != null) {
+      return _buildCityOverviewView();
+    }
+
+    // 否则显示省级列表
+    final filteredData = provinces;
 
     return Container(
       decoration: BoxDecoration(
@@ -901,138 +1444,767 @@ class _SimpleMapPageState extends State<SimpleMapPage>
           ],
         ),
       ),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: filteredData.length,
-        itemBuilder: (context, index) {
-          final province = filteredData[index];
+      child: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E3A8A)),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              itemCount: filteredData.length,
+              itemBuilder: (context, index) {
+                final province = filteredData[index];
 
-          final value = province['value'] as int;
-          final name = province['name'] as String;
+                final value = province['value'] as int;
+                final name = province['name'] as String;
 
-          // 根据数值设置颜色渐变
-          Color getColorByValue(int val) {
-            if (val >= 20) return const Color(0xFF1E3A8A); // 深蓝
-            if (val >= 10) return const Color(0xFF3B82F6); // 蓝色
-            if (val >= 5) return const Color(0xFF10B981); // 绿色
-            if (val > 0) return const Color(0xFFF59E0B); // 橙色
-            return const Color(0xFFEF4444); // 红色
-          }
+                Color getColorByValue(int val) {
+                  if (val >= 20) return const Color(0xFF1E3A8A);
+                  if (val >= 10) return const Color(0xFF3B82F6);
+                  if (val >= 5) return const Color(0xFF10B981);
+                  if (val > 0) return const Color(0xFFF59E0B);
+                  return const Color(0xFFEF4444);
+                }
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  if (!_isProvince) {
-                    setState(() {
-                      provinceId = province['adcode'];
-                    });
-
-                    _drillDownToProvince(name);
-                  } else {
-                    _showStoreBottomSheet(province['id'], province['name']);
-                  }
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      // 左侧数值圆圈
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              getColorByValue(value),
-                              getColorByValue(value).withOpacity(0.8),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: getColorByValue(value).withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        final municipalities = ['北京市', '上海市', '天津市', '重庆市'];
+                        if (municipalities.contains(name)) {
+                          _showStoreBottomSheet(province['adcode'], name);
+                        } else {
+                          // 加载该省份的城市数据，在当前页面显示
+                          await fetchCitiesByProvince(province['adcode'], name);
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    getColorByValue(value),
+                                    getColorByValue(value).withOpacity(0.8),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        getColorByValue(value).withOpacity(0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  value.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${_selectedBrand?.name ?? ''}门店数量',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: Text(
-                            value.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
                       ),
-                      const SizedBox(width: 20),
-                      // 中间信息
-                      Expanded(
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildCityOverviewView() {
+    final filteredData = _allCityData;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.grey.shade50,
+            Colors.white,
+          ],
+        ),
+      ),
+      child: Column(
+        children: [
+          // 如果有选中的省份，显示省份名称和返回按钮
+          if (_selectedProvinceName != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E3A8A),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedProvinceIdForCities = null;
+                        _selectedProvinceName = null;
+                        _allCityData = [];
+                      });
+                    },
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '$_selectedProvinceName - 城市列表',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: _allCityLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E3A8A)),
+                    ),
+                  )
+                : filteredData.isEmpty
+                    ? Center(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F2937),
-                              ),
+                            Icon(
+                              Icons.location_city,
+                              size: 80,
+                              color: Colors.grey.shade300,
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 16),
                             Text(
-                              '${_selectedBrand?.name ?? ''}门店数量',
+                              _selectedProvinceName != null ? '该省份暂无城市数据' : '请从省级列表选择一个省份',
                               style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
+                                fontSize: 16,
+                                color: Colors.grey.shade500,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      // 右侧箭头
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                          color: Colors.grey.shade600,
-                        ),
+                      )
+                    : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              itemCount: filteredData.length,
+              itemBuilder: (context, index) {
+                final city = filteredData[index];
+
+                final value = city['value'] as int;
+                final name = city['name'] as String;
+
+                Color getColorByValue(int val) {
+                  if (val >= 20) return const Color(0xFF1E3A8A);
+                  if (val >= 10) return const Color(0xFF3B82F6);
+                  if (val >= 5) return const Color(0xFF10B981);
+                  if (val > 0) return const Color(0xFFF59E0B);
+                  return const Color(0xFFEF4444);
+                }
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                ),
-              ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        final municipalities = ['北京市', '上海市', '天津市', '重庆市'];
+                        if (municipalities.contains(name)) {
+                          _showStoreBottomSheet(city['id'], '');
+                        } else {
+                          _showStoreBottomSheet(city['id'], name,
+                              customProvinceId: city['provinceId']);
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    getColorByValue(value),
+                                    getColorByValue(value).withOpacity(0.8),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        getColorByValue(value).withOpacity(0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  value.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${_selectedBrand?.name ?? ''}门店数量',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
+
+  // 新增：城市-商场列表视图（左侧城市，右侧商场）
+  Widget _buildCityMallListView() {
+    // 过滤掉门店数量为0的城市
+    final filteredCityData = _columnCityData.where((city) => (city['value'] as int) > 0).toList();
+    
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.grey.shade50,
+            Colors.white,
+          ],
+        ),
+      ),
+      child: _allCityLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E3A8A)),
+              ),
+            )
+          : Row(
+              children: [
+                // 左侧：城市列表
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        right: BorderSide(
+                          color: Colors.grey.shade200,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E3A8A),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.location_city,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '城市 (${filteredCityData.length})',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: ListView.builder(
+                            padding: const EdgeInsets.only(bottom: 30),
+                            primary: false,
+                            itemCount: filteredCityData.length,
+                            itemBuilder: (context, index) {
+                              final city = filteredCityData[index];
+                              final cityId = city['id'];
+                              final cityName = city['name'];
+                              final storeCount = city['value'] as int;
+                              final isSelected = _selectedCityIdForMalls == cityId;
+
+                              return Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedCityIdForMalls = cityId;
+                                    });
+                                    fetchMallsByCity(cityId);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? const Color(0xFF1E3A8A).withOpacity(0.1)
+                                          : Colors.transparent,
+                                      border: Border(
+                                        left: BorderSide(
+                                          color: isSelected
+                                              ? const Color(0xFF1E3A8A)
+                                              : Colors.transparent,
+                                          width: 3,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            cityName,
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w500,
+                                              color: isSelected
+                                                  ? const Color(0xFF1E3A8A)
+                                                  : const Color(0xFF1F2937),
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? const Color(0xFF1E3A8A)
+                                                : Colors.grey.shade100,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            storeCount.toString(),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : Colors.grey.shade700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // 右侧：商场列表
+                Expanded(
+                  flex: 4,
+                  child: Container(
+                    color: Colors.grey.shade50,
+                    child: _selectedCityIdForMalls == null
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.store,
+                                  size: 80,
+                                  color: Colors.grey.shade300,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  '请选择一个城市查看商场',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey.shade500,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.store,
+                                      color: Color(0xFF1E3A8A),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '商场列表 (${_mallsForSelectedCity.length})',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF1F2937),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: _mallsLoading
+                                    ? const Center(
+                                        child: CircularProgressIndicator(
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  Color(0xFF1E3A8A)),
+                                        ),
+                                      )
+                                    : _mallsForSelectedCity.isEmpty
+                                        ? Center(
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.info_outline,
+                                                  size: 60,
+                                                  color: Colors.grey.shade400,
+                                                ),
+                                                const SizedBox(height: 12),
+                                                Text(
+                                                  '该城市暂无商场数据',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey.shade500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        : ListView.builder(
+                                            padding: const EdgeInsets.all(16),
+                                            itemCount: _mallsForSelectedCity.length,
+                                            itemBuilder: (context, index) {
+                                              final mall =
+                                                  _mallsForSelectedCity[index];
+                                              return Container(
+                                                margin: const EdgeInsets.only(
+                                                    bottom: 12),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black
+                                                          .withOpacity(0.06),
+                                                      blurRadius: 8,
+                                                      offset: const Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Material(
+                                                  color: Colors.transparent,
+                                                  child: InkWell(
+                                                    borderRadius:
+                                                        BorderRadius.circular(12),
+                                                    onTap: () {
+                                                      // 点击商场，跳转到商场详情
+                                                      // context.go(
+                                                      //     '/mall-brand/${mall['_id']}');
+                                                      Navigator.of(context, rootNavigator: true).push(
+                                                        MaterialPageRoute(
+                                                          builder: (context) => MallBrandPage(mallId: mall['_id']),
+                                                        ),
+                                                      );
+                                                    },
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(16),
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Row(
+                                                            children: [
+                                                              Expanded(
+                                                                child: Text(
+                                                                  mall['name'] ??
+                                                                      '',
+                                                                  style:
+                                                                      const TextStyle(
+                                                                    fontSize: 16,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    color: Color(
+                                                                        0xFF1F2937),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              // Container(
+                                                              //   padding:
+                                                              //       const EdgeInsets
+                                                              //           .symmetric(
+                                                              //     horizontal: 8,
+                                                              //     vertical: 4,
+                                                              //   ),
+                                                              //   decoration:
+                                                              //       BoxDecoration(
+                                                              //     color: (mall['isActive'] ==
+                                                              //                 true ||
+                                                              //             mall['isActive'] ==
+                                                              //                 1)
+                                                              //         ? Colors.green
+                                                              //             .withOpacity(
+                                                              //                 0.1)
+                                                              //         : Colors.grey
+                                                              //             .withOpacity(
+                                                              //                 0.1),
+                                                              //     borderRadius:
+                                                              //         BorderRadius
+                                                              //             .circular(
+                                                              //                 4),
+                                                              //   ),
+                                                              //   child: Text(
+                                                              //     (mall['isActive'] ==
+                                                              //                 true ||
+                                                              //             mall['isActive'] ==
+                                                              //                 1)
+                                                              //         ? '营业中'
+                                                              //         : '暂停营业',
+                                                              //     style: TextStyle(
+                                                              //       fontSize: 12,
+                                                              //       fontWeight:
+                                                              //           FontWeight
+                                                              //               .w500,
+                                                              //       color: (mall['isActive'] ==
+                                                              //                   true ||
+                                                              //               mall['isActive'] ==
+                                                              //                   1)
+                                                              //           ? Colors
+                                                              //               .green
+                                                              //           : Colors
+                                                              //               .grey,
+                                                              //     ),
+                                                              //   ),
+                                                              // ),
+                                                            ],
+                                                          ),
+                                                        
+                                                          if (mall['totalArea'] != null && mall['totalArea'] > 0) ...[
+                                                            const SizedBox(height: 8),
+                                                            Row(
+                                                              children: [
+                                                                Icon(
+                                                                  Icons.crop_square,
+                                                                  size: 16,
+                                                                  color: Colors
+                                                                      .grey
+                                                                      .shade600,
+                                                                ),
+                                                                const SizedBox(
+                                                                    width: 4),
+                                                                Text(
+                                                                  '面积: ${mall['totalArea']} m²',
+                                                                  style: TextStyle(
+                                                                    fontSize: 13,
+                                                                    color: Colors
+                                                                        .grey
+                                                                        .shade600,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ],
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+ 
 
   @override
   Widget build(BuildContext context) {
@@ -1065,12 +2237,12 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                     // 返回按钮
                     Container(
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            const Color(0xFF1E3A8A),
-                            const Color(0xFF3B82F6),
+                             Color(0xFF1E3A8A),
+                             Color(0xFF3B82F6),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(12),
@@ -1100,7 +2272,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 20),
+                    const SizedBox(width: 10),
                     // TabBar
                     Expanded(
                       child: Container(
@@ -1117,13 +2289,16 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                             ? const SizedBox.shrink()
                             : TabBar(
                                 controller: _tabController!,
+                                isScrollable: true,
+                                padding: EdgeInsets.zero,
+                                tabAlignment: TabAlignment.start,
                                 indicator: BoxDecoration(
-                                  gradient: LinearGradient(
+                                  gradient: const LinearGradient(
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                     colors: [
-                                      const Color(0xFF1E3A8A),
-                                      const Color(0xFF3B82F6),
+                                       Color(0xFF1E3A8A),
+                                       Color(0xFF3B82F6),
                                     ],
                                   ),
                                   borderRadius: BorderRadius.circular(24),
@@ -1148,6 +2323,8 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                   fontSize: 15,
                                   letterSpacing: 0.5,
                                 ),
+                                labelPadding:
+                                    const EdgeInsets.symmetric(horizontal: 10),
                                 indicatorSize: TabBarIndicatorSize.tab,
                                 dividerColor: Colors.transparent,
                                 tabs: const [
@@ -1156,9 +2333,9 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.map, size: 18),
+                                        Icon(Icons.info_outline, size: 18),
                                         SizedBox(width: 6),
-                                        Text('地图视图'),
+                                        Text('介绍'),
                                       ],
                                     ),
                                   ),
@@ -1167,12 +2344,49 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.list_alt, size: 18),
+                                        Icon(Icons.map, size: 18),
                                         SizedBox(width: 6),
-                                        Text('列表视图'),
+                                        Text('地图'),
                                       ],
                                     ),
                                   ),
+                                   Tab(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.table_chart, size: 18),
+                                        SizedBox(width: 6),
+                                        Text('表格'),
+                                      ],
+                                    ),
+                                  ),
+                                  Tab(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.store, size: 18),
+                                        SizedBox(width: 6),
+                                        Text('列表'),
+                                      ],
+                                    ),
+                                  ),
+                                 
+                                  Tab(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.list_alt, size: 18),
+                                        SizedBox(width: 6),
+                                        Text('省级'),
+                                      ],
+                                    ),
+                                  ),
+                                  
+                                  
+                                 
                                 ],
                               ),
                       ),
@@ -1191,15 +2405,20 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                       )
                     : TabBarView(
                         controller: _tabController!,
-                        physics: const NeverScrollableScrollPhysics(),
+                        physics: (_tabController?.index == 1 && _tabSwipeLocked)
+                            ? const NeverScrollableScrollPhysics()
+                            : const BouncingScrollPhysics(),
                         children: [
+                          _buildIntroView(),
                           _buildMapView(),
                           _buildListView(),
+                          _buildCityMallListView(),
+                          _buildProvinceOverviewView(),
                         ],
                       ),
               ),
               // 省份视图时的返回按钮 - 只在地图视图显示
-              if (_isProvince)
+              if (_isProvince && _tabController?.index != 2 && _tabController?.index != 3 && _tabController?.index != 4)
                 Container(
                   padding: const EdgeInsets.all(20),
                   child: Container(
@@ -1295,6 +2514,118 @@ class _SimpleMapPageState extends State<SimpleMapPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  String _formatDate(String? iso) {
+    if (iso == null || iso.isEmpty) return '-';
+    try {
+      return iso.split('T').first;
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  Widget _buildIntroView() {
+    final String name = _selectedBrand?.name?.toString() ?? '未命名品牌';
+    final String code = _selectedBrand?.code?.toString() ?? '';
+    final int storeCount = _selectedBrand?.storeCount ?? 0;
+    final String createdAt = _formatDate(_selectedBrand?.createdAt);
+    final String updatedAt = _formatDate(_selectedBrand?.updatedAt);
+    final String description = _selectedBrand?.description ?? '暂无介绍';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.grey.shade200,
+                    image: (_selectedBrand?.logo != null &&
+                            (_selectedBrand?.logo as String).isNotEmpty)
+                        ? DecorationImage(
+                            image: NetworkImage(
+                                _selectedBrand?.logo as String),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: (_selectedBrand?.logo == null ||
+                          (_selectedBrand?.logo as String).isEmpty)
+                      ? const Icon(Icons.image_not_supported,
+                          color: Colors.grey, size: 28)
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        code.isNotEmpty ? code : '',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.store, size: 16, color: Colors.blueGrey),
+                const SizedBox(width: 6),
+                Text('收录门店数: $storeCount',
+                    style: const TextStyle(fontSize: 12)),
+                const SizedBox(width: 16),
+                // Icon(Icons.event, size: 16, color: Colors.blueGrey),
+                const SizedBox(width: 6),
+                // Text('收录: $createdAt',
+                //     style: const TextStyle(fontSize: 12)),
+                // const SizedBox(width: 16),
+                Icon(Icons.update, size: 16, color: Colors.blueGrey),
+                const SizedBox(width: 6),
+                Text('更新: $updatedAt',
+                    style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            Text(
+              '品牌介绍',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: const TextStyle(fontSize: 13, height: 1.5),
+            ),
+          ],
+        ),
       ),
     );
   }

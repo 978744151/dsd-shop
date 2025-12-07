@@ -1,3 +1,4 @@
+import 'package:business_savvy/pages/brand_settings_page.dart';
 import 'package:business_savvy/pages/feedback_page.dart';
 import 'package:business_savvy/pages/privacy_policy_page.dart';
 import 'package:business_savvy/pages/user_agreement_page.dart';
@@ -654,6 +655,20 @@ class _SettingsPageState extends State<SettingsPage> {
           //   ],
           // ),
           // const SizedBox(height: 20),
+                    _buildModernSettingItem(
+            icon: Icons.tune,
+            title: '品牌设置',
+            subtitle: '为品牌自定义分数',
+            color: Colors.teal,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BrandSettingsPage(),
+                ),
+              );
+            },
+          ),
           _buildModernSettingItem(
             icon: Icons.history,
             title: '浏览历史',
