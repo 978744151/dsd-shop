@@ -3,7 +3,11 @@ description: 懂商帝
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
+<<<<<<< HEAD
 version: 1.1.1
+=======
+version: 1.0.1+1
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
 
 environment:
   sdk: '>=2.19.4 <4.0.0'

@@ -7,6 +7,7 @@ class BrandModel {
   final String? createdAt;
   final String? type;
   final String? avatar;
+  final String? score;
   final String? name;
   final String? defaultImage;
   final String? logo;
@@ -26,6 +27,7 @@ class BrandModel {
       this.brandId,
       this.user,
       this.logo,
+      this.score,
       this.storeCount}); // 新增门店数量参数  添加这行
 
   factory BrandModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,8 @@ class BrandModel {
       defaultImage: json['defaultImage'] ?? '',
       logo: json['logo'], // 直接使用 Map
       brandId: json['brandId'] ?? '',
+      avatar: json['avatar'], // 直接使用 Map
+      score: json['score']?.toString() ?? '',
       storeCount: json['storeCount'] as int?, // 新增门店数量字段
     );
   }

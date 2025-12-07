@@ -59,7 +59,11 @@ class _SimpleMapPageState extends State<SimpleMapPage>
     '四川省': 'sichuan',
     '贵州省': 'guizhou',
     '云南省': 'yunnan',
+<<<<<<< HEAD
     '西藏': 'xizang',
+=======
+    '西藏自治区': 'xizang',
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
     '陕西省': 'shanxi1',
     '甘肃省': 'gansu',
     '青海省': 'qinghai',
@@ -1467,6 +1471,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                   return const Color(0xFFEF4444);
                 }
 
+<<<<<<< HEAD
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
@@ -1566,6 +1571,67 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                 size: 16,
                                 color: Colors.grey.shade600,
                               ),
+=======
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  if (!_isProvince) {
+                    setState(() {
+                      provinceId = province['adcode'];
+                    });
+
+                     final municipalities = ['北京市', '上海市', '天津市', '重庆市'];
+
+                    if (municipalities.contains(province['name'])) {
+                      // 直辖市直接显示门店列表，使用省份ID作为城市ID
+                      _showStoreBottomSheet(
+                          province['adcode'], province['name']);
+                      return;
+                    }
+                    _drillDownToProvince(name);
+                  } else {
+                    _showStoreBottomSheet(province['id'], province['name']);
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      // 左侧数值圆圈
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              getColorByValue(value),
+                              getColorByValue(value).withOpacity(0.8),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: getColorByValue(value).withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                             ),
                           ],
                         ),

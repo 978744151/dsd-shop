@@ -1,6 +1,10 @@
 import 'package:business_savvy/pages/brand_settings_page.dart';
 import 'package:business_savvy/pages/feedback_page.dart';
 import 'package:business_savvy/utils/screenshot_util.dart';
+<<<<<<< HEAD
+=======
+import 'package:business_savvy/utils/toast_util.dart';
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -82,6 +86,7 @@ class _ComparePageState extends State<ComparePage> {
 
   // 添加截图控制器用于访问ComparisonTableWidget的截图功能
 
+<<<<<<< HEAD
 
   // 表格行高（可在筛选面板中调整）
   double _rowHeight = 60;
@@ -92,6 +97,8 @@ class _ComparePageState extends State<ComparePage> {
   // 是否计算奥莱店（isola）：true=计算，false=不计算
   bool _isola = false;
 
+=======
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
   // 反馈类型选项 - 使用label-value形式
   final List<Map<String, String>> _feedbackTypes = [
     {'value': 'bug', 'label': '错误报告'},
@@ -117,10 +124,13 @@ class _ComparePageState extends State<ComparePage> {
   List<String> selectedBrandIds = [];
   List<String> selectedBrandNames = [];
   Map<String, String> brandScores = {}; // 品牌分值输入
+<<<<<<< HEAD
 
   String _selectedMallSearchQuery = '';
   String _selectedCitySearchQuery = '';
   final TextEditingController _selectionSearchController = TextEditingController();
+=======
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
 
   // 获取当前类型的选中ID列表
   List<String> get _selectedIds =>
@@ -139,7 +149,11 @@ class _ComparePageState extends State<ComparePage> {
   ComparisonStyle _getStyle() {
     switch (_styleIndex) {
       case 0: // 暗黑
+<<<<<<< HEAD
         return const ComparisonStyle(
+=======
+        return ComparisonStyle(
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
           headerColor: Colors.black,
           firstColumnColor: Colors.black,
           textColor: Colors.white,
@@ -147,6 +161,7 @@ class _ComparePageState extends State<ComparePage> {
           columnColors: const [Colors.black],
         );
       case 2: // 商务
+<<<<<<< HEAD
         return const ComparisonStyle(
           headerColor: Colors.white,
           firstColumnColor: Colors.white,
@@ -155,12 +170,28 @@ class _ComparePageState extends State<ComparePage> {
           columnColors: [Colors.white],
         );
       case 3: // 浅色
+=======
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
         return ComparisonStyle(
           headerColor: Colors.white,
           firstColumnColor: Colors.white,
           textColor: Colors.black,
+<<<<<<< HEAD
           borderColor: Color(0xFFE2E8F0),
           columnColors: [
+=======
+          borderColor: const Color(0xFFE2E8F0),
+          columnColors: const [Colors.white],
+        );
+      default: // 标准（彩色）
+        return ComparisonStyle(
+          headerColor: Colors.grey.shade100,
+          firstColumnColor: Colors.grey.shade50,
+          textColor: Colors.black,
+          firstColumnTextColor: Colors.black,
+          borderColor: Colors.grey.shade300,
+          columnColors: const [
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
             Colors.blue,
             Colors.purple,
             Colors.green,
@@ -177,6 +208,7 @@ class _ComparePageState extends State<ComparePage> {
             Colors.deepPurple,
           ],
         );
+<<<<<<< HEAD
       default: // 标准（彩色）
         return ComparisonStyle(
           headerColor: Colors.grey.shade100,
@@ -201,6 +233,8 @@ class _ComparePageState extends State<ComparePage> {
             Colors.deepPurple.withOpacity(0.6),
           ],
         );
+=======
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
     }
   }
 
@@ -535,8 +569,13 @@ class _ComparePageState extends State<ComparePage> {
                                     MaterialTapTargetSize.shrinkWrap,
                                 visualDensity: const VisualDensity(
                                     horizontal: -4, vertical: -4),
+<<<<<<< HEAD
                                 backgroundColor: Color(0xFFFFFFFF),
                                 deleteIcon: const Icon(Icons.close, size: 12,color:Colors.black,),
+=======
+                                backgroundColor: const Color(0xFFF5F5F5),
+                                deleteIcon: const Icon(Icons.close, size: 12),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                                 onDeleted: () {
                                   final idx = _selectedNames.indexOf(name);
                                   if (idx >= 0) {
@@ -1188,7 +1227,11 @@ class _ComparePageState extends State<ComparePage> {
                                 hintText: '分值',
                                 isDense: true,
                                 contentPadding: EdgeInsets.symmetric(
+<<<<<<< HEAD
                                     horizontal: 8, vertical: 2),
+=======
+                                    horizontal: 8, vertical: 8),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                                 border: OutlineInputBorder(),
                               ),
                               onChanged: (val) {
@@ -1460,8 +1503,11 @@ class _ComparePageState extends State<ComparePage> {
         'brandIds': selectedBrandIds,
         'brandScores': brandScores,
         'saveReport': saveReport,
+<<<<<<< HEAD
         'isOla': !_isola,
         'isCategory': _isCategory,
+=======
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
       });
 
       if (response['success'] == true) {
@@ -1495,6 +1541,7 @@ class _ComparePageState extends State<ComparePage> {
     return Scaffold(
       endDrawer: Drawer(
         child: SafeArea(
+<<<<<<< HEAD
         child: ComparisonFilterPanel(
           onClose: () => Navigator.of(context).pop(),
           onStyleChanged: (i) => setState(() => _styleIndex = i),
@@ -1526,6 +1573,13 @@ class _ComparePageState extends State<ComparePage> {
             }
           },
         ),
+=======
+          child: ComparisonFilterPanel(
+            onClose: () => Navigator.of(context).pop(),
+            onStyleChanged: (i) => setState(() => _styleIndex = i),
+            initialStyleIndex: _styleIndex,
+          ),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
         ),
       ),
       body: Stack(
@@ -1883,6 +1937,7 @@ class _ComparePageState extends State<ComparePage> {
       child: Container(
         margin: const EdgeInsets.all(0),
         child: ComparisonTableWidget(
+<<<<<<< HEAD
             comparisonData: _comparisonData,
             title: '对比分析',
             showScreenshotButton: false, // 因为上面已经有截图按钮了
@@ -1899,6 +1954,19 @@ class _ComparePageState extends State<ComparePage> {
             firstColumnWidth: _firstColumnWidth,
             isCategory: _isCategory,
             isOla: _isola),
+=======
+          comparisonData: _comparisonData,
+          title: '对比分析',
+          showScreenshotButton: false, // 因为上面已经有截图按钮了
+          columnColors: _getColumnColors(),
+          isCity: _selectedType == 'city',
+          headerBackgroundColor: _getStyle().headerColor,
+          firstColumnColor: _getStyle().firstColumnColor,
+          headerTextColor: _getStyle().textColor,
+          borderColor: _getStyle().borderColor,
+          cellTextColor: _getStyle().textColor,
+        ),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
       ),
     );
   }
@@ -1912,7 +1980,10 @@ class _ComparePageState extends State<ComparePage> {
         errorMessage: '表格截图生成失败，请重试',
       );
     } catch (e) {
+<<<<<<< HEAD
       print('截图失败: $e');
+=======
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('截图失败: ${e.toString()}')),
@@ -1991,6 +2062,7 @@ class _ComparePageState extends State<ComparePage> {
                         Navigator.of(context, rootNavigator: true).pop(),
                     onStyleChanged: (i) => setState(() => _styleIndex = i),
                     initialStyleIndex: _styleIndex,
+<<<<<<< HEAD
                     initialRowHeight: _rowHeight,
                     onRowHeightChanged: (h) =>
                         setState(() => _rowHeight = h.roundToDouble()),
@@ -2017,6 +2089,8 @@ class _ComparePageState extends State<ComparePage> {
                         _fetchComparisonData();
                       }
                     },
+=======
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                   ),
                 ),
               ],

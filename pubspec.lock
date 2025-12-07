@@ -268,6 +268,18 @@ packages:
     dependency: "direct main"
     description:
       path: "."
+<<<<<<< HEAD
+=======
+      ref: HEAD
+      resolved-ref: b904d5000b30d31d0d67fbd96ac53e3320d2e222
+      url: "https://gitcode.com/openharmony-sig/flutter_fluttertoast.git"
+    source: git
+    version: "8.2.2"
+  geocoding:
+    dependency: "direct main"
+    description:
+      path: geocoding
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
       ref: HEAD
       resolved-ref: b904d5000b30d31d0d67fbd96ac53e3320d2e222
       url: "https://gitcode.com/openharmony-sig/flutter_fluttertoast.git"

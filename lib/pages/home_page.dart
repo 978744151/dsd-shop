@@ -1020,6 +1020,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           // 浮空搜索栏 - 修改Positioned部分
+<<<<<<< HEAD
           Positioned(
             right: 10,
             bottom: 20,
@@ -1041,6 +1042,8 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
+=======
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
           Positioned(
             top: 0, // 从屏幕最顶部开始
             left: 0,

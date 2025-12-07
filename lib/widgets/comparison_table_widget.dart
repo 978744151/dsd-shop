@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:business_savvy/pages/mall_brand_page.dart';
 import 'package:flutter/material.dart';
 import '../utils/screenshot_util.dart';
@@ -5,12 +6,22 @@ import '../widgets/store_detail_dialog.dart';
 import '../utils/http_client.dart';
 import '../api/brand.dart';
 import 'package:go_router/go_router.dart';
+=======
+import 'package:flutter/material.dart';
+import '../utils/screenshot_util.dart';
+import '../widgets/store_detail_dialog.dart';
+import '../models/coach_data.dart';
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
 
 /// 对比表格组件，可复用的表格展示和截图功能
 class ComparisonTableWidget extends StatelessWidget {
   final List<Map<String, dynamic>> comparisonData;
   final String title;
   final bool showScreenshotButton;
+<<<<<<< HEAD
+=======
+  // final ScreenshotController? screenshotController;
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
   final Widget Function(List<Map<String, dynamic>> data)? customTableBuilder;
   final Color headerBackgroundColor;
   final List<Color>? columnColors;
@@ -19,6 +30,7 @@ class ComparisonTableWidget extends StatelessWidget {
   final Color cellTextColor;
   final Color borderColor;
   final Color firstColumnColor;
+<<<<<<< HEAD
   final double rowHeight;
   final double columnWidth;
   final bool isOla;
@@ -49,6 +61,27 @@ class ComparisonTableWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
   
+=======
+  const ComparisonTableWidget({
+    Key? key,
+    required this.comparisonData,
+    this.title = '对比表格',
+    this.showScreenshotButton = true,
+    // this.screenshotController,
+    this.customTableBuilder,
+    this.headerBackgroundColor = const Color(0xFFF5F5F5),
+    this.columnColors,
+    this.isCity = false,
+    this.headerTextColor = Colors.black,
+    this.cellTextColor = Colors.black,
+    this.borderColor = const Color(0xFFe0e0e0),
+    this.firstColumnColor = const Color(0xFFF5F5F5),
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
 
     return Column(
       children: [
@@ -58,7 +91,11 @@ class ComparisonTableWidget extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,
+<<<<<<< HEAD
              child:  _buildDefaultTable(context),
+=======
+              child:  _buildDefaultTable(context),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
             ),
           ),
         ),
@@ -95,7 +132,18 @@ class ComparisonTableWidget extends StatelessWidget {
 
   // 筛选面板入口已移动至 ComparePage 的 AppBar 区域
 
+<<<<<<< HEAD
 
+=======
+  /// 生成截图并显示
+  // Future<void> _captureAndShowImage(
+  //     BuildContext context) async {
+  //   await ScreenshotUtil.captureAndShowImage(
+  //     context: context,
+  //     errorMessage: '表格截图生成失败，请重试',
+  //   );
+  // }
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
 
   /// 构建默认表格
   Widget _buildDefaultTable(BuildContext context) {
@@ -106,9 +154,14 @@ class ComparisonTableWidget extends StatelessWidget {
     for (var data in comparisonData) {
       List<dynamic> brands = data['brands'] ?? [];
       for (var brand in brands) {
+<<<<<<< HEAD
         String brandName = useChineseName
             ? (brand['brand']?['code'] ?? '未知品牌')
             : (brand['brand']?['name'] ?? '未知品牌');
+=======
+        String brandName =
+            brand['brand']?['name'] ?? brand['brand']?['code'] ?? '未知品牌';
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
         final String? scoreStr = brand['totalScore']?.toString();
         final double? score =
             scoreStr != null ? double.tryParse(scoreStr) : null;
@@ -121,8 +174,13 @@ class ComparisonTableWidget extends StatelessWidget {
       }
     }
 
+<<<<<<< HEAD
     final List<Map<String, dynamic>> sortedBrands =
         brandScoreMap.entries.map((e) {
+=======
+    final List<Map<String, dynamic>> sortedBrands = brandScoreMap.entries
+        .map((e) {
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
       final List<double> values = e.value;
       final double avg = values.isEmpty
           ? 0.0
@@ -131,6 +189,7 @@ class ComparisonTableWidget extends StatelessWidget {
         'name': e.key,
         'score': avg,
       };
+<<<<<<< HEAD
     }).toList();
     // ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
 
@@ -174,6 +233,13 @@ class ComparisonTableWidget extends StatelessWidget {
 
     double tableWidth = firstColumnWidth + (comparisonData.length * columnWidth) + 2;
       
+=======
+    }).toList()
+      ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
+
+    double tableWidth = 142 + (comparisonData.length * 110.0);
+
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
     return RepaintBoundary(
       key: ScreenshotUtil.fullTableKey, // 关键：用同一个 Key 包裹截图区域
       child: Container(
@@ -195,11 +261,20 @@ class ComparisonTableWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+<<<<<<< HEAD
             _buildTableHeader(context),
             _buildBrandCountRow(),
             _buildStoreCountRow(),
             _buildTotalScoreRow(),
             ...brandRows,
+=======
+            _buildTableHeader(),
+            _buildBrandCountRow(),
+            _buildStoreCountRow(),
+            _buildTotalScoreRow(),
+            ...sortedBrands.map((b) =>
+                _buildBrandDataRow(b['name'] as String, (b['score'] as double))),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
             _buildDisclaimer(),
           ],
         ),
@@ -208,7 +283,11 @@ class ComparisonTableWidget extends StatelessWidget {
   }
 
   /// 构建表头
+<<<<<<< HEAD
   Widget _buildTableHeader(BuildContext context) {
+=======
+  Widget _buildTableHeader() {
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
     return Container(
       height: 50,
       decoration: BoxDecoration(
@@ -221,7 +300,11 @@ class ComparisonTableWidget extends StatelessWidget {
         children: [
           // 固定列表头
           Container(
+<<<<<<< HEAD
             width: firstColumnWidth,
+=======
+            width: 140,
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
             padding: const EdgeInsets.all(16),
             alignment: Alignment.centerLeft,
             child: Text(
@@ -240,6 +323,7 @@ class ComparisonTableWidget extends StatelessWidget {
             String locationName =
                 data['location']?['name']?.toString() ?? '未知地区';
             Color columnColor = _getColumnColor(index);
+<<<<<<< HEAD
             return InkWell(
               onTap: () {
                 if (!isCity) {
@@ -317,19 +401,38 @@ class ComparisonTableWidget extends StatelessWidget {
             return Container(
               width: columnWidth,
               padding: const EdgeInsets.all(12),
+=======
+            return Container(
+              width: 110,
+              padding: const EdgeInsets.all(16),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
               decoration: BoxDecoration(
                 color: columnColor,
                 border: Border(
                   left: BorderSide(color: borderColor),
+<<<<<<< HEAD
                   bottom: BorderSide(color: borderColor),
+=======
+                  // bottom: BorderSide(color: Colors.grey.shade300),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                 ),
               ),
               alignment: Alignment.center,
               child: Text(
+<<<<<<< HEAD
                 '',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
+=======
+                locationName,
+                maxLines: 2,
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: isCity ? 14 : 11, // 根据是否选择城市设置字体大小
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                   color: cellTextColor,
                 ),
               ),
@@ -343,12 +446,21 @@ class ComparisonTableWidget extends StatelessWidget {
   /// 构建品牌数量行
   Widget _buildBrandCountRow() {
     return Container(
+<<<<<<< HEAD
       height: rowHeight,
       child: Row(
         children: [
           Container(
             width: firstColumnWidth,
             padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+=======
+      height: 60,
+      child: Row(
+        children: [
+          Container(
+            width: 140,
+            padding: const EdgeInsets.all(16),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
             decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(color: borderColor),
@@ -371,7 +483,11 @@ class ComparisonTableWidget extends StatelessWidget {
                 data['summary']?['totalBrands']?.toString() ?? '0';
             Color columnColor = _getColumnColor(index);
             return Container(
+<<<<<<< HEAD
               width: columnWidth,
+=======
+              width: 110,
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: columnColor,
@@ -399,12 +515,21 @@ class ComparisonTableWidget extends StatelessWidget {
   /// 构建门店数量行
   Widget _buildStoreCountRow() {
     return Container(
+<<<<<<< HEAD
       height: rowHeight,
       child: Row(
         children: [
           Container(
             width: firstColumnWidth,
             padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+=======
+      height: 60,
+      child: Row(
+        children: [
+          Container(
+            width: 140,
+            padding: const EdgeInsets.all(16),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
             decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(color: borderColor),
@@ -427,7 +552,11 @@ class ComparisonTableWidget extends StatelessWidget {
                 data['summary']?['totalStores']?.toString() ?? '0';
             Color columnColor = _getColumnColor(index);
             return Container(
+<<<<<<< HEAD
               width: columnWidth,
+=======
+              width: 110,
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: columnColor,
@@ -465,12 +594,21 @@ class ComparisonTableWidget extends StatelessWidget {
   /// 构建综合总分行
   Widget _buildTotalScoreRow() {
     return Container(
+<<<<<<< HEAD
       height: rowHeight,
       child: Row(
         children: [
           Container(
             width: firstColumnWidth,
             padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+=======
+      height: 60,
+      child: Row(
+        children: [
+          Container(
+            width: 140,
+            padding: const EdgeInsets.all(16),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
             decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(color: borderColor),
@@ -493,8 +631,13 @@ class ComparisonTableWidget extends StatelessWidget {
                 data['summary']?['totalScore']?.toString() ?? '0';
             Color columnColor = _getColumnColor(index);
             return Container(
+<<<<<<< HEAD
               width: columnWidth,
               padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+=======
+              width: 110,
+              padding: const EdgeInsets.all(16),
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
               decoration: BoxDecoration(
                 color: columnColor,
                 border: Border(
@@ -521,11 +664,19 @@ class ComparisonTableWidget extends StatelessWidget {
   /// 构建品牌数据行
   Widget _buildBrandDataRow(String brandName, double averageScore) {
     return Container(
+<<<<<<< HEAD
       height: rowHeight,
       child: Row(
         children: [
           Container(
             width: firstColumnWidth,
+=======
+      height: 60,
+      child: Row(
+        children: [
+          Container(
+            width: 140,
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
             padding: const EdgeInsets.only(left: 10),
             decoration: BoxDecoration(
               border: Border(
@@ -577,13 +728,21 @@ class ComparisonTableWidget extends StatelessWidget {
             var data = entry.value;
             List<dynamic> brands = data['brands'] ?? [];
             var brandData = brands.firstWhere(
+<<<<<<< HEAD
               (b) => (b['brand']?['name'] == brandName) ||
                   (b['brand']?['code'] == brandName),
+=======
+              (b) => (b['brand']?['name'] ?? b['brand']?['code']) == brandName,
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
               orElse: () => null,
             );
             Color columnColor = _getColumnColor(index);
             return Container(
+<<<<<<< HEAD
               width: columnWidth,
+=======
+              width: 110,
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: columnColor,
@@ -597,6 +756,7 @@ class ComparisonTableWidget extends StatelessWidget {
                   ? Text('', style: TextStyle(color: cellTextColor))
                   : Builder(builder: (ctx) {
                       return InkWell(
+<<<<<<< HEAD
                         onTap: () async {
                           final String locationName =
                               data['location']?['name']?.toString() ?? '';
@@ -651,6 +811,20 @@ class ComparisonTableWidget extends StatelessWidget {
                           if (stores.isNotEmpty) {
                             _showStoreDialog(ctx, dialogTitle, stores);
                           }
+=======
+                        onTap: () {
+                          final String locationName =
+                              data['location']?['name']?.toString() ?? '';
+                          final List<dynamic> rawStores =
+                              (brandData['stores'] as List<dynamic>?) ?? [];
+                          final List<CoachData> stores = rawStores
+                              .map((e) => CoachData.fromJson(
+                                  (e as Map<String, dynamic>)))
+                              .toList();
+                          final String dialogTitle =
+                              '${locationName.isEmpty ? '' : '$locationName - '}$brandName 门店';
+                          _showStoreDialog(ctx, dialogTitle, stores);
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                         },
                         child: Text(
                           '${brandData['storeCount'] ?? 0}',
@@ -670,7 +844,11 @@ class ComparisonTableWidget extends StatelessWidget {
   }
 
   void _showStoreDialog(
+<<<<<<< HEAD
       BuildContext context, String title, List<dynamic> stores) {
+=======
+      BuildContext context, String title, List<CoachData> stores) {
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
     // 避免在构建阶段进行导航，延迟到帧结束后执行
     WidgetsBinding.instance.addPostFrameCallback((_) {
       showDialog(
@@ -758,4 +936,8 @@ class ComparisonTableWidget extends StatelessWidget {
     if (score >= 4.0) return Colors.red;
     return Colors.grey;
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
