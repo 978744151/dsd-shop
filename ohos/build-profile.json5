@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "storeFile": "D:/code/key/release_dcd.p12",
-          "storePassword": "0000001EE295E68F2CDBD7E06CF1C2C17999F534472501A92ED1441447A025B1FE0AE1EB2C37981C6BBE97410712",
-          "keyAlias": "release_dcd",
-          "keyPassword": "0000001E02487868B3A0AE53699B2DC626BAE13966F93460DC55CB5CC3824BC04E7982A282EB0F29112BF469E9DB",
+          "certpath": "/Users/t/.ohos/config/default_ohos_lR7LuADsSjh5IVzEvSjnV69e-XjCgY1W3vVQuHyhu7U=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B9F0B0C6B631E03485EE37E7266D8FBE7BFCDA5B32910C16B55B374791F5BF0F899CF1D0577F510",
+          "profile": "/Users/t/.ohos/config/default_ohos_lR7LuADsSjh5IVzEvSjnV69e-XjCgY1W3vVQuHyhu7U=.p7b",
           "signAlg": "SHA256withECDSA",
-          "profile": "D:/code/csr/release_dcdRelease.p7b",
-          "certpath": "D:/code/csr/release_dcd.cer"
+          "storeFile": "/Users/t/.ohos/config/default_ohos_lR7LuADsSjh5IVzEvSjnV69e-XjCgY1W3vVQuHyhu7U=.p12",
+          "storePassword": "0000001BDE399A13430D576BC1EF4EBFA410EC4D0CF44A85697E4755CC751357E4BDA673DAB4EDCCEF536A"
         }
       }
     ],
@@ -20,7 +20,18 @@
         "name": "default",
         "signingConfig": "default",
         "compatibleSdkVersion": "5.0.0(12)",
-        "runtimeOS": "HarmonyOS"
+        "runtimeOS": "HarmonyOS",
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "profile"
+      },
+      {
+        "name": "release"
       }
     ]
   },

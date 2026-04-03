@@ -14,8 +14,8 @@ import '../api/brand.dart';
 import '../utils/http_client.dart';
 import '../models/province.dart';
 import '../models/brand.dart';
-
 import '../utils/screenshot_util.dart';
+import 'package:business_savvy/widgets/ai_floating_button.dart';
 
 class SimpleMapPage extends StatefulWidget {
   final String? brandId;
@@ -59,11 +59,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
     '四川省': 'sichuan',
     '贵州省': 'guizhou',
     '云南省': 'yunnan',
-<<<<<<< HEAD
     '西藏': 'xizang',
-=======
-    '西藏自治区': 'xizang',
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
     '陕西省': 'shanxi1',
     '甘肃省': 'gansu',
     '青海省': 'qinghai',
@@ -140,26 +136,44 @@ class _SimpleMapPageState extends State<SimpleMapPage>
   String? _currentCityName = ''; // 当前选中的城市名称
   dynamic _selectedBrand;
   bool _tabSwipeLocked = false;
-  // final ScreenshotController _tableScreenshotController =
-  //     ScreenshotUtil.createController();
+
   final GlobalKey _tableKey = GlobalKey();
   List<dynamic> _brandCitiesAll = [];
   bool _brandCitiesLoading = false;
+  // 列表视图排序状态
+  String _sortField = 'shopCount'; // 排序字段：'shopCount'（门店数）
+  bool _sortAscending = false; // 是否升序
+  // 市级地图
+  String? _citiesJsonString; // 全国市级 GeoJSON
+  bool _citiesJsonLoading = false; // 市级 JSON 加载中
+  bool _cityMapShowLabel = true; // 市级地图是否显示城市名称
+  bool _cityMapShowCount = true; // 市级地图是否显示门店数量（只显示>0的）
+  bool _cityMapBubbleMode = false; // 市级地图渲染模式：false=颜色覆盖 true=气泡
+  bool _cityMapDarkGold = false; // 市级地图主题：true=黑金 false=白天
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this, initialIndex: 1);
+    _tabController = TabController(length: 6, vsync: this, initialIndex: 2);
     _tabController!.addListener(() {
       setState(() {});
       final idx = _tabController!.index;
-      if (( idx == 4 || idx == 3) && _allCityData.isEmpty && !_allCityLoading) {
+      // 列表(4) 和 省级(5) 都需要 allCityData
+      if ((idx == 5 || idx == 4) && _allCityData.isEmpty && !_allCityLoading) {
         fetchAllCitiesOverview();
       }
-     
-      if (idx == 2 && _brandCitiesAll.isEmpty && !_brandCitiesLoading) {
+
+      // 表格 tab (index 3)
+      if (idx == 3 && _brandCitiesAll.isEmpty && !_brandCitiesLoading) {
         fetchAllCitiesByBrand();
       }
-      
+
+      // 市级地图 tab (index 1)
+      if (idx == 1) {
+        _loadCitiesJson();
+        if (_allCityData.isEmpty && !_allCityLoading) {
+          fetchAllCitiesOverview();
+        }
+      }
     });
     fetchBrandDetail();
     _loadChinaJson();
@@ -184,9 +198,13 @@ class _SimpleMapPageState extends State<SimpleMapPage>
         final List<dynamic> flattenedCities = [];
         for (final c in citiesData) {
           final List<dynamic> malls = c['malls'] ?? [];
-          final List<String> mallNamesList = malls
-              .map((m) => (m['name'] ?? '').toString())
-              .where((n) => n.isNotEmpty)
+          final List<Map<String, dynamic>> mallNamesList = malls
+              .where((m) => (m['name'] ?? '').toString().isNotEmpty)
+              .map((m) => {
+                    'name': (m['name'] ?? '').toString(),
+                    'typeStr': m['typeStr']?.toString() ?? '',
+                    'remark': m['remark']?.toString() ?? '',
+                  })
               .toList();
           flattenedCities.add({
             'name': c['name'],
@@ -231,7 +249,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
     try {
       // 调用 brandApi.getTree 接口，传入 level=1 参数
       final response = await HttpClient.get(brandApi.getBrandTree, params: {
-        'level': 1,
+        'level': 2,
         'brandId': widget.brandId,
       });
 
@@ -549,6 +567,31 @@ class _SimpleMapPageState extends State<SimpleMapPage>
         _currentMapJsonString = '{}';
         _currentMapKey = '';
         _isProvince = false;
+      });
+    }
+  }
+
+  Future<void> _loadCitiesJson() async {
+    if (_citiesJsonString != null) return; // 已加载过则跳过
+    if (_citiesJsonLoading) return;
+    setState(() {
+      _citiesJsonLoading = true;
+    });
+    try {
+      final jsonString =
+          await rootBundle.loadString('assets/map/json/china-cities.json');
+      final dynamic parsed = jsonString.isEmpty ? {} : json.decode(jsonString);
+      final compact = json.encode(parsed);
+      if (!mounted) return;
+      setState(() {
+        _citiesJsonString = compact;
+        _citiesJsonLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _citiesJsonString = '{}';
+        _citiesJsonLoading = false;
       });
     }
   }
@@ -1220,9 +1263,10 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                   width: 1,
                                 ),
                                 columnWidths: const {
-                                  0: FixedColumnWidth(100),
-                                  1: FixedColumnWidth(60),
-                                  2: FlexColumnWidth(),
+                                  0: FixedColumnWidth(60),
+                                  1: FixedColumnWidth(90),
+                                  2: FixedColumnWidth(60),
+                                  3: FlexColumnWidth(),
                                 },
                                 children: [
                                   // 表头
@@ -1231,29 +1275,75 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                       color: Color(0xFF1E3A8A),
                                     ),
                                     children: [
+                                      // 序号列表头
                                       const Padding(
-                                        padding:  EdgeInsets.all(12),
+                                        padding: EdgeInsets.all(12),
+                                        child: Text(
+                                          '序号',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                      // 城市列表头
+                                      const Padding(
+                                        padding: EdgeInsets.all(12),
                                         child: Text(
                                           '城市',
-                                          style:  TextStyle(
+                                          style: TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 14,
                                           ),
                                         ),
                                       ),
-                                       Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Text(
-                                          '${_selectedBrand?.storeCount ?? ''}',
-                                            textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
+                                      // 门店数排序列表头（可点击排序）
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            if (_sortField == 'shopCount') {
+                                              _sortAscending = !_sortAscending;
+                                            } else {
+                                              _sortField = 'shopCount';
+                                              _sortAscending = false;
+                                            }
+                                            _brandCitiesAll.sort((a, b) {
+                                              final av = (a['shopCount'] as int? ?? 0);
+                                              final bv = (b['shopCount'] as int? ?? 0);
+                                              return _sortAscending ? av.compareTo(bv) : bv.compareTo(av);
+                                            });
+                                          });
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                '${_selectedBrand?.storeCount ?? ''}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              // const SizedBox(width: 4),
+                                              // Icon(
+                                              //   _sortField == 'shopCount'
+                                              //       ? (_sortAscending
+                                              //           ? Icons.arrow_upward
+                                              //           : Icons.arrow_downward)
+                                              //       : Icons.unfold_more,
+                                              //   color: Colors.white70,
+                                              //   size: 14,
+                                              // ),
+                                            ],
                                           ),
                                         ),
                                       ),
+                                      // 门店列表列表头
                                       Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Text(
@@ -1268,19 +1358,31 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                     ],
                                   ),
                                   // 数据行
-                                  ..._brandCitiesAll.map((city) {
+                                  ..._brandCitiesAll.asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final city = entry.value;
                                     final cityName = city['name']?.toString() ?? '-';
                                     final mallNamesList = city['mallNamesList'] as List<dynamic>? ?? [];
                                     final mallCount = mallNamesList.length;
-                                    final mallsText = mallNamesList.isNotEmpty
-                                        ? mallNamesList.join('、')
-                                        : '-';
+                                    final isEven = index % 2 == 0;
 
                                     return TableRow(
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
+                                      decoration: BoxDecoration(
+                                        color: isEven ? Colors.white : const Color(0xFFF5F7FF),
                                       ),
                                       children: [
+                                        // 序号列
+                                        Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Text(
+                                            '${index + 1}',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                        // 城市名列
                                         Padding(
                                           padding: const EdgeInsets.all(12),
                                           child: Text(
@@ -1291,6 +1393,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                             ),
                                           ),
                                         ),
+                                        // 门店数列
                                         Padding(
                                           padding: const EdgeInsets.all(12),
                                           child: Text(
@@ -1303,15 +1406,56 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                             textAlign: TextAlign.center,
                                           ),
                                         ),
+                                        // 门店列表列
                                         Padding(
                                           padding: const EdgeInsets.all(12),
-                                          child: Text(
-                                            mallsText,
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              height: 1.5,
-                                            ),
-                                          ),
+                                          child: mallNamesList.isEmpty
+                                              ? const Text(
+                                                  '-',
+                                                  style: TextStyle(fontSize: 13, height: 1.5),
+                                                )
+                                              : Wrap(
+                                                  spacing: 0,
+                                                  runSpacing: 0,
+                                                  children: mallNamesList.map((m) {
+                                                    final name = (m as Map<String, dynamic>)['name']?.toString() ?? '';
+                                                    final typeStr = m['typeStr']?.toString() ?? '';
+                                                    final remark = m['remark']?.toString() ?? '';
+                                                    return RichText(
+                                                      text: TextSpan(
+                                                        style: const TextStyle(fontSize: 13, height: 1.5, color: Colors.black87),
+                                                        children: [
+                                                          TextSpan(text: name),
+                                                          if (typeStr.isNotEmpty || remark.isNotEmpty) ...
+                                                            [
+                                                              const TextSpan(text: '('),
+                                                              if (typeStr.isNotEmpty)
+                                                                TextSpan(
+                                                                  text: typeStr,
+                                                                  style: const TextStyle(
+                                                                    fontWeight: FontWeight.bold,
+                                                                    color: Color(0xFFE67E22),
+                                                                    fontSize: 12,
+                                                                  ),
+                                                                ),
+                                                              if (typeStr.isNotEmpty && remark.isNotEmpty)
+                                                                const TextSpan(text: '-'),
+                                                              if (remark.isNotEmpty)
+                                                                TextSpan(
+                                                                  text: remark,
+                                                                  style: const TextStyle(
+                                                                    color: ui.Color.fromARGB(255, 236, 18, 18),
+                                                                    fontSize: 11,
+                                                                  ),
+                                                                ),
+                                                              const TextSpan(text: ')'),
+                                                            ],
+                                                        ],
+                                                      ),
+                                                    );
+                                                  }).expand((w) => [w, const Text('、', style: TextStyle(fontSize: 13, height: 1.5))]).toList()
+                                                    ..removeLast(),
+                                                ),
                                         ),
                                       ],
                                     );
@@ -1332,7 +1476,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                 ),
                                 child: const Center(
                                   child: Text(
-                                    '应用商店搜索 懂商帝 查看更多商业内容',
+                                    '应用商店搜索 商业星球 查看更多商业内容',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 14,
@@ -1471,7 +1615,6 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                   return const Color(0xFFEF4444);
                 }
 
-<<<<<<< HEAD
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
@@ -1571,67 +1714,6 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                 size: 16,
                                 color: Colors.grey.shade600,
                               ),
-=======
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  if (!_isProvince) {
-                    setState(() {
-                      provinceId = province['adcode'];
-                    });
-
-                     final municipalities = ['北京市', '上海市', '天津市', '重庆市'];
-
-                    if (municipalities.contains(province['name'])) {
-                      // 直辖市直接显示门店列表，使用省份ID作为城市ID
-                      _showStoreBottomSheet(
-                          province['adcode'], province['name']);
-                      return;
-                    }
-                    _drillDownToProvince(name);
-                  } else {
-                    _showStoreBottomSheet(province['id'], province['name']);
-                  }
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      // 左侧数值圆圈
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              getColorByValue(value),
-                              getColorByValue(value).withOpacity(0.8),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: getColorByValue(value).withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                             ),
                           ],
                         ),
@@ -1860,6 +1942,583 @@ class _SimpleMapPageState extends State<SimpleMapPage>
           ),
         ],
       ),
+    );
+  }
+
+  // 弹框内模式选择chip辅助方法
+  Widget _buildModeChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    bool isDark = true,
+  }) {
+    final activeColor = isDark ? const Color(0xFFD4A843) : const Color(0xFF1E3A8A);
+    final inactiveBorder = isDark ? const Color(0x55D4A843) : const Color(0x554E65FF);
+    final inactiveText = isDark ? const Color(0xFFB8A060) : const Color(0xFF4E65FF);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: selected ? activeColor : inactiveBorder,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: selected ? Colors.white : inactiveText,
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 弹框内开关行辅助方法
+  Widget _buildDialogSwitch({
+    required String label,
+    required bool value,
+    required VoidCallback onTap,
+    bool isDark = true,
+  }) {
+    final labelColor = isDark ? const Color(0xFFB8A060) : const Color(0xFF1E3A8A);
+    final activeColor = isDark ? const Color(0xFFD4A843) : const Color(0xFF1E3A8A);
+    final inactiveColor = isDark ? const Color(0xFF2A2010) : const Color(0xFFDDDDDD);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 13, color: labelColor),
+        ),
+        GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 44,
+            height: 24,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: value ? activeColor : inactiveColor,
+            ),
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 200),
+              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(
+                margin: const EdgeInsets.all(3),
+                width: 18,
+                height: 18,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 市级地图视图
+  Widget _buildCityMapView() {
+    // 数据或 JSON 未就绪
+    if (_citiesJsonLoading || _allCityLoading ||
+        _citiesJsonString == null || _allCityData.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4A843)),
+        ),
+      );
+    }
+
+    // 将 _allCityData 转为 ECharts data，去掉城市名末尾的「市」字以匹配 GeoJSON
+    final cityMapData = _allCityData.map((c) {
+      String name = c['name']?.toString() ?? '';
+      // GeoJSON 里都是简称（如「合肥」），接口可能返回「合肥市」，需去尾
+      if (name.endsWith('市') || name.endsWith('区')) {
+        name = name.substring(0, name.length - 1);
+      }
+      return {
+        'name': name,
+        'value': c['value'] ?? 0,
+      };
+    }).toList();
+
+    final maxValue = cityMapData.isEmpty
+        ? 10
+        : cityMapData
+            .map((c) => c['value'] as int)
+            .reduce((a, b) => a > b ? a : b);
+
+    // ── 地图主题色彩变量区 ──────────────────────────────────────────
+    // 所有颜色变量均在此提前计算，避免 ECharts option 内嵌套引号导致 JSON 解析失败
+
+    // 地图容器背景色
+    final _bgColor = _cityMapDarkGold ? '#0D0D0D' : '#FFFFFF';
+    // 标题文字颜色（黑金=金色 / 白天=深蓝）
+    final _titleColor = _cityMapDarkGold ? '#D4A843' : '#1E3A8A';
+    // 副标题文字颜色（均为灰色）
+    final _subtitleColor = _cityMapDarkGold ? '#888' : '#999';
+
+    // ── 标题文字预计算（避免 option 内单引号冲突） ────────────────────
+    final _brandName   = _selectedBrand?.name ?? '';
+    final _brandCode   = _selectedBrand?.code ?? '';
+    final _storeCount  = _selectedBrand?.storeCount ?? '-';
+    final _updatedDate = (_selectedBrand?.updatedAt ?? '').toString().split('T').first;
+    // 主标题：品牌名 + 门店分布图
+    final _mainTitle = '$_brandName 门店分布图';
+    // 副标题：品牌编码 + 已收录数量 + 收录日期
+    final _subTitle  = '$_brandCode (已收录${_storeCount}个 收录日期 $_updatedDate)';
+
+    // ── Tooltip 颜色 ───────────────────────────────────────────────────
+    final _tooltipBg     = _cityMapDarkGold ? 'rgba(10,8,0,0.9)'     : 'rgba(255,255,255,0.95)';
+    final _tooltipBorder = _cityMapDarkGold ? '#D4A843'              : '#4E65FF';
+    final _tooltipText   = _cityMapDarkGold ? '#F5DFA0'              : '#4E65FF';
+
+    // ── 颜色覆盖模式专用颜色 ────────────────────────────────────────────
+    // visualMap 渐变色板：黑金=金色系 / 白天=靛蓝色系（无数据白色→深蓝）
+    final _visualColors = _cityMapDarkGold
+        ? "['#1a1200','#5C3D00','#A0640A','#D4A843','#FFD700']"
+        : "['#FFFFFF','#C8E0FF','#6AABF7','#1E6FD9','#0033AA']";
+    // visualMap 文字和边框颜色
+    final _visualTextColor   = _cityMapDarkGold ? '#B8A060'               : '#4E65FF';
+    final _visualBorderColor = _cityMapDarkGold ? 'rgba(212,168,67,0.25)' : 'rgba(78,101,255,0.25)';
+    // 无数据区域底色、边框、阴影（黑金=深棕黑 / 白天=纯白）
+    final _areaColor   = _cityMapDarkGold ? '#1a1200'                : '#FFFFFF';
+    final _borderColor = _cityMapDarkGold ? '#bbb599'               : '#fff';
+    final _shadowColor = _cityMapDarkGold ? 'rgba(232,200,74,0.15)' : 'rgba(70,10,25,0.1)';
+    // 地图标签文字颜色和阴影
+    final _labelColor  = _cityMapDarkGold ? '#E8C84A'           : '#4E65FF';
+    final _labelShadow = _cityMapDarkGold ? 'rgba(0,0,0,0.95)'  : 'rgba(255,255,255,0.8)';
+    // 鼠标悬停强调效果：标签、区域填充、边框颜色
+    final _emphasisLabelColor = _cityMapDarkGold ? '#FFD700' : '#4E65FF';
+    final _emphasisArea       = _cityMapDarkGold ? '#5C3D00' : '#D0D8FF';
+    final _emphasisBorder     = _cityMapDarkGold ? '#FFD700' : '#4E65FF';
+
+    // ── 气泡模式专用颜色 ────────────────────────────────────────────────
+    // geo 底图：黑金=深黑底 / 白天=纯白底
+    final _geoArea       = _cityMapDarkGold ? '#0D0D0D' : '#fff';
+    final _geoBorder     = _cityMapDarkGold ? '#3A3020' : '#e3e3e3';
+    final _geoEmphArea   = _cityMapDarkGold ? '#2A2000' : '#D0D8FF';
+    final _geoEmphBorder = _cityMapDarkGold ? '#D4A843' : '#4E65FF';
+    // 气泡光晕带大小和颜色：黑金=金色发光 / 白天=蓝色发光
+    final _bubbleShadowBlur  = _cityMapDarkGold ? 15 : 18;
+    final _bubbleShadowColor = _cityMapDarkGold ? 'rgba(212,168,67,0.7)' : 'rgba(78,101,255,0.6)';
+    // ─────────────────────────────────────────────────────────────────────
+
+    return Stack(
+      children: [
+        // 地图区域（占满全部空间）
+        Positioned.fill(
+          child: Container(
+            margin: const EdgeInsets.all(0),
+            decoration: BoxDecoration(
+              color: _cityMapDarkGold ? const Color(0xFF0D0D0D) : const Color(0xFFFFFFFF),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(0),
+              child: Listener(
+          onPointerDown: (_) {
+            if (_tabController?.index == 1) {
+              setState(() => _tabSwipeLocked = true);
+            }
+          },
+          onPointerUp: (_) {
+            if (_tabController?.index == 1) {
+              setState(() => _tabSwipeLocked = false);
+            }
+          },
+          onPointerCancel: (_) {
+            if (_tabController?.index == 1) {
+              setState(() => _tabSwipeLocked = false);
+            }
+          },
+          child: Echarts(
+          key: ValueKey('city_map_${_allCityData.length}_${_cityMapShowLabel}_${_cityMapShowCount}_${_cityMapBubbleMode}_${_cityMapDarkGold}'),
+          option: _cityMapBubbleMode ? '''
+          {
+            backgroundColor: '$_bgColor',
+            title: [
+              {
+                text: '$_mainTitle',
+                subtext: '$_subTitle',
+                left: 'center', top: 10,
+                textStyle: { color: '$_titleColor', fontSize: 18, fontWeight: 'bold' },
+                subtextStyle: { color: '$_subtitleColor', fontSize: 12 }
+              }
+            ],
+            tooltip: {
+              trigger: 'item',
+              backgroundColor: '$_tooltipBg',
+              borderColor: '$_tooltipBorder', borderWidth: 1,
+              textStyle: { color: '$_tooltipText', fontSize: 13 },
+              formatter: function(p) {
+                if (!p.value || (Array.isArray(p.value) && (isNaN(p.value[2]) || p.value[2] <= 0))) return '';
+                var val = Array.isArray(p.value) ? p.value[2] : p.value;
+                return p.name + '<br/>门店数量：<b>' + val + '</b> 家';
+              }
+            },
+            geo: {
+              map: 'china_cities', roam: true, zoom: 1.5,
+              label: { show: false },
+              itemStyle: {
+                areaColor: '$_geoArea',
+                borderColor: '$_geoBorder',
+                borderWidth: 0.8
+              },
+              emphasis: {
+                label: { show: false },
+                itemStyle: {
+                  areaColor: '$_geoEmphArea',
+                  borderColor: '$_geoEmphBorder',
+                  borderWidth: 1
+                }
+              }
+            },
+            series: [
+              {
+                name: '门店分布', type: 'map', map: 'china_cities',
+                geoIndex: 0, roam: true, zoom: 1.5,
+                label: { show: false }, itemStyle: { opacity: 0 },
+                emphasis: { itemStyle: { opacity: 0 } },
+                data: ${json.encode(cityMapData)}
+              },
+              {
+                name: '门店散点', type: 'effectScatter',
+                coordinateSystem: 'geo', geoIndex: 0,
+                data: (function() {
+                  var rawData = ${json.encode(cityMapData)};
+                  var geoData = []; var geoCoordMap = {};
+                  try {
+                    var mapData = echarts.getMap('china_cities');
+                    if (mapData && mapData.geoJSON && mapData.geoJSON.features) {
+                      mapData.geoJSON.features.forEach(function(f) {
+                        var name = f.properties && f.properties.name;
+                        var center = f.properties && f.properties.cp;
+                        if (!center && f.geometry) {
+                          var coords = f.geometry.type === 'Polygon' ? f.geometry.coordinates[0] :
+                            (f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates[0][0] : null);
+                          if (coords && coords.length) {
+                            var lngs = coords.map(function(c){return c[0];});
+                            var lats = coords.map(function(c){return c[1];});
+                            center = [(Math.min.apply(null,lngs)+Math.max.apply(null,lngs))/2,
+                                      (Math.min.apply(null,lats)+Math.max.apply(null,lats))/2];
+                          }
+                        }
+                        if (name && center) geoCoordMap[name] = center;
+                      });
+                    }
+                  } catch(e) {}
+                  rawData.forEach(function(item) {
+                    var coord = geoCoordMap[item.name];
+                    if (coord && item.value > 0)
+                      geoData.push({ name: item.name, value: [coord[0], coord[1], item.value] });
+                  });
+                  return geoData;
+                })(),
+                symbolSize: function(val) {
+                  var v = Array.isArray(val) ? val[2] : val;
+                  return Math.max(4, Math.min(14, 4 + v * 1.2));
+                },
+                rippleEffect: { brushType: 'stroke', scale: 3.5, period: 3 },
+                label: {
+                  show: ${_cityMapShowLabel || _cityMapShowCount},
+                  position: 'right', fontSize: 10,
+                  color: '$_labelColor',
+                  textShadowColor: '$_labelShadow',
+                  textShadowBlur: 4,
+                  formatter: function(p) {
+                    if (!p.value || isNaN(p.value[2]) || p.value[2] <= 0) return '';
+                    var showName = ${_cityMapShowLabel}; var showCount = ${_cityMapShowCount};
+                    if (showName && showCount) return p.name + ' ' + p.value[2];
+                    if (showName) return p.name;
+                    if (showCount) return '' + p.value[2];
+                    return '';
+                  }
+                },
+                itemStyle: {
+                  color: function(p) {
+                    var v = Array.isArray(p.value) ? p.value[2] : p.value;
+                    var ratio = v / ($maxValue || 1);
+                    var isDark = ${_cityMapDarkGold};
+                    if (isDark) {
+                      // 黑金模式：金橙色系
+                      if (ratio > 0.7) return '#FF8C00';
+                      if (ratio > 0.4) return '#D4A843';
+                      if (ratio > 0.2) return '#C8B560';
+                      return '#A89030';
+                    } else {
+                      // 白天模式：红色热力图（低→蓝紫→绿→黄→橙→红）
+                      if (ratio > 0.8) return '#FF0000';
+                      if (ratio > 0.6) return '#FF4500';
+                      if (ratio > 0.4) return '#FF8C00';
+                      if (ratio > 0.25) return '#FFFF00';
+                      if (ratio > 0.1) return '#00FF88';
+                      return '#4169E1';
+                    }
+                  },
+                  shadowBlur: $_bubbleShadowBlur,
+                  shadowColor: '$_bubbleShadowColor'
+                },
+                zlevel: 2
+              }
+            ]
+          }
+          ''' : '''
+          {
+            backgroundColor: '$_bgColor',
+            title: [
+              {
+                text: '$_mainTitle',
+                subtext: '$_subTitle',
+                left: 'center', top: 10,
+                textStyle: { color: '$_titleColor', fontSize: 18, fontWeight: 'bold' },
+                subtextStyle: { color: '$_subtitleColor', fontSize: 12 }
+              }
+            ],
+            tooltip: {
+              trigger: 'item',
+              backgroundColor: '$_tooltipBg',
+              borderColor: '$_tooltipBorder', borderWidth: 1,
+              textStyle: { color: '$_tooltipText', fontSize: 13 },
+              formatter: function(p) {
+                if (!p.value || isNaN(p.value) || p.value <= 0) return '';
+                return p.name + '<br/>门店数量：<b>' + p.value + '</b> 家';
+              }
+            },
+            visualMap: {
+              min: -${(maxValue * 0.3).round()}, max: $maxValue,
+              left: 'left', bottom: 20,
+              text: ['高', '低'], calculable: true,
+              inRange: { color: $_visualColors },
+              textStyle: { color: '$_visualTextColor', fontSize: 11 },
+              itemWidth: 14, itemHeight: 90,
+              borderColor: '$_visualBorderColor', borderWidth: 1
+            },
+            series: [{
+              name: '门店分布', type: 'map', map: 'china_cities',
+              roam: true, zoom: 1.5,
+              label: {
+                show: ${_cityMapShowLabel || _cityMapShowCount},
+                fontSize: 10, color: '$_labelColor',
+                textShadowColor: '$_labelShadow', textShadowBlur: 4,
+                formatter: function(p) {
+                  if (!p.value || isNaN(p.value) || p.value <= 0) return '';
+                  var showName = ${_cityMapShowLabel}; var showCount = ${_cityMapShowCount};
+                  if (showName && showCount) return p.name + ' ' + p.value;
+                  if (showName) return p.name;
+                  if (showCount) return '' + p.value;
+                  return '';
+                }
+              },
+              emphasis: {
+                label: { show: true, fontSize: 11, color: '$_emphasisLabelColor', fontWeight: 'bold' },
+                itemStyle: { areaColor: '$_emphasisArea', borderColor: '$_emphasisBorder', borderWidth: 1.5 }
+              },
+              itemStyle: {
+                borderColor: '$_borderColor', borderWidth: 0.8,
+                areaColor: '$_areaColor',
+                shadowColor: '$_shadowColor', shadowBlur: 8
+              },
+              data: ${json.encode(cityMapData)}
+            }]
+          }
+          ''',
+          extraScript: '''
+          try {
+            var citiesGeoJson = ${_citiesJsonString!};
+            echarts.registerMap('china_cities', citiesGeoJson);
+          } catch(e) {
+            console.error('市级地图注册失败:', e);
+          }
+          ''',
+                ),
+              ),
+            ),
+          ),
+        ),
+        // 右上角浮动设置按鈕
+        Positioned(
+          top: 12,
+          right: 12,
+          child: GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                barrierColor: Colors.transparent,
+                builder: (ctx) => StatefulBuilder(
+                  builder: (ctx, setDialogState) => Stack(
+                    children: [
+                      Positioned(
+                        top: 60,
+                        right: 16,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Container(
+                            width: 200,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: _cityMapDarkGold ? const Color(0xFF1A1000) : const Color(0xFFF8F8FF),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _cityMapDarkGold
+                                    ? const Color(0xFFD4A843).withOpacity(0.4)
+                                    : const Color(0xFF1E3A8A).withOpacity(0.3),
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _cityMapDarkGold
+                                      ? const Color(0xFFD4A843).withOpacity(0.15)
+                                      : const Color(0xFF1E3A8A).withOpacity(0.1),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '地图设置',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: _cityMapDarkGold ? const Color(0xFFD4A843) : const Color(0xFF1E3A8A),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                // 渲染模式选择
+                                Text(
+                                  '渲染模式',
+                                  style: TextStyle(fontSize: 11, color: _cityMapDarkGold ? const Color(0xFF888888) : const Color(0xFF999999)),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    _buildModeChip(
+                                      label: '颜色覆盖',
+                                      selected: !_cityMapBubbleMode,
+                                      isDark: _cityMapDarkGold,
+                                      onTap: () {
+                                        setState(() => _cityMapBubbleMode = false);
+                                        setDialogState(() {});
+                                      },
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildModeChip(
+                                      label: '气泡',
+                                      selected: _cityMapBubbleMode,
+                                      isDark: _cityMapDarkGold,
+                                      onTap: () {
+                                        setState(() => _cityMapBubbleMode = true);
+                                        setDialogState(() {});
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                // 地图主题选择
+                                Text(
+                                  '地图主题',
+                                  style: TextStyle(fontSize: 11, color: _cityMapDarkGold ? const Color(0xFF888888) : const Color(0xFF999999)),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    _buildModeChip(
+                                      label: '黑金',
+                                      selected: _cityMapDarkGold,
+                                      isDark: _cityMapDarkGold,
+                                      onTap: () {
+                                        setState(() => _cityMapDarkGold = true);
+                                        setDialogState(() {});
+                                      },
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildModeChip(
+                                      label: '白天',
+                                      selected: !_cityMapDarkGold,
+                                      isDark: _cityMapDarkGold,
+                                      onTap: () {
+                                        setState(() => _cityMapDarkGold = false);
+                                        setDialogState(() {});
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Divider(color: _cityMapDarkGold ? const Color(0x33D4A843) : const Color(0x331E3A8A), height: 1),
+                                const SizedBox(height: 12),
+                                // 显示名称开关
+                                _buildDialogSwitch(
+                                  label: '显示城市名称',
+                                  value: _cityMapShowLabel,
+                                  isDark: _cityMapDarkGold,
+                                  onTap: () {
+                                    setState(() => _cityMapShowLabel = !_cityMapShowLabel);
+                                    setDialogState(() {});
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+                                // 显示数量开关
+                                _buildDialogSwitch(
+                                  label: '显示门店数量',
+                                  value: _cityMapShowCount,
+                                  isDark: _cityMapDarkGold,
+                                  onTap: () {
+                                    setState(() => _cityMapShowCount = !_cityMapShowCount);
+                                    setDialogState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: _cityMapDarkGold ? const Color(0xFF0D0800) : const Color(0xFFF0F4FF),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: _cityMapDarkGold
+                      ? const Color(0xFFD4A843).withOpacity(0.6)
+                      : const Color(0xFF1E3A8A).withOpacity(0.5),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _cityMapDarkGold
+                        ? const Color(0xFFD4A843).withOpacity(0.35)
+                        : const Color(0xFF1E3A8A).withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.tune,
+                size: 18,
+                color: _cityMapDarkGold ? const Color(0xFFD4A843) : const Color(0xFF1E3A8A),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2300,6 +2959,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                 ),
                 child: Row(
                   children: [
+                      
                     // 返回按钮
                     Container(
                       decoration: BoxDecoration(
@@ -2410,13 +3070,24 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.map, size: 18),
+                                        Icon(Icons.location_city, size: 18),
                                         SizedBox(width: 6),
-                                        Text('地图'),
+                                        Text('市级'),
                                       ],
                                     ),
                                   ),
-                                   Tab(
+                                  Tab(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.map, size: 18),
+                                        SizedBox(width: 6),
+                                        Text('省级'),
+                                      ],
+                                    ),
+                                  ),
+                                  Tab(
                                     child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
@@ -2438,7 +3109,6 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                       ],
                                     ),
                                   ),
-                                 
                                   Tab(
                                     child: Row(
                                       mainAxisAlignment:
@@ -2450,9 +3120,6 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                                       ],
                                     ),
                                   ),
-                                  
-                                  
-                                 
                                 ],
                               ),
                       ),
@@ -2476,6 +3143,7 @@ class _SimpleMapPageState extends State<SimpleMapPage>
                             : const BouncingScrollPhysics(),
                         children: [
                           _buildIntroView(),
+                          _buildCityMapView(),
                           _buildMapView(),
                           _buildListView(),
                           _buildCityMallListView(),

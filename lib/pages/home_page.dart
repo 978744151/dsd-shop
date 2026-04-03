@@ -1,3 +1,9 @@
+import 'package:business_savvy/pages/mall_brand_page.dart';
+import 'package:business_savvy/pages/mall_detail_page.dart';
+import 'package:business_savvy/pages/simple_map_page.dart';
+import 'package:business_savvy/pages/spring_festival_stats_page.dart';
+import 'package:business_savvy/widgets/loading_indicator_widget.dart';
+import 'package:business_savvy/widgets/ai_floating_button.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:business_savvy/pages/brand_center_page.dart';
@@ -15,6 +21,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:business_savvy/pages/message_page.dart';
 import '../utils/event_bus.dart';
 import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -38,6 +45,10 @@ class _HomePageState extends State<HomePage> {
   bool recommendLoadingMore = false;
   final ScrollController _recommendScrollController = ScrollController();
   late StreamSubscription _refreshSubscription; // 添加刷新事件订阅
+  late StreamSubscription<List<ConnectivityResult>>
+      _connectivitySubscription; // 网络状态订阅
+  bool _hasNetworkConnection = false; // 网络连接状态
+  bool _initialDataLoaded = false; // 是否已加载初始数据
 
   // 地址相关状态
   List<AddressModel> addressList = [];
@@ -55,16 +66,18 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    fetchBrand();
-    fetchRecommendBlogs();
-    fetchDefaultAddress(); // 获取默认地址
-    loadCachedProvinceCity(); // 加载缓存的省市信息
     _recommendScrollController.addListener(_onRecommendScroll);
 
     // 监听首页刷新事件
     _refreshSubscription = eventBus.on<HomePageRefreshEvent>().listen((_) {
       _refreshHomePage();
     });
+
+    // 初始化网络状态监听
+    // _initConnectivity();
+    // _connectivitySubscription =
+    //     Connectivity().onConnectivityChanged.listen(_updateConnectionStatus);
+      _loadInitialData();
   }
 
   @override
@@ -72,6 +85,7 @@ class _HomePageState extends State<HomePage> {
     _searchController.dispose(); // 只在dispose时释放控制器
     _recommendScrollController.dispose();
     _refreshSubscription.cancel(); // 取消刷新事件订阅
+    _connectivitySubscription.cancel(); // 取消网络状态订阅
     super.dispose();
   }
 
@@ -117,7 +131,7 @@ class _HomePageState extends State<HomePage> {
       });
       // 添加错误提示
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('刷新失败：${e.toString()}')),
+        SnackBar(content: Text('刷新失败')),
       );
     }
     // 返回 Future 完成
@@ -150,7 +164,7 @@ class _HomePageState extends State<HomePage> {
       });
       // 添加错误提示
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('刷新失败：${e.toString()}')),
+        SnackBar(content: Text('刷新失败')),
       );
     }
     // 返回 Future 完成
@@ -261,7 +275,7 @@ class _HomePageState extends State<HomePage> {
               );
             }
           });
-          print('已选择位置：${selectedProvince!.code} ${selectedCity!.id}');
+          // print('已选择位置：${selectedProvince!.code} ${selectedCity!.id}');
           // 根据缓存的省市信息获取商城数据
           await fetchMall(
             provinceId: selectedProvince!.code,
@@ -306,7 +320,6 @@ class _HomePageState extends State<HomePage> {
 
   // 获取城市列表
   Future<void> fetchCities(String provinceId) async {
-    print(provinceId);
     setState(() {
       isLoadingCities = true;
       cityList = [];
@@ -460,7 +473,7 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (e) {
-      print('获取城市列表失败: $e');
+      // print('获取城市列表失败: $e');
       setModalState(() {
         cityList = [];
         isLoadingCities = false;
@@ -906,16 +919,12 @@ class _HomePageState extends State<HomePage> {
       recommendPage = 1;
     });
     await fetchBrand();
-    // await fetchMall();
+    await fetchMall();
     await fetchRecommendBlogs();
 
     // 刷新完成后，将滚动位置重置到顶部
     if (_recommendScrollController.hasClients) {
-      _recommendScrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      _recommendScrollController.jumpTo(0);
     }
   }
 
@@ -930,6 +939,65 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // 初始化网络连接状态
+  Future<void> _initConnectivity() async {
+    
+    try {
+    
+      final List<ConnectivityResult> results =
+          await Connectivity().checkConnectivity();
+      _updateConnectionStatus(results);
+    } catch (e) {
+       
+      // print('检查网络状态失败: $e');
+    }
+  }
+
+  // 更新网络连接状态
+  void _updateConnectionStatus(List<ConnectivityResult> results) {
+    try {
+      if (!mounted) return;
+          // 检查是否有网络连接
+    final bool hasConnection =
+        results.any((result) => result != ConnectivityResult.none);
+
+    // print('网络状态更新: $results, 有网络: $hasConnection');
+
+    // 如果从无网络变为有网络，且还未加载初始数据
+    if (hasConnection && !_hasNetworkConnection && !_initialDataLoaded) {
+      setState(() {
+        _hasNetworkConnection = true;
+      });
+      // 网络可用后加载数据
+      _loadInitialData();
+    } else {
+      
+        _loadInitialData();
+      setState(() {
+        _hasNetworkConnection = hasConnection;
+      });
+    }
+    } catch (e) {
+           print(134);
+        _loadInitialData();
+      print('检查网络状态失败: $e');
+    }
+
+
+  }
+
+  // 加载初始数据
+  Future<void> _loadInitialData() async {
+    if (_initialDataLoaded) return;
+
+    _initialDataLoaded = true;
+
+    await fetchBrand();
+    await fetchRecommendBlogs();
+    await fetchDefaultAddress();
+    await loadCachedProvinceCity();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -937,148 +1005,136 @@ class _HomePageState extends State<HomePage> {
       // 移除appBar,让内容区域扩展到状态栏
       extendBodyBehindAppBar: true,
       extendBody: true,
-      body: Stack(
-        children: [
-          // 浮空搜索栏
-          
-          CustomRefreshWidget(
-            onRefresh: () async {
-              setState(() {
-                recommendPage = 1;
-              });
-              // await fetchBrand();
-              // await fetchMall();
-              await fetchRecommendBlogs();
+      body: SizedBox(
+        width: double.infinity,
+        height: MediaQuery.of(context).size.height,
+        child: Stack(
+          children: [
+            CustomRefreshWidget(
+              onRefresh: () async {
+                // setState(() {
+                //   recommendPage = 1;
+                // });
+                // // await fetchBrand();
+                // // await fetchMall();
+                // await fetchRecommendBlogs();
+                await _refreshHomePage();
+                // 刷新完成后，将滚动位置重置到顶部
+                if (_recommendScrollController.hasClients) {
+                  _recommendScrollController.jumpTo(0);
+                }
+              },
+              child: SingleChildScrollView(
+                controller: _recommendScrollController,
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: MediaQuery.of(context).padding.top + 50, // 为浮空搜索栏留出空间
+                  bottom: 16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 第一个Section - 圆形图标网格
+                    _buildSectionHeader('品牌'),
+                    const SizedBox(height: 16),
+                    _buildCircularIconGrid(),
+                    const SizedBox(height: 20),
 
-              // 刷新完成后，将滚动位置重置到顶部
-              if (_recommendScrollController.hasClients) {
-                _recommendScrollController.animateTo(
-                  0,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                );
-              }
-            },
-            child: SingleChildScrollView(
-              controller: _recommendScrollController,
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: MediaQuery.of(context).padding.top + 50, // 为浮空搜索栏留出空间
-                bottom: 16,
+                    // 第二个Section - 大图卡片
+                    _buildSectionHeader('购物中心'),
+                    const SizedBox(height: 10),
+                    _buildLargeCard(),
+                    const SizedBox(height: 20),
+
+                    // 经济数据引导层
+                    _buildSectionHeader('经济数据'),
+                    const SizedBox(height: 10),
+                    _buildEconomicDataSection(),
+                    const SizedBox(height: 20),
+
+                    // 第三个Section - 小图标网格
+                    // _buildSectionHeader('分类'),
+                    // const SizedBox(height: 20),
+                    // _buildSmallIconGrid(),
+                    // const SizedBox(height: 20),
+
+                    // 第四个Section - 音乐卡片网格
+                    _buildSectionHeader('交流'),
+                    // const SizedBox(height: 20),
+                    isLoading
+                        ? const LoadingIndicatorWidget()
+                        : _buildMessageRecommendSection(),
+                    if (recommendLoadingMore)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    const SizedBox(height: 20),
+
+                    // // 第五个Section - 新闻列表
+                    // _buildSectionHeader('Section title'),
+                    // const SizedBox(height: 20),
+                    // _buildNewsList(),
+                    // const SizedBox(height: 20),
+
+                    // // 最后一个Section - More like
+                    // _buildMoreLikeSection(),
+                    // const SizedBox(height: 20),
+                    // _buildBottomIconGrid(),
+                    // const SizedBox(height: 20),
+                    // _buildBottomText(),
+                    // const SizedBox(height: 20),
+
+                    // // 底部导航图标
+                    // _buildBottomNavigation(),
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 第一个Section - 圆形图标网格
-                  _buildSectionHeader('品牌'),
-                  const SizedBox(height: 16),
-                  _buildCircularIconGrid(),
-                  const SizedBox(height: 20),
-
-                  // 第二个Section - 大图卡片
-                  _buildSectionHeader('购物中心'),
-                  const SizedBox(height: 10),
-                  _buildLargeCard(),
-                  const SizedBox(height: 10),
-
-                  // 第三个Section - 小图标网格
-                  // _buildSectionHeader('分类'),
-                  // const SizedBox(height: 20),
-                  // _buildSmallIconGrid(),
-                  // const SizedBox(height: 20),
-
-                  // 第四个Section - 音乐卡片网格
-                  _buildSectionHeader('交流'),
-                  // const SizedBox(height: 20),
-                  _buildMessageRecommendSection(),
-                  if (recommendLoadingMore)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Center(child: CircularProgressIndicator()),
+            ),
+            // 浮空搜索栏 - 修改Positioned部分
+            Positioned(
+              top: 0, // 从屏幕最顶部开始
+              left: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              const BrandCenterPage(autoFocus: true)));
+                },
+                child: Container(
+                  height:
+                      MediaQuery.of(context).padding.top + 50, // 状态栏高度 + 搜索框高度
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color.fromARGB(255, 120, 160, 230), // 更深的蓝色
+                        Color.fromARGB(255, 255, 255, 255), // 半透明白色
+                      ],
+                      stops: [0.0, 1.0],
                     ),
-                  const SizedBox(height: 20),
-
-                  // // 第五个Section - 新闻列表
-                  // _buildSectionHeader('Section title'),
-                  // const SizedBox(height: 20),
-                  // _buildNewsList(),
-                  // const SizedBox(height: 20),
-
-                  // // 最后一个Section - More like
-                  // _buildMoreLikeSection(),
-                  // const SizedBox(height: 20),
-                  // _buildBottomIconGrid(),
-                  // const SizedBox(height: 20),
-                  // _buildBottomText(),
-                  // const SizedBox(height: 20),
-
-                  // // 底部导航图标
-                  // _buildBottomNavigation(),
-                ],
-              ),
-            ),
-          ),
-          // 浮空搜索栏 - 修改Positioned部分
-<<<<<<< HEAD
-          Positioned(
-            right: 10,
-            bottom: 20,
-            child: RawMaterialButton(
-              onPressed: () {
-                context.go('/message/create');
-              },
-              elevation: 4.0,
-              fillColor: Colors.white,
-              shape: const CircleBorder(),
-              constraints: const BoxConstraints.tightFor(
-                width: 60,
-                height: 60,
-              ),
-              child: Icon(
-                Icons.add_photo_alternate,
-                color: Theme.of(context).primaryColor,
-                size: 35,
-              ),
-            ),
-          ),
-=======
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
-          Positioned(
-            top: 0, // 从屏幕最顶部开始
-            left: 0,
-            right: 0,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.of(context, rootNavigator: true).push(
-                    MaterialPageRoute(
-                        builder: (context) =>
-                            const BrandCenterPage(autoFocus: true)));
-              },
-              child: Container(
-                height:
-                    MediaQuery.of(context).padding.top + 50, // 状态栏高度 + 搜索框高度
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color.fromARGB(255, 120, 160, 230), // 更深的蓝色
-                      Color.fromARGB(255, 255, 255, 255), // 半透明白色
-                    ],
-                    stops: [0.0, 1.0],
                   ),
-                ),
-                child: SafeArea(
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 8), // 避免贴近灵动岛
-                    child: _buildFloatingSearchBar(),
+                  child: SafeArea(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 8), // 避免贴近灵动岛
+                      child: _buildFloatingSearchBar(),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+
+            // 右下角AI悬浮按钮
+            const AiFloatingButton(
+              initialRight: 16,
+              initialBottom: 50,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1143,7 +1199,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   const SizedBox(width: 2),
-                  Icon(
+                  const Icon(
                     Icons.keyboard_arrow_down,
                     size: 14,
                     color: Colors.grey,
@@ -1161,7 +1217,11 @@ class _HomePageState extends State<HomePage> {
     return GestureDetector(
       onTap: () {
         if (title == '购物中心') {
-          context.go('/mall-detail');
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (context) => const MallDetailPage(),
+            ),
+          );
         }
         if (title == '交流') {
           context.go('/message');
@@ -1260,7 +1320,12 @@ class _HomePageState extends State<HomePage> {
     return GestureDetector(
       onTap: () {
         // Navigator.pushNamed(context, '/brand', arguments: brand);
-        context.go('/brandMap/${brand.id}');
+        // context.go('/brandMap/${brand.id}');
+        Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute(
+            builder: (context) => SimpleMapPage(brandId: brand.id),
+          ),
+        );
       },
       child: Column(
         children: [
@@ -1309,7 +1374,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     return SizedBox(
-      height: 140,
+      height: 100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: mallList.length,
@@ -1317,7 +1382,12 @@ class _HomePageState extends State<HomePage> {
           final mall = mallList[index];
           return GestureDetector(
               onTap: () {
-                context.go('/mall-brand/${mall.id}');
+                Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(
+                    builder: (context) => MallBrandPage(mallId: mall.id),
+                  ),
+                );
+                // context.go('/mall-brand/${mall.id}');
                 // Navigator.of(context, rootNavigator: true).push(
                 //   // 添加 rootNavigator: true
                 //   PageRouteBuilder(
@@ -1439,7 +1509,6 @@ class _HomePageState extends State<HomePage> {
                               // 只要有一个品牌就带入预选并自动打开选择弹窗
                               final query =
                                   'mallId=${mall.id}&open=true&mallName=${mall.name}';
-                              print(query);
                               context.go('/compare?$query');
                             },
                             child: Text(
@@ -1463,16 +1532,16 @@ class _HomePageState extends State<HomePage> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        mall.address,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      // const SizedBox(height: 8),
+                      // Text(
+                      //   mall.address,
+                      //   style: TextStyle(
+                      //     color: Colors.grey[600],
+                      //     fontSize: 14,
+                      //   ),
+                      //   maxLines: 1,
+                      //   overflow: TextOverflow.ellipsis,
+                      // ),
                       const Spacer(),
                       // Row(
                       //   children: [
@@ -1867,6 +1936,191 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ],
+    );
+  }
+
+  // 经济数据引导层
+  Widget _buildEconomicDataSection() {
+    final economicData = [
+      {
+        'title': '春节数据',
+        'subtitle': '春节消费',
+        'icon': Icons.celebration,
+        'color': const Color(0xFFFF6B6B),
+        'gradient': const LinearGradient(
+          colors: [Color(0xFFFF6B6B), Color(0xFFFF8E8E)],
+        ),
+      },
+      {
+        'title': '五一数据',
+        'subtitle': '劳动节消费',
+        'icon': Icons.work_outline,
+        'color': const Color(0xFF4ECDC4),
+        'gradient': const LinearGradient(
+          colors: [Color(0xFF4ECDC4), Color(0xFF6FE7DD)],
+        ),
+      },
+      {
+        'title': '国庆数据',
+        'subtitle': '国庆黄金周',
+        'icon': Icons.flag,
+        'color': const Color(0xFFFFBE0B),
+        'gradient': const LinearGradient(
+          colors: [Color(0xFFFFBE0B), Color(0xFFFFD93D)],
+        ),
+      },
+      {
+        'title': '双十一',
+        'subtitle': '购物狂欢节',
+        'icon': Icons.shopping_bag,
+        'color': const Color(0xFFB565D8),
+        'gradient': const LinearGradient(
+          colors: [Color(0xFFB565D8), Color(0xFFCE93E8)],
+        ),
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 标题
+
+        const SizedBox(height: 12),
+
+        // 横向滚动的数据卡片
+        SizedBox(
+          height: 80,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: economicData.length,
+            itemBuilder: (context, index) {
+              final data = economicData[index];
+              return Container(
+                width: 160,
+                margin: EdgeInsets.only(
+                  right: index < economicData.length - 1 ? 12 : 0,
+                ),
+                child: _buildEconomicDataCard(
+                  title: data['title'] as String,
+                  subtitle: data['subtitle'] as String,
+                  icon: data['icon'] as IconData,
+                  gradient: data['gradient'] as LinearGradient,
+                  onTap: () {
+                    // 跳转到对应的数据详情页
+                    if (data['title'] == '春节数据') {
+                      Navigator.of(context, rootNavigator: true).push(
+                        MaterialPageRoute(
+                          builder: (context) => SpringFestivalStatsPage(),
+                        ),
+                      );
+                    } else {
+                      print('点击了 ${data['title']} - 功能开发中');
+                    }
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 经济数据卡片
+  Widget _buildEconomicDataCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required LinearGradient gradient,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: gradient.colors.first.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // 背景装饰图案
+            Positioned(
+              right: -20,
+              top: -20,
+              child: Icon(
+                icon,
+                size: 100,
+                color: Colors.white.withValues(alpha: 0.2),
+              ),
+            ),
+
+            // 内容
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // 图标
+                  // Container(
+                  //   padding: const EdgeInsets.all(8),
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.white.withValues(alpha: 0.3),
+                  //     borderRadius: BorderRadius.circular(8),
+                  //   ),
+                  //   child: Icon(
+                  //     icon,
+                  //     color: Colors.white,
+                  //     size: 24,
+                  //   ),
+                  // ),
+
+                  // 文字信息
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // 右上角箭头
+            Positioned(
+              right: 12,
+              top: 12,
+              child: Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: Colors.white.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

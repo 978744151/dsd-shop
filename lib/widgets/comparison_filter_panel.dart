@@ -4,7 +4,6 @@ class ComparisonFilterPanel extends StatelessWidget {
   final VoidCallback? onClose;
   final ValueChanged<int>? onStyleChanged;
   final int initialStyleIndex;
-<<<<<<< HEAD
   // isola 表示是否计算奥莱店：true=计算，false=不计算
   final ValueChanged<bool>? onIsolaChanged;
   final bool initialIsola;
@@ -42,11 +41,6 @@ class ComparisonFilterPanel extends StatelessWidget {
       this.onCategorySelectionChanged,
       this.onIsolaChanged,
       this.initialIsola = true})
-=======
-
-  const ComparisonFilterPanel(
-      {Key? key, this.onClose, this.onStyleChanged, this.initialStyleIndex = 0})
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
       : super(key: key);
 
   @override
@@ -74,11 +68,7 @@ class ComparisonFilterPanel extends StatelessWidget {
           children: [
             // Header
             Container(
-<<<<<<< HEAD
               // padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
-=======
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
               decoration: const BoxDecoration(
                   // color: Color(0xFF1E3A8A),
                   ),
@@ -110,16 +100,11 @@ class ComparisonFilterPanel extends StatelessWidget {
                   children: [
                     _FilterRadioGroup(
                       title: '风格',
-<<<<<<< HEAD
                       options: const ['暗黑', '标准', '商务', '深色'],
-=======
-                      options: const ['暗黑', '标准', '商务'],
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                       initialIndex: initialStyleIndex,
                       onChanged: onStyleChanged,
                     ),
                     const SizedBox(height: 16),
-<<<<<<< HEAD
                     _FilterSlider(
                       title: '行高',
                       min: 40,
@@ -179,11 +164,6 @@ class ComparisonFilterPanel extends StatelessWidget {
                       initialValue: initialIsola,
                       onChanged: onIsolaChanged,
                     ),
-=======
-                    const Divider(),
-                    const SizedBox(height: 16),
-                    // _FilterSwitch(title: '是否计算奥莱店'),
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                   ],
                 ),
               ),
@@ -217,7 +197,6 @@ class ComparisonFilterPanel extends StatelessWidget {
   }
 }
 
-<<<<<<< HEAD
 // class _FilterSwitch extends StatefulWidget {
 //   final String title;
 //   const _FilterSwitch({Key? key, required this.title}) : super(key: key);
@@ -249,17 +228,6 @@ class _IsolaSwitchState extends State<_IsolaSwitch> {
     value = widget.initialValue; // 默认计算奥莱店（true）
   }
 
-=======
-class _FilterSwitch extends StatefulWidget {
-  final String title;
-  const _FilterSwitch({Key? key, required this.title}) : super(key: key);
-  @override
-  State<_FilterSwitch> createState() => _FilterSwitchState();
-}
-
-class _FilterSwitchState extends State<_FilterSwitch> {
-  bool value = false;
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -267,7 +235,6 @@ class _FilterSwitchState extends State<_FilterSwitch> {
       children: [
         Expanded(child: Text(widget.title)),
         Switch(
-<<<<<<< HEAD
           value: value,
           inactiveThumbColor: Theme.of(context).primaryColor,
           activeColor: Theme.of(context).primaryColor,
@@ -276,18 +243,11 @@ class _FilterSwitchState extends State<_FilterSwitch> {
             widget.onChanged?.call(v); // 以 isola 参数传递 true/false
           },
         ),
-=======
-            value: value,
-            inactiveThumbColor: Theme.of(context).primaryColor,
-            // activeThumbColor: Theme.of(context).primaryColor,
-            onChanged: (v) => setState(() => value = v)),
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
       ],
     );
   }
 }
 
-<<<<<<< HEAD
 class _CategorySelector extends StatefulWidget {
   final List<Map<String, dynamic>> options;
   final List<String> initialSelected;
@@ -367,8 +327,6 @@ class _CategorySelectorState extends State<_CategorySelector> {
   }
 }
 
-=======
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
 class _FilterRadioGroup extends StatefulWidget {
   final String title;
   final List<String> options;
@@ -400,15 +358,9 @@ class _FilterRadioGroupState extends State<_FilterRadioGroup> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(widget.title),
-<<<<<<< HEAD
         const SizedBox(height: 6),
         Wrap(
           spacing: 8,
-=======
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 12,
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
           children: [
             for (int i = 0; i < widget.options.length; i++)
               AnimatedContainer(
@@ -417,15 +369,9 @@ class _FilterRadioGroupState extends State<_FilterRadioGroup> {
                   label: Text(
                     widget.options[i],
                     style: TextStyle(
-<<<<<<< HEAD
                       fontSize: 12,
                       fontWeight:
                           selected == i ? FontWeight.w600 : FontWeight.w400,
-=======
-                      fontSize: 14,
-                      fontWeight:
-                          selected == i ? FontWeight.bold : FontWeight.normal,
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                       color: selected == i ? Colors.white : Colors.black87,
                     ),
                   ),
@@ -437,16 +383,11 @@ class _FilterRadioGroupState extends State<_FilterRadioGroup> {
                   backgroundColor: Colors.white,
                   selectedColor: Theme.of(context).primaryColor,
                   shape: RoundedRectangleBorder(
-<<<<<<< HEAD
                     borderRadius: BorderRadius.circular(16),
-=======
-                    borderRadius: BorderRadius.circular(20),
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                     side: BorderSide(
                       color: selected == i
                           ? Theme.of(context).primaryColor
                           : Colors.grey.shade300,
-<<<<<<< HEAD
                       width: 1.0,
                     ),
                   ),
@@ -454,15 +395,6 @@ class _FilterRadioGroupState extends State<_FilterRadioGroup> {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   elevation: 0,
                   pressElevation: 0,
-=======
-                      width: 1.5,
-                    ),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  elevation: selected == i ? 4 : 0,
-                  pressElevation: 8,
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                 ),
               ),
           ],
@@ -470,7 +402,6 @@ class _FilterRadioGroupState extends State<_FilterRadioGroup> {
       ],
     );
   }
-<<<<<<< HEAD
 }
 
 class _FilterSlider extends StatefulWidget {
@@ -529,6 +460,3 @@ class _FilterSliderState extends State<_FilterSlider> {
     );
   }
 }
-=======
-}
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0

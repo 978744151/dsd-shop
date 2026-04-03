@@ -1,14 +1,11 @@
 import 'package:business_savvy/pages/brand_settings_page.dart';
 import 'package:business_savvy/pages/feedback_page.dart';
 import 'package:business_savvy/utils/screenshot_util.dart';
-<<<<<<< HEAD
-=======
-import 'package:business_savvy/utils/toast_util.dart';
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'dart:async';
 
 import '../api/brand.dart';
 import '../models/brand.dart';
@@ -18,6 +15,7 @@ import '../api/feedback_api.dart';
 import '../widgets/comparison_table_widget.dart';
 import '../widgets/comparison_filter_panel.dart';
 import '../utils/screenshot_util.dart';
+import '../utils/event_bus.dart';
 
 // 全局颜色常量定义
 const Color kHeaderBackgroundColor = Color(0xFFF4F8FF);
@@ -83,10 +81,9 @@ class _ComparePageState extends State<ComparePage> {
   final ValueNotifier<String> _feedbackLabelNotifier =
       ValueNotifier<String>('错误报告');
   bool _isFeedbackTypeDialogOpen = false; // 控制反馈类型选择弹框
+  StreamSubscription? _compareRefreshSub;
 
-  // 添加截图控制器用于访问ComparisonTableWidget的截图功能
-
-<<<<<<< HEAD
+  
 
   // 表格行高（可在筛选面板中调整）
   double _rowHeight = 60;
@@ -97,8 +94,6 @@ class _ComparePageState extends State<ComparePage> {
   // 是否计算奥莱店（isola）：true=计算，false=不计算
   bool _isola = false;
 
-=======
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
   // 反馈类型选项 - 使用label-value形式
   final List<Map<String, String>> _feedbackTypes = [
     {'value': 'bug', 'label': '错误报告'},
@@ -124,13 +119,14 @@ class _ComparePageState extends State<ComparePage> {
   List<String> selectedBrandIds = [];
   List<String> selectedBrandNames = [];
   Map<String, String> brandScores = {}; // 品牌分值输入
-<<<<<<< HEAD
+  // 分类筛选
+  List<Map<String, dynamic>> _categoryOptions = [];
+  List<String> _selectedCategoryNames = [];
 
   String _selectedMallSearchQuery = '';
   String _selectedCitySearchQuery = '';
-  final TextEditingController _selectionSearchController = TextEditingController();
-=======
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
+  final TextEditingController _selectionSearchController =
+      TextEditingController();
 
   // 获取当前类型的选中ID列表
   List<String> get _selectedIds =>
@@ -149,11 +145,7 @@ class _ComparePageState extends State<ComparePage> {
   ComparisonStyle _getStyle() {
     switch (_styleIndex) {
       case 0: // 暗黑
-<<<<<<< HEAD
         return const ComparisonStyle(
-=======
-        return ComparisonStyle(
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
           headerColor: Colors.black,
           firstColumnColor: Colors.black,
           textColor: Colors.white,
@@ -161,7 +153,6 @@ class _ComparePageState extends State<ComparePage> {
           columnColors: const [Colors.black],
         );
       case 2: // 商务
-<<<<<<< HEAD
         return const ComparisonStyle(
           headerColor: Colors.white,
           firstColumnColor: Colors.white,
@@ -170,28 +161,12 @@ class _ComparePageState extends State<ComparePage> {
           columnColors: [Colors.white],
         );
       case 3: // 浅色
-=======
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
         return ComparisonStyle(
           headerColor: Colors.white,
           firstColumnColor: Colors.white,
           textColor: Colors.black,
-<<<<<<< HEAD
           borderColor: Color(0xFFE2E8F0),
           columnColors: [
-=======
-          borderColor: const Color(0xFFE2E8F0),
-          columnColors: const [Colors.white],
-        );
-      default: // 标准（彩色）
-        return ComparisonStyle(
-          headerColor: Colors.grey.shade100,
-          firstColumnColor: Colors.grey.shade50,
-          textColor: Colors.black,
-          firstColumnTextColor: Colors.black,
-          borderColor: Colors.grey.shade300,
-          columnColors: const [
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
             Colors.blue,
             Colors.purple,
             Colors.green,
@@ -208,7 +183,6 @@ class _ComparePageState extends State<ComparePage> {
             Colors.deepPurple,
           ],
         );
-<<<<<<< HEAD
       default: // 标准（彩色）
         return ComparisonStyle(
           headerColor: Colors.grey.shade100,
@@ -233,8 +207,6 @@ class _ComparePageState extends State<ComparePage> {
             Colors.deepPurple.withOpacity(0.6),
           ],
         );
-=======
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
     }
   }
 
@@ -249,7 +221,7 @@ class _ComparePageState extends State<ComparePage> {
   }
 
   @override
-  void initState() {
+  void  initState() {
     super.initState();
 
     if (widget.mallId != null && widget.mallId!.isNotEmpty) {
@@ -264,6 +236,21 @@ class _ComparePageState extends State<ComparePage> {
     }
 
     _loadInitialData();
+
+    // 监听底部Tab compare重复点击刷新事件
+    // _compareRefreshSub =
+    //     eventBus.on<ComparePageRefreshEvent>().listen((event) {
+    //   // 加载省份数据
+    //    _loadProvinces();
+
+    //   // 加载城市数据
+    //    _loadCities();
+
+    //   // 加载品牌数据
+    //    _loadBrands();
+    //   // 加载分类字典
+    //    _loadCategories();
+    // });
   }
 
   @override
@@ -329,6 +316,8 @@ class _ComparePageState extends State<ComparePage> {
 
       // 加载品牌数据
       await _loadBrands();
+      // 加载分类字典
+      await _loadCategories();
       // _showSelectionDialog();
     } catch (e) {
       print('加载数据失败: $e');
@@ -421,6 +410,28 @@ class _ComparePageState extends State<ComparePage> {
     }
   }
 
+  Future<void> _loadCategories() async {
+    try {
+      final resp = await HttpClient.get('admin/dictionaries',
+          params: {'type': 'brand_category'});
+      if (resp['success'] == true) {
+        final List<dynamic> list = resp['data']['dictionaries'] ?? [];
+        print(list);
+        setState(() {
+          _categoryOptions = list
+              .map((e) => {
+                    'id': (e['value'] ?? e['id'])?.toString(),
+                    'name':
+                        (e['label'] ?? e['label'] ?? e['value'])?.toString(),
+                  })
+              .toList();
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
   Future<void> _loadCitiesByProvince(
       String? provinceId, StateSetter setModalState) async {
     try {
@@ -439,7 +450,6 @@ class _ComparePageState extends State<ComparePage> {
                     'provinceId': city['provinceId'].toString(),
                   })
               .toList();
-          print('cities: $cities');
         });
         setState(() {}); // 同时更新主页面状态
       }
@@ -484,8 +494,9 @@ class _ComparePageState extends State<ComparePage> {
 
   void _showSelectionDialog() {
     _isSelectionSheetOpen = true;
-    _selectionSearchController.text =
-        _selectedType == 'mall' ? _selectedMallSearchQuery : _selectedCitySearchQuery;
+    _selectionSearchController.text = _selectedType == 'mall'
+        ? _selectedMallSearchQuery
+        : _selectedCitySearchQuery;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -525,12 +536,14 @@ class _ComparePageState extends State<ComparePage> {
                             color: Colors.black87,
                           ),
                         ),
-                        const SizedBox(width: 4,),
-                         Text(
-                        '(已选择 ${_selectedNames.length} 个${_selectedType == 'mall' ? '商场' : '城市'})',
-                        style: const TextStyle(
-                            fontSize: 13, color: Colors.black54),
-                      ),
+                        const SizedBox(
+                          width: 4,
+                        ),
+                        Text(
+                          '(已选择 ${_selectedNames.length} 个${_selectedType == 'mall' ? '商场' : '城市'})',
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.black54),
+                        ),
                         const Spacer(),
                         GestureDetector(
                           onTap: () {
@@ -552,10 +565,7 @@ class _ComparePageState extends State<ComparePage> {
                         ),
                       ],
                     ),
-                   
-                   
                     if (_selectedNames.isNotEmpty) ...[
-                     
                       const SizedBox(height: 4),
                       Wrap(
                         spacing: 4,
@@ -564,18 +574,18 @@ class _ComparePageState extends State<ComparePage> {
                             .map(
                               (name) => Chip(
                                 label: Text(name,
-                                    style: const TextStyle(fontSize: 10,color:Colors.black)),
+                                    style: const TextStyle(
+                                        fontSize: 10, color: Colors.black)),
                                 materialTapTargetSize:
                                     MaterialTapTargetSize.shrinkWrap,
                                 visualDensity: const VisualDensity(
                                     horizontal: -4, vertical: -4),
-<<<<<<< HEAD
                                 backgroundColor: Color(0xFFFFFFFF),
-                                deleteIcon: const Icon(Icons.close, size: 12,color:Colors.black,),
-=======
-                                backgroundColor: const Color(0xFFF5F5F5),
-                                deleteIcon: const Icon(Icons.close, size: 12),
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
+                                deleteIcon: const Icon(
+                                  Icons.close,
+                                  size: 12,
+                                  color: Colors.black,
+                                ),
                                 onDeleted: () {
                                   final idx = _selectedNames.indexOf(name);
                                   if (idx >= 0) {
@@ -599,8 +609,8 @@ class _ComparePageState extends State<ComparePage> {
                             .toList(),
                       ),
                     ],
-                    const SizedBox(height:12),
-                     Container(
+                    const SizedBox(height: 12),
+                    Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(2),
@@ -615,7 +625,8 @@ class _ComparePageState extends State<ComparePage> {
                           Expanded(
                             child: TextField(
                               controller: _selectionSearchController,
-                              style: const TextStyle(fontSize: 14, color: Colors.black87),
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.black87),
                               cursorColor: Colors.black45,
                               textAlignVertical: TextAlignVertical.center,
                               textInputAction: TextInputAction.search,
@@ -625,8 +636,10 @@ class _ComparePageState extends State<ComparePage> {
                                 hintText: '搜索列表项',
                                 border: InputBorder.none,
                                 isDense: true,
-                                hintStyle: TextStyle(color: Colors.black38, fontSize: 14),
-                                contentPadding: EdgeInsets.symmetric(vertical: 4),
+                                hintStyle: TextStyle(
+                                    color: Colors.black38, fontSize: 14),
+                                contentPadding:
+                                    EdgeInsets.symmetric(vertical: 4),
                               ),
                               onChanged: (v) {
                                 setModalState(() {
@@ -1227,11 +1240,7 @@ class _ComparePageState extends State<ComparePage> {
                                 hintText: '分值',
                                 isDense: true,
                                 contentPadding: EdgeInsets.symmetric(
-<<<<<<< HEAD
                                     horizontal: 8, vertical: 2),
-=======
-                                    horizontal: 8, vertical: 8),
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                                 border: OutlineInputBorder(),
                               ),
                               onChanged: (val) {
@@ -1503,11 +1512,9 @@ class _ComparePageState extends State<ComparePage> {
         'brandIds': selectedBrandIds,
         'brandScores': brandScores,
         'saveReport': saveReport,
-<<<<<<< HEAD
         'isOla': !_isola,
         'isCategory': _isCategory,
-=======
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
+        'category': _selectedCategoryNames,
       });
 
       if (response['success'] == true) {
@@ -1525,10 +1532,10 @@ class _ComparePageState extends State<ComparePage> {
         Fluttertoast.showToast(msg: '保存成功');
       }
     } catch (e) {
-      // print('获取对比数据失败: $e');
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(content: Text('获取对比数据失败: $e')),
-      // );
+      print('获取对比数据失败: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('获取对比数据失败: $e')),
+      );
     } finally {
       setState(() {
         _isLoadingData = false;
@@ -1541,45 +1548,44 @@ class _ComparePageState extends State<ComparePage> {
     return Scaffold(
       endDrawer: Drawer(
         child: SafeArea(
-<<<<<<< HEAD
-        child: ComparisonFilterPanel(
-          onClose: () => Navigator.of(context).pop(),
-          onStyleChanged: (i) => setState(() => _styleIndex = i),
-          initialStyleIndex: _styleIndex,
-          initialRowHeight: _rowHeight,
-          onRowHeightChanged: (h) =>
-              setState(() => _rowHeight = h.roundToDouble()),
-          initialColumnWidth: _columnWidth,
-          onColumnWidthChanged: (w) =>
-              setState(() => _columnWidth = w.roundToDouble()),
-          initialFirstColumnWidth: _firstColumnWidth,
-          onFirstColumnWidthChanged: (w) =>
-              setState(() => _firstColumnWidth = w.roundToDouble()),
-          initialUseChineseName: _useChineseName,
-          onUseChineseNameChanged: (v) =>
-              setState(() => _useChineseName = v),
-          initialIsCategory: _isCategory,
-          onIsCategoryChanged: (v) {
-            setState(() => _isCategory = v);
-            if (_selectedIds.length >= 2) {
-              _fetchComparisonData();
-            }
-          },
-          initialIsola: _isola,
-          onIsolaChanged: (v) {
-            setState(() => _isola = v);
-            if (_selectedIds.length >= 2) {
-              _fetchComparisonData();
-            }
-          },
-        ),
-=======
           child: ComparisonFilterPanel(
             onClose: () => Navigator.of(context).pop(),
             onStyleChanged: (i) => setState(() => _styleIndex = i),
             initialStyleIndex: _styleIndex,
+            initialRowHeight: _rowHeight,
+            onRowHeightChanged: (h) =>
+                setState(() => _rowHeight = h.roundToDouble()),
+            initialColumnWidth: _columnWidth,
+            onColumnWidthChanged: (w) =>
+                setState(() => _columnWidth = w.roundToDouble()),
+            initialFirstColumnWidth: _firstColumnWidth,
+            onFirstColumnWidthChanged: (w) =>
+                setState(() => _firstColumnWidth = w.roundToDouble()),
+            initialUseChineseName: _useChineseName,
+            onUseChineseNameChanged: (v) => setState(() => _useChineseName = v),
+            initialIsCategory: _isCategory,
+            onIsCategoryChanged: (v) {
+              setState(() => _isCategory = v);
+              if (_selectedIds.length >= 2) {
+                _fetchComparisonData();
+              }
+            },
+            categoryOptions: _categoryOptions,
+            selectedCategoryNames: _selectedCategoryNames,
+            onCategorySelectionChanged: (names) {
+              setState(() => _selectedCategoryNames = names);
+              if (_selectedIds.length >= 2) {
+                _fetchComparisonData();
+              }
+            },
+            initialIsola: _isola,
+            onIsolaChanged: (v) {
+              setState(() => _isola = v);
+              if (_selectedIds.length >= 2) {
+                _fetchComparisonData();
+              }
+            },
           ),
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
         ),
       ),
       body: Stack(
@@ -1646,7 +1652,8 @@ class _ComparePageState extends State<ComparePage> {
                             onTap: () {
                               setState(() {
                                 _selectedType = 'mall';
-                                _selectionSearchController.text = _selectedMallSearchQuery;
+                                _selectionSearchController.text =
+                                    _selectedMallSearchQuery;
                                 // 保留状态，不清空选择和对比数据
                               });
                             },
@@ -1674,7 +1681,8 @@ class _ComparePageState extends State<ComparePage> {
                             onTap: () {
                               setState(() {
                                 _selectedType = 'city';
-                                _selectionSearchController.text = _selectedCitySearchQuery;
+                                _selectionSearchController.text =
+                                    _selectedCitySearchQuery;
                                 // 保留状态，不清空选择和对比数据
                               });
                             },
@@ -1937,7 +1945,6 @@ class _ComparePageState extends State<ComparePage> {
       child: Container(
         margin: const EdgeInsets.all(0),
         child: ComparisonTableWidget(
-<<<<<<< HEAD
             comparisonData: _comparisonData,
             title: '对比分析',
             showScreenshotButton: false, // 因为上面已经有截图按钮了
@@ -1954,19 +1961,6 @@ class _ComparePageState extends State<ComparePage> {
             firstColumnWidth: _firstColumnWidth,
             isCategory: _isCategory,
             isOla: _isola),
-=======
-          comparisonData: _comparisonData,
-          title: '对比分析',
-          showScreenshotButton: false, // 因为上面已经有截图按钮了
-          columnColors: _getColumnColors(),
-          isCity: _selectedType == 'city',
-          headerBackgroundColor: _getStyle().headerColor,
-          firstColumnColor: _getStyle().firstColumnColor,
-          headerTextColor: _getStyle().textColor,
-          borderColor: _getStyle().borderColor,
-          cellTextColor: _getStyle().textColor,
-        ),
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
       ),
     );
   }
@@ -1980,10 +1974,6 @@ class _ComparePageState extends State<ComparePage> {
         errorMessage: '表格截图生成失败，请重试',
       );
     } catch (e) {
-<<<<<<< HEAD
-      print('截图失败: $e');
-=======
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('截图失败: ${e.toString()}')),
@@ -2062,7 +2052,6 @@ class _ComparePageState extends State<ComparePage> {
                         Navigator.of(context, rootNavigator: true).pop(),
                     onStyleChanged: (i) => setState(() => _styleIndex = i),
                     initialStyleIndex: _styleIndex,
-<<<<<<< HEAD
                     initialRowHeight: _rowHeight,
                     onRowHeightChanged: (h) =>
                         setState(() => _rowHeight = h.roundToDouble()),
@@ -2082,6 +2071,14 @@ class _ComparePageState extends State<ComparePage> {
                         _fetchComparisonData();
                       }
                     },
+                    categoryOptions: _categoryOptions,
+                    selectedCategoryNames: _selectedCategoryNames,
+                    onCategorySelectionChanged: (names) {
+                      setState(() => _selectedCategoryNames = names);
+                      if (_selectedIds.length >= 2) {
+                        _fetchComparisonData();
+                      }
+                    },
                     initialIsola: _isola,
                     onIsolaChanged: (v) {
                       setState(() => _isola = v);
@@ -2089,8 +2086,6 @@ class _ComparePageState extends State<ComparePage> {
                         _fetchComparisonData();
                       }
                     },
-=======
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
                   ),
                 ),
               ],

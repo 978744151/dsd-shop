@@ -3,11 +3,7 @@ description: 懂商帝
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-<<<<<<< HEAD
-version: 1.1.1
-=======
 version: 1.0.1+1
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
 
 environment:
   sdk: '>=2.19.4 <4.0.0'
@@ -77,7 +73,11 @@ dependencies:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_permission_handler.git
       path: "permission_handler"
-
+  connectivity_plus:
+    git: 
+      url: https://gitcode.com/openharmony-sig/flutter_plus_plugins.git
+      path: packages/connectivity_plus/connectivity_plus
+      ref: br_connectivity_plus-v6.1.0_ohos
   geocoding:
     git:
       url: https://gitcode.com/openharmony-sig/fluttertpc_geocoding.git
@@ -103,7 +103,22 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/logo/
     - assets/brand/
     - assets/map/json/
     - assets/map/json/province/
+    - assets/map/json/province/
+    - assets/svgs/
+    - assets/svgs/frame/
+    - assets/svgs/chat/
     - assets/images/
+    - assets/images/avatar/
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo/logo.jpg"  # 你的图标路径
+  # 或者为不同平台设置不同图标
+  image_path_ios: "assets/logo/logo.jpg"
+  min_sdk_android: 21  # Android 最小 SDK
+  remove_alpha_ios: true  # iOS 移除透明通道

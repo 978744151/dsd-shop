@@ -59,10 +59,6 @@ class ScreenshotUtil {
         showImageDialog(context, imageBytes);
       }
     } catch (e) {
-<<<<<<< HEAD
-      print(e);
-=======
->>>>>>> b48e7f0bd2e4176879c6662554d3236da64c22e0
       // 捕获异常并反馈
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
