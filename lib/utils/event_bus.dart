@@ -32,3 +32,13 @@ class HomePageRefreshEvent {
 class MinePageRefreshEvent {
   MinePageRefreshEvent();
 }
+
+// 对比页面刷新事件
+class ComparePageRefreshEvent {
+  ComparePageRefreshEvent();
+}
+
+// 开屏广告初始化完成事件
+class SplashAdInitializedEvent {
+  SplashAdInitializedEvent();
+}

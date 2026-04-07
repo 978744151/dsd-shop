@@ -8,6 +8,7 @@ import '../pages/compare_page.dart';
 import '../pages/shell_page.dart';
 import '../pages/mine_page.dart';
 import '../pages/login_page.dart';
+// import '../pages/shopDetailEcharts.dart';
 import '../pages/simple_map_page.dart';
 import '../pages/mall_detail_page.dart';
 import '../pages/mall_brand_page.dart';
@@ -21,7 +22,12 @@ import '../pages/favorites_page.dart';
 import '../pages/follow_page.dart';
 import '../pages/notifications_page.dart';
 import '../pages/brand_center_page.dart';
-import '../pages/user_profile.dart';
+import '../pages/feedback_page.dart';
+import '../pages/user_profile_page.dart';
+import '../pages/blacklist_page.dart';
+import '../pages/spring_festival_stats_page.dart';
+import '../pages/deepseek_page.dart';
+
 final _rootNavigatorKey = GlobalKey<NavigatorState>(); // 添加这行
 
 final router = GoRouter(
@@ -29,13 +35,7 @@ final router = GoRouter(
   observers: [BotToastNavigatorObserver()],
 
   initialLocation: '/',
-  redirect: (context, state) {
-    // 如果访问根路径，重定向到message页面
-    if (state.location == '/') {
-      return '/';
-    }
-    return null; // 不重定向
-  },
+  
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
@@ -48,24 +48,29 @@ final router = GoRouter(
               path: '/',
               builder: (context, state) => const HomePage(),
               routes: [
-                GoRoute(
-                  path: 'brandMap/:brandId',
-                  parentNavigatorKey: _rootNavigatorKey,
-                  builder: (context, state) =>
-                      SimpleMapPage(brandId: state.pathParameters['brandId']),
-                ),
-                GoRoute(
-                  parentNavigatorKey: _rootNavigatorKey,
-                  path: 'mall-detail',
-                  builder: (context, state) => MallDetailPage(),
-                ),
-                GoRoute(
-                  parentNavigatorKey: _rootNavigatorKey,
-                  path: 'mall-brand/:mallId',
-                  builder: (context, state) => MallBrandPage(
-                    mallId: state.pathParameters['mallId']!,
-                  ),
-                ),
+                // GoRoute(
+                //   path: 'shopDetailEcharts/:id',
+                //   builder: (context, state) =>
+                //       ShopDetailEcharts(id: state.pathParameters['id']!),
+                // ),
+                // GoRoute(
+                //   path: 'brandMap/:brandId',
+                //   parentNavigatorKey: _rootNavigatorKey,
+                //   builder: (context, state) =>
+                //       SimpleMapPage(brandId: state.pathParameters['brandId']),
+                // ),
+                // GoRoute(
+                //   parentNavigatorKey: _rootNavigatorKey,
+                //   path: 'mall-detail',
+                //   builder: (context, state) => MallDetailPage(),
+                // ),
+                // GoRoute(
+                //   parentNavigatorKey: _rootNavigatorKey,
+                //   path: 'mall-brand/:mallId',
+                //   builder: (context, state) => MallBrandPage(
+                //     mallId: state.pathParameters['mallId']!,
+                //   ),
+                // ),
               ],
             ),
           ],
@@ -114,7 +119,6 @@ final router = GoRouter(
                 final mallIdParam = state.queryParameters['mallId'];
                 final mallNameParam = state.queryParameters['mallName'];
                 final autoOpen = state.queryParameters['open'] == 'true';
-                print('mallIdParam: $mallIdParam');
                 return ComparePage(
                   mallId: mallIdParam,
                   autoOpenSelection: autoOpen,
@@ -125,14 +129,7 @@ final router = GoRouter(
             // 新增比较详情页
           ],
         ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/notifications',
-              builder: (context, state) => const NotificationsPage(),
-            ),
-          ],
-        ),
+       
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -162,7 +159,11 @@ final router = GoRouter(
     GoRoute(
       path: '/follow',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const FollowPage(),
+      builder: (context, state) {
+        final initialTabIndex =
+            int.tryParse(state.queryParameters['tab'] ?? '0') ?? 0;
+        return FollowPage(initialTabIndex: initialTabIndex);
+      },
     ),
     GoRoute(
       path: '/notifications',
@@ -174,8 +175,6 @@ final router = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginPage(),
-      
-      
     ),
     GoRoute(
       path: '/brand_center',
@@ -185,6 +184,34 @@ final router = GoRouter(
         return BrandCenterPage(autoFocus: autoFocus);
       },
     ),
-  
+   
+    GoRoute(
+      path: '/user/:userId',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final userId = state.pathParameters['userId']!;
+        return UserProfilePage(userId: userId);
+      },
+    ),
+    GoRoute(
+      path: '/blacklist',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const BlacklistPage(),
+    ),
+    GoRoute(
+      path: '/feedback',
+      builder: (context, state) => const FeedbackPage(),
+    ),
+    // GoRoute(
+    //   path: '/spring-festival-stats',
+    //   parentNavigatorKey: _rootNavigatorKey,
+    //   builder: (context, state) => const SpringFestivalStatsPage(),
+    // ),
+    
+    GoRoute(
+      path: '/deepseek',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const DeepseekPage(),
+    ),
   ],
 );

@@ -41,7 +41,9 @@ class FollowUser {
 }
 
 class FollowPage extends StatefulWidget {
-  const FollowPage({super.key});
+  final int initialTabIndex;
+  
+  const FollowPage({super.key, this.initialTabIndex = 0});
 
   @override
   State<FollowPage> createState() => _FollowPageState();
@@ -66,7 +68,7 @@ class _FollowPageState extends State<FollowPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: widget.initialTabIndex);
 
     // 初始加载数据
     fetchFollowing();
@@ -498,20 +500,22 @@ class _FollowPageState extends State<FollowPage>
           //         )
           //       : null,
           // ),
-          SvgPicture.network(
-            user.avatar ?? '',
-            height: 35, // 固定头像大小
-            width: 35,
-            placeholderBuilder: (BuildContext context) => Container(
-              height: 35,
-              width: 35,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.person, color: Colors.grey),
-            ),
-          ),
+          // SvgPicture.network(
+          //   user.avatar ?? '',
+          //   height: 35, // 固定头像大小
+          //   width: 35,
+          //   errorBuilder: (context, error, stackTrace) {
+          //     return Container(
+          //       height: 35,
+          //       width: 35,
+          //       decoration: BoxDecoration(
+          //         color: Colors.grey[200],
+          //         shape: BoxShape.circle,
+          //       ),
+          //       child: const Icon(Icons.person, color: Colors.grey),
+          //     );
+          //   },
+          // ),
           const SizedBox(width: 16),
           // 用户信息
           Expanded(

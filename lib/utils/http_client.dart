@@ -19,7 +19,7 @@ class HttpClient {
   }
 
   static Future<Map<String, String>> _getHeaders() async {
-    final token =  await _getToken();
+    final token = await _getToken();
 
     return {
       'Content-Type': 'application/json',
@@ -46,6 +46,7 @@ class HttpClient {
     )
         .timeout(
       const Duration(seconds: 15),
+      
       onTimeout: () {
         throw Exception('请求超时，请检查网络连接');
       },
@@ -103,14 +104,48 @@ class HttpClient {
     return _handleResponse(response);
   }
 
+  // 流式请求方法
+  static Future<Stream<String>> postStream(String path, {Map<String, dynamic>? body}) async {
+    final headers = await _getHeaders();
+    final client = http.Client();
+    
+    try {
+      final request = http.Request('POST', Uri.parse('$baseUrl$path'));
+      request.headers.addAll(headers);
+      if (body != null) {
+        request.body = json.encode(body);
+      }
+      
+      final streamedResponse = await client.send(request);
+      
+      if (streamedResponse.statusCode != 200) {
+        throw Exception('请求失败: ${streamedResponse.statusCode}');
+      }
+      
+      return streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .map((line) {
+            if (line.startsWith('data: ')) {
+              return line.substring(6); // 移除 "data: " 前缀
+            }
+            return line;
+          })
+          .where((line) => line.isNotEmpty && line != '[DONE]');
+    } catch (e) {
+      client.close();
+      rethrow;
+    }
+  }
+
   static dynamic _handleResponse(http.Response response) {
     try {
       final data = json.decode(response.body);
       if (response.statusCode == 401) {
-        _showErrorMessage('请重新登录');
+        // _showErrorMessage('登录已过期，请重新登录');
 
         // ignore: depend_on_referenced_packages
-        ToastUtil.showDanger("请重新登录");
+        ToastUtil.showDanger("登录已过期，请重新登录");
         final context = router.routerDelegate.navigatorKey.currentContext;
 
         if (context != null) {
@@ -120,7 +155,7 @@ class HttpClient {
       }
       if (data['success'] != true) {
         final message = data['message'] ?? data['error'] ?? '请求失败';
-        _showErrorMessage(message);
+        ToastUtil.showDanger(message);
         throw Exception(message); // 传递具体错误信息，避免catch块重复显示
       }
 
@@ -143,7 +178,7 @@ class HttpClient {
 
   static void _showErrorMessage(String message) {
     // ToastUtil.showDanger(message);
-    ToastUtil.showPrimary(message);
+    Fluttertoast.showToast(msg: message);
     // final context = router.routerDelegate.navigatorKey.currentContext;
     // if (context != null) {
     //   ScaffoldMessenger.of(context).showSnackBar(
