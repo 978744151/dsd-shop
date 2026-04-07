@@ -2,16 +2,16 @@
   "app": {
     "signingConfigs": [
       {
-        "name": "default",
+        "name": "com.example.dcd",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "/Users/t/.ohos/config/default_ohos_lR7LuADsSjh5IVzEvSjnV69e-XjCgY1W3vVQuHyhu7U=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001B9F0B0C6B631E03485EE37E7266D8FBE7BFCDA5B32910C16B55B374791F5BF0F899CF1D0577F510",
-          "profile": "/Users/t/.ohos/config/default_ohos_lR7LuADsSjh5IVzEvSjnV69e-XjCgY1W3vVQuHyhu7U=.p7b",
+          "storeFile": "/Users/t/Desktop/desk/hm/dsd-shop/assets/p12/dcd",
+          "storePassword": "0000001927DB380F5B15816FF09E25D4FE7E8C49A15F373CE5E5A79E80267F68A291CDA81888211B4C",
+          "keyAlias": "dcd",
+          "keyPassword": "00000019509B2B86D3BFB481A2D85B30D5D2D33D3A270F0CA77CCB236DCCCBDF424F7774DD23B07990",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "/Users/t/.ohos/config/default_ohos_lR7LuADsSjh5IVzEvSjnV69e-XjCgY1W3vVQuHyhu7U=.p12",
-          "storePassword": "0000001BDE399A13430D576BC1EF4EBFA410EC4D0CF44A85697E4755CC751357E4BDA673DAB4EDCCEF536A"
+          "profile": "/Users/t/Desktop/desk/hm/release_dcdRelease.p7b",
+          "certpath": "/Users/t/Desktop/desk/hm/dsd-shop/assets/p12/csr/dcd.csr"
         }
       }
     ],

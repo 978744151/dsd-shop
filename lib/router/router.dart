@@ -129,7 +129,19 @@ final router = GoRouter(
             // 新增比较详情页
           ],
         ),
-       
+               StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/chats',
+              name: 'chats',
+              builder: (context, state) {
+                // 先初始化 Controller
+                // 然后返回 Widget
+                return NotificationsPage();
+              },
+            ),
+          ],
+        ),
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -184,7 +196,7 @@ final router = GoRouter(
         return BrandCenterPage(autoFocus: autoFocus);
       },
     ),
-   
+  
     GoRoute(
       path: '/user/:userId',
       parentNavigatorKey: _rootNavigatorKey,

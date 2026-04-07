@@ -25,12 +25,6 @@ class _ShellPageState extends State<ShellPage> {
   @override
   void initState() {
     super.initState();
-    // 确保从登录页跳转时显示首页（第一个分支）
-    if (widget.navigationShell.currentIndex != 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.navigationShell.goBranch(0);
-      });
-    }
     _checkAdStatus();
   }
   
@@ -61,26 +55,14 @@ class _ShellPageState extends State<ShellPage> {
 
   @override
   Widget build(BuildContext context) {
+    print('ShellPage build - currentIndex: ${widget.navigationShell.currentIndex}');
+    
     return Scaffold(
-      body: Stack(
-        children: [
-          widget.navigationShell,
-          // 开屏广告 Overlay - 覆盖整个屏幕包括 tabbar
-          if (_adCheckComplete && _showSplashAd)
-            Positioned.fill(
-              child: SplashAdOverlay(
-                onInitialized: _onSplashAdInitialized,
-                onDismiss: _onSplashAdDismissed,
-              ),
-            ),
-        ],
+      body: widget.navigationShell,
+      bottomNavigationBar: CustomBottomNavigation(
+        currentIndex: widget.navigationShell.currentIndex,
+        onTap: widget.navigationShell.goBranch,
       ),
-      bottomNavigationBar: _adCheckComplete && _showSplashAd
-          ? null  // 广告显示时隐藏底部导航
-          : CustomBottomNavigation(
-              currentIndex: widget.navigationShell.currentIndex,
-              onTap: widget.navigationShell.goBranch,
-            ),
     );
   }
 }

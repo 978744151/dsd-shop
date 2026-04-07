@@ -85,7 +85,7 @@ class _HomePageState extends State<HomePage> {
     _searchController.dispose(); // 只在dispose时释放控制器
     _recommendScrollController.dispose();
     _refreshSubscription.cancel(); // 取消刷新事件订阅
-    _connectivitySubscription.cancel(); // 取消网络状态订阅
+    // _connectivitySubscription.cancel(); // 取消网络状态订阅
     super.dispose();
   }
 

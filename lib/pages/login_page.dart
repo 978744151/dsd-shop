@@ -10,6 +10,7 @@ import 'package:flutter/gestures.dart';
 import 'user_agreement_page.dart';
 import 'privacy_policy_page.dart';
 import 'package:go_router/go_router.dart';
+import '../router/router.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -342,7 +343,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _guestLogin() async {
     final prefs = await SharedPreferences.getInstance();
-        await prefs.clear();
+    await prefs.clear();
     setState(() => _isLoading = true);
     try {
       if (mounted) {
